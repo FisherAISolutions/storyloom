@@ -15,6 +15,7 @@ import {
   toAppUser,
 } from '../src/lib/authState.js';
 import { invalidatePageTranslations, shouldSyncCoverForPage } from '../src/lib/storyState.js';
+import { CONTINUATION_LENGTHS, INITIAL_STORY_LENGTHS } from '../src/lib/storyLengths.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
@@ -185,13 +186,40 @@ test('Edge Function authenticates, validates actions and ownership, and gates pr
 test('AI contracts bound counts, styles, languages, and validate structured output', () => {
   const config = read('supabase/functions/story-ai/config.ts');
   const edge = read('supabase/functions/story-ai/index.ts');
-  assert.match(config, /STORY_PAGE_COUNTS = new Set\(\[6, 10, 15\]\)/);
+  assert.match(config, /STORY_PAGE_COUNTS = new Set\(\[6, 10, 15, 24, 30\]\)/);
   assert.match(config, /CONTINUATION_PAGE_COUNTS = new Set\(\[3, 5, 10\]\)/);
   for (const style of ['watercolor', 'cartoon', 'crayon', 'pencil', 'claymation', 'collage']) assert.match(config, new RegExp(`${style}:`));
   for (const language of ['es', 'fr', 'de', 'pt', 'ja', 'zh']) assert.match(config, new RegExp(`${language}:`));
   assert.match(edge, /value\.pages\.length !== count/);
   assert.match(edge, /value\.translations\.length !== texts\.length/);
   assert.match(edge, /AI_RESPONSE_INVALID/);
+});
+
+test('initial and continuation story lengths preserve exact product parity', () => {
+  assert.deepEqual(INITIAL_STORY_LENGTHS, [6, 10, 15, 24, 30]);
+  assert.deepEqual(CONTINUATION_LENGTHS, [3, 5, 10]);
+  const createStory = read('src/pages/CreateStory.jsx');
+  const continuation = read('src/components/ContinueStoryModal.jsx');
+  assert.match(createStory, /INITIAL_STORY_LENGTHS\.map/);
+  assert.match(continuation, /CONTINUATION_LENGTHS\.map/);
+});
+
+test('Edge Function accepts only supported initial and continuation counts', () => {
+  const config = read('supabase/functions/story-ai/config.ts');
+  const validation = read('supabase/functions/story-ai/validation.ts');
+  assert.match(config, /new Set\(\[6, 10, 15, 24, 30\]\)/);
+  assert.match(config, /new Set\(\[3, 5, 10\]\)/);
+  assert.match(validation, /!Number\.isInteger\(value\) \|\| !allowed\.has\(value as number\)/);
+});
+
+test('toasts dismiss immediately and auto-remove after five seconds', () => {
+  const toast = read('src/components/ui/use-toast.jsx');
+  const toaster = read('src/components/ui/toaster.jsx');
+  assert.match(toast, /DEFAULT_TOAST_DURATION = 5000/);
+  assert.match(toast, /addToRemoveQueue\(id, props\.duration \?\? DEFAULT_TOAST_DURATION\)/);
+  assert.match(toast, /state\.toasts\.filter\(\(item\) => item\.id !== toastId\)/);
+  assert.match(toast, /clearTimeout\(timeout\)/);
+  assert.match(toaster, /<ToastClose onClick=\{\(\) => dismiss\(id\)\}/);
 });
 
 test('generated images are decoded and uploaded server-side to deterministic paths', () => {

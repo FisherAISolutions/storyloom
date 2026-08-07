@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Wand2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { CONTINUATION_LENGTHS } from '@/lib/storyLengths';
 import * as storiesService from '@/services/stories';
 import * as storyPagesService from '@/services/storyPages';
 
@@ -104,7 +105,7 @@ export default function ContinueStoryModal({ story, pages, onClose, onDone }) {
         <div className="mt-4 space-y-2">
           <label className="text-sm font-medium text-stone-700">How many new pages?</label>
           <div className="inline-flex rounded-full border border-stone-200 bg-stone-50 p-1">
-            {[3, 5, 10].map((n) => (
+            {CONTINUATION_LENGTHS.map((n) => (
               <button
                 key={n}
                 onClick={() => setPageCount(n)}

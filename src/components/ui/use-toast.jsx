@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 
 const TOAST_LIMIT = 20;
-const TOAST_REMOVE_DELAY = 1000000;
+export const DEFAULT_TOAST_DURATION = 5000;
 
 const actionTypes = {
   ADD_TOAST: "ADD_TOAST",
@@ -20,7 +20,7 @@ function genId() {
 
 const toastTimeouts = new Map();
 
-const addToRemoveQueue = (toastId) => {
+const addToRemoveQueue = (toastId, duration = DEFAULT_TOAST_DURATION) => {
   if (toastTimeouts.has(toastId)) {
     return;
   }
@@ -31,7 +31,7 @@ const addToRemoveQueue = (toastId) => {
       type: actionTypes.REMOVE_TOAST,
       toastId,
     });
-  }, TOAST_REMOVE_DELAY);
+  }, duration);
 
   toastTimeouts.set(toastId, timeout);
 };
@@ -62,27 +62,11 @@ export const reducer = (state, action) => {
 
     case actionTypes.DISMISS_TOAST: {
       const { toastId } = action;
-
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
-      if (toastId) {
-        addToRemoveQueue(toastId);
-      } else {
-        state.toasts.forEach((toast) => {
-          addToRemoveQueue(toast.id);
-        });
-      }
-
+      if (toastId) _clearFromRemoveQueue(toastId);
+      else state.toasts.forEach((item) => _clearFromRemoveQueue(item.id));
       return {
         ...state,
-        toasts: state.toasts.map((t) =>
-          t.id === toastId || toastId === undefined
-            ? {
-                ...t,
-                open: false,
-              }
-            : t
-        ),
+        toasts: toastId === undefined ? [] : state.toasts.filter((item) => item.id !== toastId),
       };
     }
     case actionTypes.REMOVE_TOAST:
@@ -133,6 +117,7 @@ function toast({ ...props }) {
       },
     },
   });
+  addToRemoveQueue(id, props.duration ?? DEFAULT_TOAST_DURATION);
 
   return {
     id,
@@ -151,9 +136,13 @@ function useToast() {
       if (index > -1) {
         listeners.splice(index, 1);
       }
+      if (listeners.length === 0) {
+        toastTimeouts.forEach((timeout) => clearTimeout(timeout));
+        toastTimeouts.clear();
+        memoryState = { toasts: [] };
+      }
     };
-  }, [state]);
-
+  }, []);
   return {
     ...state,
     toast,
@@ -161,4 +150,4 @@ function useToast() {
   };
 }
 
-export { useToast, toast }; 
+export { useToast, toast };

@@ -10,6 +10,7 @@ import { Loader2, Wand2, Check } from 'lucide-react';
 import { Image } from '@/components/ui/image';
 import { cn } from '@/lib/utils';
 import CharacterSlots from '@/components/CharacterSlots';
+import { INITIAL_STORY_LENGTHS } from '@/lib/storyLengths';
 import * as storiesService from '@/services/stories';
 import * as storyPagesService from '@/services/storyPages';
 import * as charactersService from '@/services/characters';
@@ -218,7 +219,7 @@ export default function CreateStory() {
         <div className="space-y-2 md:col-span-2">
           <Label>Story length</Label>
           <div className="inline-flex rounded-full border border-stone-200 bg-stone-50 p-1">
-            {[6, 10, 15].map((n) => (
+            {INITIAL_STORY_LENGTHS.map((n) => (
               <button
                 key={n}
                 onClick={() => setPageCount(n)}

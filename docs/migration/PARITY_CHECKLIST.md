@@ -43,7 +43,7 @@ Use the untouched live Base44 app as the behavioral reference. Mark an item comp
 - [ ] Template mode retains all nine templates, titles, themes, ideas, imagery, and deep-link selection via `?template=`.
 - [ ] Custom mode retains custom-idea behavior and deep-link population via `?idea=`.
 - [ ] Start-button eligibility matches the current template/custom validation.
-- [ ] Page-count choices and default match the reference app.
+- [x] Page-count choices and default match the reference app: 6, 10, 15, 24, and 30; 24/30 generation is contract-tested but not live-generated.
 - [ ] All six art styles, IDs, labels, prompt text, and watercolor default are unchanged.
 - [ ] Multiple saved and quick characters are converted into the same AI character descriptions.
 - [ ] Generated story title is persisted.
@@ -118,7 +118,13 @@ Static contract tests verify newest-first story/character ordering, ascending pa
 
 ### Phase 6 validation note
 
-IMPLEMENTED: authenticated action routing, ownership checks, strict structured-output validation, supported-count/style/language allowlists, private-photo vision, reference-photo portrait editing, direct server-side image persistence, safe errors, usage logging, and a future entitlement hook. MOCK/STATIC VERIFIED: frontend isolation from OpenAI, absence of active Base44 AI calls/provider URL persistence, authorization/validation code paths, deterministic generated paths, page/translation count validation, entitlement ordering, and usage logging. LIVE OPENAI VERIFIED: not yet; no remote function deployment or billable provider request was authorized/performed, so AI parity checklist boxes remain unchecked pending normal-account testing.
+IMPLEMENTED: authenticated action routing, ownership checks, strict structured-output validation, supported-count/style/language allowlists, private-photo vision, reference-photo portrait editing, direct server-side image persistence, safe errors, usage logging, and a future entitlement hook. MOCK/STATIC VERIFIED: frontend isolation from OpenAI, absence of active Base44 AI calls/provider URL persistence, authorization/validation code paths, deterministic generated paths, page/translation count validation, entitlement ordering, and usage logging. LIVE OPENAI VERIFIED by the project owner after deployment: signup/login, character creation and photo analysis, portrait generation, a 15-page story, editing/repainting, custom cover persistence/library rendering, and all supported translations. Initial 24/30-page generation remains intentionally untested live because of image cost.
+
+### Post-live parity fixes
+
+- Initial story-length UI and Edge validation now allow exactly 6, 10, 15, 24, and 30 pages. Exact-count structured-output validation applies to every allowed length. The 24/30 paths have static contract coverage but were intentionally not live-generated because of image cost.
+- Character-ready notifications now remove immediately through the close control and automatically after five seconds. Toast timers and listeners are cleared when dismissed or when the final consumer unmounts.
+- Continuation choices and server validation remain exactly 3, 5, and 10 pages.
 
 - [ ] Built frontend contains no OpenAI key or Supabase service-role key.
 - [ ] Edge Functions verify the caller and row/storage ownership for every referenced resource.

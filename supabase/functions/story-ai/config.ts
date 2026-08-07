@@ -4,7 +4,7 @@ export const MODELS = Object.freeze({
   IMAGE: Deno.env.get('OPENAI_IMAGE_MODEL') || 'gpt-image-2',
 });
 
-export const STORY_PAGE_COUNTS = new Set([6, 10, 15]);
+export const STORY_PAGE_COUNTS = new Set([6, 10, 15, 24, 30]);
 export const CONTINUATION_PAGE_COUNTS = new Set([3, 5, 10]);
 export const LANGUAGE_NAMES: Record<string, string> = {
   es: 'Spanish', fr: 'French', de: 'German', pt: 'Portuguese', ja: 'Japanese', zh: 'Chinese',
