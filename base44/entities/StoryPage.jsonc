@@ -1,0 +1,22 @@
+{
+  "name": "StoryPage",
+  "type": "object",
+  "properties": {
+    "story_id": {
+      "type": "string"
+    },
+    "page_number": {
+      "type": "number"
+    },
+    "text": {
+      "type": "string"
+    },
+    "image_url": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "story_id",
+    "page_number"
+  ]
+}

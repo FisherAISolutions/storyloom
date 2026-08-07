@@ -1,0 +1,53 @@
+{
+  "name": "Story",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "theme": {
+      "type": "string"
+    },
+    "art_style": {
+      "type": "string",
+      "default": "watercolor"
+    },
+    "status": {
+      "type": "string",
+      "default": "draft"
+    },
+    "cover_image_url": {
+      "type": "string"
+    },
+    "child_character_id": {
+      "type": "string"
+    },
+    "secondary_characters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "character_id": {
+            "type": "string"
+          },
+          "quick_description": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "translations": {
+      "type": "object"
+    },
+    "page_count": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "title"
+  ]
+}
