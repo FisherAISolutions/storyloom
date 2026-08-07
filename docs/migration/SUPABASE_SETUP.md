@@ -34,9 +34,30 @@ In Authentication settings:
 4. Decide whether email confirmation is mandatory. The current UI expects a six-digit verification code; Supabase email templates and the Phase 3 implementation must be configured and tested to preserve that experience. Local `config.toml` enables confirmation as the secure default.
 5. Configure password-recovery redirects to the future explicit reset/callback route. Preserve the existing same-origin/allowlisted return-path protections.
 
-### Google OAuth for Phase 3
+### Phase 4 route configuration
 
-Create OAuth credentials in Google Cloud for the intended environments. In Supabase Authentication > Providers, enable Google and enter its client ID and secret. Register the Supabase callback URL shown by the Dashboard with Google. Add only the application redirect URLs that Phase 3 will use. Provider secrets stay in Supabase Auth configuration, never in Vite variables or source control.
+The frontend now uses `/login`, `/register`, `/forgot-password`, `/reset-password`, and `/auth/callback`.
+
+Configure the Dashboard with:
+
+- **Site URL:** the canonical production origin, such as `https://<production-host>`.
+- **Additional Redirect URLs:** `http://localhost:5173/**`, `http://127.0.0.1:5173/**`, intentionally supported preview origins, and `https://<production-host>/**`.
+- Permit `<origin>/reset-password` for password recovery.
+- Permit `<origin>/auth/callback` for email confirmation and the post-provider application return.
+
+The configured project currently reports email auth enabled and automatic confirmation disabled. New users must therefore follow Supabase's email confirmation link; the former Base44 six-digit OTP protocol is no longer used.
+
+### Google OAuth for Phase 4
+
+Create OAuth credentials in Google Cloud for the intended environments. In Supabase Authentication > Providers, enable Google and enter its client ID and secret. Register the Supabase callback URL shown by the Dashboard with Google, conventionally `https://<project-ref>.supabase.co/auth/v1/callback`. Google returns to Supabase first; Supabase then redirects to the React `/auth/callback` route. Provider secrets stay in Supabase Auth configuration, never in Vite variables or source control.
+
+The configured project currently reports Google disabled. Enable it before expecting the visible Google buttons to complete sign-in.
+
+## Future Stripe compatibility
+
+Stripe is intentionally deferred. The stable `auth.users.id`/`profiles.id` identity and server-only `ai_usage` table allow a later billing phase to add customer, subscription, price/tier, entitlement, quota-period, and webhook-event tables without changing authentication ownership.
+
+Authoritative subscription status and entitlements must be written by verified Stripe webhooks or trusted server operations. They must not live only in browser state, `user_metadata`, or other user-editable fields. Checkout and Customer Portal sessions will be created server-side, and AI functions will enforce quotas from server-maintained subscription/tier state.
 
 ## 4. Database design
 

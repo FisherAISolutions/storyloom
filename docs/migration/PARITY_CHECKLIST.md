@@ -17,9 +17,9 @@ Use the untouched live Base44 app as the behavioral reference. Mark an item comp
 - [ ] Expired or revoked sessions return the user to login without loops or stale privileged UI.
 - [ ] Protected routes wait for initial auth resolution and never flash another user's data.
 - [ ] Anonymous, authenticated, and cross-user RLS behavior is verified for every table and storage bucket.
-- [ ] Admin-only behavior, if retained, uses a trusted role source rather than editable profile data.
-- [ ] Login, register, forgot-password, reset-password, and callback routes are explicitly registered in React Router.
-- [ ] Decide whether Base44 MCP OAuth consent behavior is removed or replaced; verify the chosen outcome.
+- [x] Admin-only behavior, if retained, uses the RLS-protected `profiles.role` rather than editable metadata.
+- [x] Login, register, forgot-password, reset-password, and callback routes are explicitly registered in React Router.
+- [x] Base44 MCP OAuth consent was confirmed unreachable/unimported and removed rather than rebuilt.
 
 ## Characters
 

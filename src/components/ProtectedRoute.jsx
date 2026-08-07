@@ -1,37 +1,27 @@
-import { useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
-import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 
-const DefaultFallback = () => (
-  <div className="fixed inset-0 flex items-center justify-center">
-    <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+const AuthLoading = () => (
+  <div className="fixed inset-0 flex items-center justify-center" aria-label="Checking authentication">
+    <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800" />
   </div>
 );
 
-export default function ProtectedRoute({ fallback = <DefaultFallback />, unauthenticatedElement }) {
-  const { isAuthenticated, isLoadingAuth, authChecked, authError, checkUserAuth } = useAuth();
+export default function ProtectedRoute() {
+  const { isAuthenticated, isLoadingAuth, authChecked } = useAuth();
+  const location = useLocation();
 
-  useEffect(() => {
-    if (!authChecked && !isLoadingAuth) {
-      checkUserAuth();
-    }
-  }, [authChecked, isLoadingAuth, checkUserAuth]);
-
-  if (isLoadingAuth || !authChecked) {
-    return fallback;
-  }
-
-  if (authError) {
-    if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError />;
-    }
-    return unauthenticatedElement;
-  }
-
+  if (isLoadingAuth || !authChecked) return <AuthLoading />;
   if (!isAuthenticated) {
-    return unauthenticatedElement;
+    const returnTo = `${location.pathname}${location.search}`;
+    return <Navigate to={`/login?returnTo=${encodeURIComponent(returnTo)}`} replace />;
   }
+  return <Outlet />;
+}
 
+export function PublicOnlyRoute() {
+  const { isAuthenticated, isLoadingAuth, authChecked } = useAuth();
+  if (isLoadingAuth || !authChecked) return <AuthLoading />;
+  if (isAuthenticated) return <Navigate to="/" replace />;
   return <Outlet />;
 }

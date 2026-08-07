@@ -1,54 +1,36 @@
+// Temporary Base44 runtime configuration retained only for entity and AI calls.
+// Supabase Auth is authoritative; no Base44 access token is read or persisted.
 const isNode = typeof window === 'undefined';
-const windowObj = isNode ? { localStorage: new Map() } : window;
-const storage = windowObj.localStorage;
+const storage = isNode ? null : window.localStorage;
 
-const toSnakeCase = (str) => {
-	return str.replace(/([A-Z])/g, '_$1').toLowerCase();
+if (!isNode) {
+  storage.removeItem('base44_access_token');
+  storage.removeItem('token');
+  const params = new URLSearchParams(window.location.search);
+  const original = params.toString();
+  for (const name of ['access_token', 'clear_access_token', 'from_url']) params.delete(name);
+  if (params.toString() !== original) {
+    const query = params.toString();
+    window.history.replaceState({}, document.title, `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+  }
 }
 
-const getAppParamValue = (paramName, { defaultValue = undefined, removeFromUrl = false } = {}) => {
-	if (isNode) {
-		return defaultValue;
-	}
-	const storageKey = `base44_${toSnakeCase(paramName)}`;
-	const urlParams = new URLSearchParams(window.location.search);
-	const searchParam = urlParams.get(paramName);
-	if (removeFromUrl) {
-		urlParams.delete(paramName);
-		const newUrl = `${window.location.pathname}${urlParams.toString() ? `?${urlParams.toString()}` : ""
-			}${window.location.hash}`;
-		window.history.replaceState({}, document.title, newUrl);
-	}
-	if (searchParam) {
-		storage.setItem(storageKey, searchParam);
-		return searchParam;
-	}
-	if (defaultValue) {
-		storage.setItem(storageKey, defaultValue);
-		return defaultValue;
-	}
-	const storedValue = storage.getItem(storageKey);
-	if (storedValue) {
-		return storedValue;
-	}
-	return null;
-}
+const toSnakeCase = (str) => str.replace(/([A-Z])/g, '_$1').toLowerCase();
 
-const getAppParams = () => {
-	if (getAppParamValue("clear_access_token") === 'true') {
-		storage.removeItem('base44_access_token');
-		storage.removeItem('token');
-	}
-	return {
-		appId: getAppParamValue("app_id", { defaultValue: import.meta.env.VITE_BASE44_APP_ID }),
-		token: getAppParamValue("access_token", { removeFromUrl: true }),
-		fromUrl: getAppParamValue("from_url", { defaultValue: window.location.href }),
-		functionsVersion: getAppParamValue("functions_version", { defaultValue: import.meta.env.VITE_BASE44_FUNCTIONS_VERSION }),
-		appBaseUrl: getAppParamValue("app_base_url", { defaultValue: import.meta.env.VITE_BASE44_APP_BASE_URL }),
-	}
-}
-
+const getAppParamValue = (paramName, defaultValue) => {
+  if (isNode) return defaultValue;
+  const storageKey = `base44_${toSnakeCase(paramName)}`;
+  const searchParam = new URLSearchParams(window.location.search).get(paramName);
+  if (searchParam) {
+    storage.setItem(storageKey, searchParam);
+    return searchParam;
+  }
+  if (defaultValue) return defaultValue;
+  return storage.getItem(storageKey);
+};
 
 export const appParams = {
-	...getAppParams()
-}
+  appId: getAppParamValue('app_id', import.meta.env.VITE_BASE44_APP_ID),
+  functionsVersion: getAppParamValue('functions_version', import.meta.env.VITE_BASE44_FUNCTIONS_VERSION),
+  appBaseUrl: getAppParamValue('app_base_url', import.meta.env.VITE_BASE44_APP_BASE_URL),
+};

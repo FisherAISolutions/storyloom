@@ -4,7 +4,7 @@
 
 This repository is the migration copy of Story Loom Kids. The original live Base44 application remains untouched and is the behavioral reference. There are no production customers or records to transfer; Supabase will start with fresh users and data. Migration work must preserve the existing interface, workflows, prompts, art styles, story behavior, and generated-output intent.
 
-Phase 1 established the audit and documentation. Phase 2 added the source-controlled Supabase backend foundation. Phase 3 adds a lazy browser client and schema-aligned service layer while the application continues to run on Base44.
+Phase 1 established the audit and documentation. Phase 2 added the Supabase backend foundation. Phase 3 added the browser service layer. Phase 4 moves normal user authentication to Supabase while CRUD, uploads, and AI remain temporarily on Base44.
 
 ## Current architecture
 
@@ -163,7 +163,17 @@ The destination backend is defined by `supabase/migrations/20260807000000_storyl
 
 ## Phase 3 data-access foundation
 
-The browser client, authenticated ownership model, CRUD service APIs, private Storage helpers, temporary signed-URL strategy, and service error contract are documented in `DATA_ACCESS.md`. These modules are not wired into React yet, so Base44 remains the active runtime. Phase 4 will migrate authentication and clear private URL cache state on logout/user changes.
+The browser client, authenticated ownership model, CRUD service APIs, private Storage helpers, temporary signed-URL strategy, and service error contract are documented in `DATA_ACCESS.md`. Phase 4 now uses the client for Auth only; CRUD and Storage services remain unwired until Phase 5.
+
+## Phase 4 authentication
+
+Supabase Auth is authoritative for email/password login, confirmation-link signup, Google OAuth initiation, password recovery, session persistence, protected routes, and logout. React receives only `{ id, email, role }`; roles come from `public.profiles`, and profile failures default to `user`. Logout and user replacement clear private signed URLs and TanStack Query data.
+
+Legacy Base44 access-token/query bootstrapping and every normal `base44.auth` call are removed. Base44 app ID, base URL, and functions-version configuration remain because entity and AI calls still use the tokenless `requiresAuth: false` client. This hybrid is provisional: it may fail or expose only the Base44 app's public data depending on backend configuration. No Supabase token is sent to Base44, and Phase 5 CRUD should follow promptly.
+
+`OAuthConsent.jsx` was removed because it was unreachable, unimported, and solely implemented Base44 MCP platform authorization.
+
+Stripe billing remains a future dedicated phase. Stable Supabase user IDs and trusted AI usage records leave room for webhook-maintained customer/subscription/entitlement/quota tables. Browser state and editable auth metadata must never be authoritative for plan access.
 
 ## Phase 1 validation
 

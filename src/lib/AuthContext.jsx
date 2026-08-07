@@ -1,150 +1,148 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
-import { appParams } from '@/lib/app-params';
-import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { getSupabaseClient } from '@/lib/supabase';
+import { queryClientInstance } from '@/lib/query-client';
+import { clearSignedUrlCache } from '@/services/storage';
+import { didAuthenticatedUserChange, INITIAL_AUTH_STATE, toAppUser } from '@/lib/authState';
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
+
+function clearUserScopedState() {
+  clearSignedUrlCache();
+  queryClientInstance.clear();
+}
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(true);
+  const [user, setUser] = useState(INITIAL_AUTH_STATE.user);
+  const [isAuthenticated, setIsAuthenticated] = useState(INITIAL_AUTH_STATE.isAuthenticated);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(INITIAL_AUTH_STATE.isLoadingAuth);
+  const [authChecked, setAuthChecked] = useState(INITIAL_AUTH_STATE.authChecked);
   const [authError, setAuthError] = useState(null);
-  const [authChecked, setAuthChecked] = useState(false);
-  const [appPublicSettings, setAppPublicSettings] = useState(null); // Contains only { id, public_settings }
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(() => window.location.hash.includes('type=recovery'));
+  const userIdRef = useRef(null);
+  const revisionRef = useRef(0);
 
-  useEffect(() => {
-    checkAppState();
+  const applySignedOut = useCallback(() => {
+    if (userIdRef.current) clearUserScopedState();
+    userIdRef.current = null;
+    setUser(null);
+    setIsAuthenticated(false);
+    setIsPasswordRecovery(false);
+    setIsLoadingAuth(false);
+    setAuthChecked(true);
   }, []);
 
-  const checkAppState = async () => {
-    try {
-      setIsLoadingPublicSettings(true);
-      setAuthError(null);
-      
-      // First, check app public settings (with token if available)
-      // This will tell us if auth is required, user not registered, etc.
-      const appClient = createAxiosClient({
-        baseURL: `/api/apps/public`,
-        headers: {
-          'X-App-Id': appParams.appId
-        },
-        token: appParams.token, // Include token if available
-        interceptResponses: true
-      });
-      
-      try {
-        const publicSettings = await appClient.get(`/prod/public-settings/by-id/${appParams.appId}`);
-        setAppPublicSettings(publicSettings);
-        
-        // If we got the app public settings successfully, check if user is authenticated
-        if (appParams.token) {
-          await checkUserAuth();
-        } else {
-          setIsLoadingAuth(false);
-          setIsAuthenticated(false);
-          setAuthChecked(true);
-        }
-        setIsLoadingPublicSettings(false);
-      } catch (appError) {
-        console.error('App state check failed:', appError);
-        
-        // Handle app-level errors
-        if (appError.status === 403 && appError.data?.extra_data?.reason) {
-          const reason = appError.data.extra_data.reason;
-          if (reason === 'auth_required') {
-            setAuthError({
-              type: 'auth_required',
-              message: 'Authentication required'
-            });
-          } else if (reason === 'user_not_registered') {
-            setAuthError({
-              type: 'user_not_registered',
-              message: 'User not registered for this app'
-            });
-          } else {
-            setAuthError({
-              type: reason,
-              message: appError.message
-            });
-          }
-        } else {
-          setAuthError({
-            type: 'unknown',
-            message: appError.message || 'Failed to load app'
-          });
-        }
-        setIsLoadingPublicSettings(false);
-        setIsLoadingAuth(false);
-      }
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      setAuthError({
-        type: 'unknown',
-        message: error.message || 'An unexpected error occurred'
-      });
-      setIsLoadingPublicSettings(false);
-      setIsLoadingAuth(false);
-    }
-  };
+  const resolveSession = useCallback(async (session, { loading = false } = {}) => {
+    const revision = ++revisionRef.current;
+    if (loading) setIsLoadingAuth(true);
+    setAuthError(null);
 
-  const checkUserAuth = async () => {
+    if (!session?.user) {
+      applySignedOut();
+      return;
+    }
+
     try {
-      // Now check if the user is authenticated
-      setIsLoadingAuth(true);
-      const currentUser = await base44.auth.me();
-      setUser(currentUser);
+      const supabase = getSupabaseClient();
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) throw userError || new Error('No authenticated user');
+
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userData.user.id)
+        .maybeSingle();
+
+      if (revision !== revisionRef.current) return;
+      if (didAuthenticatedUserChange(userIdRef.current, userData.user.id)) clearUserScopedState();
+      userIdRef.current = userData.user.id;
+
+      // Profile failures never grant privilege. Auth remains usable with the
+      // least-privileged role while the error is available for diagnostics/UI.
+      if (profileError) {
+        setAuthError({ type: 'profile_unavailable', message: 'Your account profile could not be loaded.' });
+      }
+
+      setUser(toAppUser(userData.user, profile?.role));
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
       setAuthChecked(true);
-    } catch (error) {
-      console.error('User auth check failed:', error);
-      setIsLoadingAuth(false);
+    } catch {
+      if (revision !== revisionRef.current) return;
+      clearUserScopedState();
+      userIdRef.current = null;
+      setUser(null);
       setIsAuthenticated(false);
+      setAuthError({ type: 'auth_required', message: 'Your session is no longer valid.' });
+      setIsLoadingAuth(false);
       setAuthChecked(true);
-      
-      // If user auth fails, it might be an expired token
-      if (error.status === 401 || error.status === 403) {
-        setAuthError({
-          type: 'auth_required',
-          message: 'Authentication required'
-        });
+    }
+  }, [applySignedOut]);
+
+  useEffect(() => {
+    let active = true;
+    const supabase = getSupabaseClient();
+
+    const initialize = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        if (active) await resolveSession(data.session, { loading: true });
+      } catch {
+        if (!active) return;
+        setAuthError({ type: 'auth_unavailable', message: 'Authentication could not be initialized.' });
+        applySignedOut();
       }
-    }
-  };
+    };
 
-  const logout = (shouldRedirect = true) => {
-    setUser(null);
-    setIsAuthenticated(false);
-    
-    if (shouldRedirect) {
-      // Use the SDK's logout method which handles token cleanup and redirect
-      base44.auth.logout(window.location.href);
-    } else {
-      // Just remove the token without redirect
-      base44.auth.logout();
-    }
-  };
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!active) return;
+      if (event === 'PASSWORD_RECOVERY') setIsPasswordRecovery(true);
+      if (event === 'SIGNED_OUT') {
+        ++revisionRef.current;
+        applySignedOut();
+        return;
+      }
 
-  const navigateToLogin = () => {
-    // Use the SDK's redirectToLogin method
-    base44.auth.redirectToLogin(window.location.href);
-  };
+      // Supabase recommends keeping auth callbacks lightweight. Resolve the
+      // verified user/profile after the callback returns.
+      window.setTimeout(() => {
+        if (active) void resolveSession(session);
+      }, 0);
+    });
+
+    void initialize();
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
+  }, [applySignedOut, resolveSession]);
+
+  const logout = useCallback(async () => {
+    clearUserScopedState();
+    const { error } = await getSupabaseClient().auth.signOut();
+    if (error) {
+      setAuthError({ type: 'logout_failed', message: 'Could not log out. Please try again.' });
+      throw error;
+    }
+    applySignedOut();
+  }, [applySignedOut]);
+
+  const checkUserAuth = useCallback(async () => {
+    const { data, error } = await getSupabaseClient().auth.getSession();
+    if (error) throw error;
+    await resolveSession(data.session, { loading: true });
+  }, [resolveSession]);
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated, 
+    <AuthContext.Provider value={{
+      user,
+      isAuthenticated,
       isLoadingAuth,
-      isLoadingPublicSettings,
-      authError,
-      appPublicSettings,
       authChecked,
+      authError,
+      isPasswordRecovery,
       logout,
-      navigateToLogin,
       checkUserAuth,
-      checkAppState
     }}>
       {children}
     </AuthContext.Provider>
@@ -153,8 +151,6 @@ export const AuthProvider = ({ children }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };

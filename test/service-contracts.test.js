@@ -9,6 +9,11 @@ import {
   pickDefined,
   rejectOwnershipOverride,
 } from '../src/services/errors.js';
+import {
+  didAuthenticatedUserChange,
+  INITIAL_AUTH_STATE,
+  toAppUser,
+} from '../src/lib/authState.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
@@ -66,4 +71,50 @@ test('browser source contains no privileged environment-variable references', ()
   assert.doesNotMatch(source, /SERVICE_ROLE|OPENAI_API_KEY/);
   assert.match(source, /VITE_SUPABASE_URL/);
   assert.match(source, /VITE_SUPABASE_PUBLISHABLE_KEY/);
+});
+
+test('auth state starts private and maps only the application user shape', () => {
+  assert.deepEqual(INITIAL_AUTH_STATE, {
+    user: null,
+    isAuthenticated: false,
+    isLoadingAuth: true,
+    authChecked: false,
+  });
+  assert.deepEqual(toAppUser({ id: 'u1', email: 'kid@example.com', user_metadata: { role: 'admin' } }), {
+    id: 'u1', email: 'kid@example.com', role: 'user',
+  });
+  assert.equal(toAppUser({ id: 'u1', email: 'a@b.co' }, 'admin').role, 'admin');
+  assert.equal(toAppUser(null), null);
+});
+
+test('authenticated user replacement is detectable for private-cache clearing', () => {
+  assert.equal(didAuthenticatedUserChange(null, 'u1'), false);
+  assert.equal(didAuthenticatedUserChange('u1', 'u1'), false);
+  assert.equal(didAuthenticatedUserChange('u1', 'u2'), true);
+});
+
+test('auth wiring uses Supabase, protects routes, and clears private caches', () => {
+  const context = read('src/lib/AuthContext.jsx');
+  const routes = read('src/components/ProtectedRoute.jsx');
+  const app = read('src/App.jsx');
+  const authSources = [
+    context,
+    read('src/pages/Login.jsx'),
+    read('src/pages/Register.jsx'),
+    read('src/pages/ForgotPassword.jsx'),
+    read('src/pages/ResetPassword.jsx'),
+    read('src/lib/PageNotFound.jsx'),
+  ].join('\n');
+
+  assert.match(context, /getSession\(\)/);
+  assert.match(context, /getUser\(\)/);
+  assert.match(context, /onAuthStateChange/);
+  assert.match(context, /clearSignedUrlCache\(\)/);
+  assert.match(context, /queryClientInstance\.clear\(\)/);
+  assert.match(routes, /isLoadingAuth \|\| !authChecked/);
+  assert.match(routes, /<Navigate to=\{`\/login\?returnTo=/);
+  assert.match(app, /path="\/login"/);
+  assert.match(app, /path="\/reset-password"/);
+  assert.doesNotMatch(authSources, /base44\.auth/);
+  assert.doesNotMatch(authSources, /user_metadata[^\n]*role/);
 });

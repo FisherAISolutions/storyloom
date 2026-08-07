@@ -27,7 +27,7 @@ Delete functions add no product behavior because no React component calls these 
 
 Database services expose schema-native `photo_path`, `character_image_path`, `image_path`, and `cover_image_path`. They do not synthesize Base44-style URL fields and never persist a signed URL.
 
-UI migration will resolve a path explicitly through the matching storage helper. Signed URLs default to five minutes and are cached in memory by user, bucket, and path until 30 seconds before expiration. Storage operations validate the allowlisted bucket and require the first path segment to equal the authenticated user's UUID before Supabase RLS performs the authoritative check. Phase 4 must call `clearSignedUrlCache()` on logout and user changes.
+UI migration will resolve a path explicitly through the matching storage helper. Signed URLs default to five minutes and are cached in memory by user, bucket, and path until 30 seconds before expiration. Storage operations validate the allowlisted bucket and require the first path segment to equal the authenticated user's UUID before Supabase RLS performs the authoritative check. Phase 4 now calls `clearSignedUrlCache()` and clears TanStack Query data on logout and authenticated-user changes.
 
 ## Errors
 
@@ -53,4 +53,4 @@ Owner-filtered `get`, `update`, and `remove` operations return `NOT_FOUND` for b
 
 ## What remains on Base44
 
-All React authentication, entity CRUD, uploads, LLM calls, and image generation remain on Base44. Phase 4 will replace authentication and explicitly wire auth routes/state. Later phases will migrate CRUD/storage and then server-side OpenAI execution.
+React authentication now uses Supabase. Entity CRUD, uploads, LLM calls, and image generation remain temporarily on Base44. Later phases will migrate CRUD/storage and then server-side OpenAI execution.

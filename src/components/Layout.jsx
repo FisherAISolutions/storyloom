@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
-import { Home, Sparkles, Users, BookMarked, BookOpen } from 'lucide-react';
+import { Home, Sparkles, Users, BookMarked, BookOpen, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/lib/AuthContext';
 
 const nav = [
   { to: '/', label: 'Home', icon: Home },
@@ -11,6 +13,17 @@ const nav = [
 
 export default function Layout() {
   const location = useLocation();
+  const { logout } = useAuth();
+  const [logoutError, setLogoutError] = useState('');
+
+  const handleLogout = async () => {
+    setLogoutError('');
+    try {
+      await logout();
+    } catch {
+      setLogoutError('Could not log out. Please try again.');
+    }
+  };
   return (
     <div className="min-h-screen bg-[#fdfbf7] text-stone-800">
       <header className="sticky top-0 z-40 border-b border-stone-200/70 bg-[#fdfbf7]/80 backdrop-blur-md">
@@ -21,6 +34,7 @@ export default function Layout() {
             </div>
             <span className="font-display text-xl font-semibold tracking-tight">Storyloom</span>
           </Link>
+          <div className="flex items-center gap-2">
           <nav className="hidden items-center gap-1 md:flex">
             {nav.map(({ to, label, icon: Icon }) => {
               const active = location.pathname === to;
@@ -38,8 +52,13 @@ export default function Layout() {
               );
             })}
           </nav>
+          <button onClick={() => { void handleLogout(); }} className="rounded-full p-2 text-stone-500 hover:bg-stone-200/60 hover:text-stone-900" aria-label="Log out">
+            <LogOut className="h-4 w-4" />
+          </button>
+          </div>
         </div>
       </header>
+      {logoutError && <p role="alert" className="mx-auto max-w-7xl px-5 pt-3 text-sm text-red-600">{logoutError}</p>}
       <main className="mx-auto max-w-7xl px-5 py-8 pb-24 md:pb-12">
         <Outlet />
       </main>

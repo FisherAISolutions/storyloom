@@ -25,6 +25,7 @@ Start with `README.md` for the currently checked-in local setup. Read `docs/migr
 - Run OpenAI calls and privileged operations in Supabase Edge Functions or another trusted server environment.
 - Do not weaken or bypass RLS for convenience.
 - Do not attempt to migrate Base44 users, passwords, IDs, stories, or database records.
+- Keep future Stripe billing server-authoritative: subscription state, tiers, entitlements, and AI quotas must come from webhook-maintained database state or trusted server logic, never editable user metadata or browser state.
 
 ## Key Files
 
