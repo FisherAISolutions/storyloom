@@ -116,9 +116,9 @@ export default function Home() {
       {/* How it works */}
       <section className="grid gap-4 md:grid-cols-3 md:gap-6">
         {[
-        { n: '01', t: 'Choose or imagine', d: 'Pick a watercolor template or type your own idea — pirates, fairies, brave little otters.' },
-        { n: '02', t: 'AI paints the pages', d: 'The story is written and each page is illustrated as a soft watercolor scene.' },
-        { n: '03', t: 'Star your child', d: 'Upload a photo to create a storybook character, then edit every page your way.' }].
+        { n: '01', t: 'Star your child', d: 'Upload a photo to create a storybook character of your child.' },
+        { n: '02', t: 'Choose or imagine', d: 'Pick a template or type your own idea — pirates, fairies, brave little otters.' },,
+        { n: '03', t: 'AI paints the pages', d: 'The story is written and each page is illustrated in the style you choose, then edit the story to your liking.' }].
         map((s) =>
         <div key={s.n} className="rounded-2xl border border-stone-200 bg-white p-6">
             <span className="font-mono text-xs text-stone-400">{s.n}</span>
