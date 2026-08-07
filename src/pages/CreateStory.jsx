@@ -13,7 +13,6 @@ import CharacterSlots from '@/components/CharacterSlots';
 import * as storiesService from '@/services/stories';
 import * as storyPagesService from '@/services/storyPages';
 import * as charactersService from '@/services/characters';
-import { persistStoryPageImage } from '@/services/storage';
 
 /** Convert UI slots into the characters array used by the AI. */
 function slotsToCharacters(slots, savedCharacters) {
@@ -100,13 +99,11 @@ export default function CreateStory() {
       let coverPath = null;
       for (let i = 0; i < content.pages.length; i++) {
         setProgress(`Painting page ${i + 1} of ${content.pages.length}…`);
-        const providerUrl = await generatePageImage({
+        const imagePath = await generatePageImage({
+          storyId: story.id,
+          pageNumber: i + 1,
           text: content.pages[i].text,
-          theme,
-          characters,
-          artStyle,
         });
-        const imagePath = await persistStoryPageImage(story.id, i + 1, providerUrl);
         if (i === 0) coverPath = imagePath;
         await storyPagesService.create({
           story_id: story.id,

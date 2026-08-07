@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { generatePageImage, resolveStoryCharacters, translateStory } from '@/lib/storyStudio';
+import { generatePageImage, translateStory } from '@/lib/storyStudio';
 import { downloadStoryPdf } from '@/lib/storyPdf';
 import CoverCreator from '@/components/CoverCreator';
 import ContinueStoryModal from '@/components/ContinueStoryModal';
@@ -14,13 +14,12 @@ import { cn } from '@/lib/utils';
 import { invalidatePageTranslations, shouldSyncCoverForPage } from '@/lib/storyState';
 import * as storiesService from '@/services/stories';
 import * as storyPagesService from '@/services/storyPages';
-import { STORAGE_BUCKETS, persistStoryPageImage } from '@/services/storage';
+import { STORAGE_BUCKETS } from '@/services/storage';
 
 export default function StoryEditor() {
   const { id } = useParams();
   const [story, setStory] = useState(null);
   const [pages, setPages] = useState([]);
-  const [storyCharacters, setStoryCharacters] = useState([]);
   const [current, setCurrent] = useState(0);
   const [draft, setDraft] = useState('');
   const [editing, setEditing] = useState(false);
@@ -42,8 +41,6 @@ export default function StoryEditor() {
         const ps = await storyPagesService.listByStory(id);
         setPages(ps);
         if (ps[0]) setDraft(ps[0].text);
-        const chars = await resolveStoryCharacters(s);
-        setStoryCharacters(chars);
       } catch (e) { setError(e?.message || 'This story could not be loaded.'); }
       setLoading(false);
     })();
@@ -90,13 +87,11 @@ export default function StoryEditor() {
     if (!page || !story) return;
     setRegenerating(true);
     try {
-      const providerUrl = await generatePageImage({
+      const imagePath = await generatePageImage({
+        storyId: story.id,
+        pageNumber: page.page_number,
         text: draft || page.text,
-        theme: story.theme,
-        characters: storyCharacters,
-        artStyle: story.art_style,
       });
-      const imagePath = await persistStoryPageImage(story.id, page.page_number, providerUrl);
       const updated = await storyPagesService.update(page.id, { image_path: imagePath, text: draft || page.text });
       const copy = [...pages];
       copy[current] = updated;
@@ -115,8 +110,7 @@ export default function StoryEditor() {
     if (story.translations && story.translations[lang]) return;
     setTranslating(true);
     try {
-      const texts = pages.map((p) => p.text);
-      const translated = await translateStory({ texts, language: lang });
+      const translated = await translateStory({ storyId: story.id, language: lang });
       const translations = { ...(story.translations || {}), [lang]: translated };
       const updated = await storiesService.update(story.id, { translations });
       setStory({ ...story, translations });

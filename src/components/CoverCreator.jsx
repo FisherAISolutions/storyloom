@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { generateCover } from '@/services/ai';
 import { getStylePrompt, DEFAULT_ART_STYLE } from '@/lib/artStyles';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Wand2, Save, X } from 'lucide-react';
-import { Image } from '@/components/ui/image';
 import PrivateImage from '@/components/PrivateImage';
 import * as storiesService from '@/services/stories';
-import { STORAGE_BUCKETS, persistStoryCoverImage } from '@/services/storage';
+import { STORAGE_BUCKETS } from '@/services/storage';
 
 export default function CoverCreator({ story, onClose, onSaved }) {
   const [prompt, setPrompt] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [imagePath, setImagePath] = useState('');
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -20,15 +19,15 @@ export default function CoverCreator({ story, onClose, onSaved }) {
     setPrompt(
       `A children's book cover illustration for "${story.title}". ${story.summary || ''} Theme: ${story.theme}. Style: ${getStylePrompt(story.art_style || DEFAULT_ART_STYLE)}. No text or title in the image.`
     );
-    setImageUrl('');
+    setImagePath('');
   }, [story]);
 
   async function generate() {
     setGenerating(true);
     setError('');
     try {
-      const { url } = await base44.integrations.Core.GenerateImage({ prompt });
-      setImageUrl(url);
+      const result = await generateCover(story.id, prompt);
+      setImagePath(result.cover_image_path);
     } catch (e) { setError(e?.message || 'The cover could not be painted.'); }
     setGenerating(false);
   }
@@ -36,9 +35,8 @@ export default function CoverCreator({ story, onClose, onSaved }) {
   async function save() {
     setSaving(true);
     try {
-      const coverImagePath = await persistStoryCoverImage(story.id, imageUrl);
-      await storiesService.update(story.id, { cover_image_path: coverImagePath, status: story.status === 'generating' ? 'ready' : story.status });
-      onSaved?.(coverImagePath);
+      await storiesService.update(story.id, { cover_image_path: imagePath, status: story.status === 'generating' ? 'ready' : story.status });
+      onSaved?.(imagePath);
       onClose?.();
     } catch (e) { setError(e?.message || 'The cover could not be saved.'); }
     setSaving(false);
@@ -61,13 +59,13 @@ export default function CoverCreator({ story, onClose, onSaved }) {
             <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={6} className="resize-none" />
             <Button onClick={generate} disabled={generating} className="w-full rounded-full bg-stone-900 hover:bg-stone-800">
               {generating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-              {generating ? 'Painting…' : imageUrl ? 'Repaint cover' : 'Generate cover'}
+              {generating ? 'Painting…' : imagePath ? 'Repaint cover' : 'Generate cover'}
             </Button>
           </div>
           <div className="flex flex-col">
             <div className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-stone-200 bg-stone-50">
-              {imageUrl ? (
-                <Image src={imageUrl} alt="cover" fittingType="fill" className="h-full w-full" />
+              {imagePath ? (
+                <PrivateImage bucket={STORAGE_BUCKETS.STORY_IMAGES} path={imagePath} alt="cover" fittingType="fill" className="h-full w-full" />
               ) : story.cover_image_path ? (
                 <PrivateImage bucket={STORAGE_BUCKETS.STORY_IMAGES} path={story.cover_image_path} alt="cover" fittingType="fill" className="h-full w-full" />
               ) : (
@@ -79,7 +77,7 @@ export default function CoverCreator({ story, onClose, onSaved }) {
                 </div>
               )}
             </div>
-            <Button onClick={save} disabled={!imageUrl || saving} className="mt-3 rounded-full bg-stone-900 hover:bg-stone-800">
+            <Button onClick={save} disabled={!imagePath || saving} className="mt-3 rounded-full bg-stone-900 hover:bg-stone-800">
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Save cover
             </Button>
           </div>

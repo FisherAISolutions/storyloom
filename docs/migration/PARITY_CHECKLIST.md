@@ -116,6 +116,10 @@ Use the untouched live Base44 app as the behavioral reference. Mark an item comp
 
 Static contract tests verify newest-first story/character ordering, ascending page ordering, caller ownership rejection, path-only persistence, deterministic user-prefixed storage paths, per-page translation invalidation, page-1-only cover synchronization, private PDF downloads, and auth cache clearing. Build and lint validation also passed. Against the configured project, an anonymous REST table read was denied (401) and anonymous `story-images` listing returned zero objects. End-to-end image copying/PDF rendering against a real signed-in account and two-user RLS Storage isolation were not performed in this phase, so the corresponding checklist items remain unchecked.
 
+### Phase 6 validation note
+
+IMPLEMENTED: authenticated action routing, ownership checks, strict structured-output validation, supported-count/style/language allowlists, private-photo vision, reference-photo portrait editing, direct server-side image persistence, safe errors, usage logging, and a future entitlement hook. MOCK/STATIC VERIFIED: frontend isolation from OpenAI, absence of active Base44 AI calls/provider URL persistence, authorization/validation code paths, deterministic generated paths, page/translation count validation, entitlement ordering, and usage logging. LIVE OPENAI VERIFIED: not yet; no remote function deployment or billable provider request was authorized/performed, so AI parity checklist boxes remain unchecked pending normal-account testing.
+
 - [ ] Built frontend contains no OpenAI key or Supabase service-role key.
 - [ ] Edge Functions verify the caller and row/storage ownership for every referenced resource.
 - [ ] AI endpoints validate inputs, structured outputs, file types/sizes, and enforce rate/cost controls.

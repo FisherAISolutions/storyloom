@@ -121,54 +121,6 @@ export async function uploadCharacterPhoto(characterId, file) {
   return upload(STORAGE_BUCKETS.CHARACTER_PHOTOS, path, file, { contentType: file.type, upsert: true });
 }
 
-async function downloadGeneratedImage(url) {
-  if (typeof url !== 'string' || !/^https:\/\//i.test(url)) {
-    throw new ServiceError('VALIDATION', 'The image provider returned an invalid URL.');
-  }
-  let response;
-  try {
-    response = await fetch(url, { credentials: 'omit' });
-  } catch (error) {
-    throw new ServiceError('STORAGE', 'The generated image could not be copied into private storage.', { cause: error });
-  }
-  if (!response.ok) throw new ServiceError('STORAGE', 'The generated image could not be downloaded.');
-  const blob = await response.blob();
-  requireImageType(blob.type);
-  return blob;
-}
-
-async function persistGeneratedImage(bucket, suffix, providerUrl) {
-  const blob = await downloadGeneratedImage(providerUrl);
-  const path = await ownedImagePath(suffix, blob.type);
-  return upload(bucket, path, blob, { contentType: blob.type, upsert: true });
-}
-
-export const persistCharacterImage = (characterId, providerUrl) =>
-  persistGeneratedImage(
-    STORAGE_BUCKETS.CHARACTER_IMAGES,
-    `${requireId(characterId, 'Character ID')}/portrait`,
-    providerUrl
-  );
-
-export const persistStoryPageImage = (storyId, pageNumber, providerUrl) => {
-  const id = requireId(storyId, 'Story ID');
-  if (!Number.isInteger(pageNumber) || pageNumber <= 0) {
-    throw new ServiceError('VALIDATION', 'Page number must be a positive integer.');
-  }
-  return persistGeneratedImage(
-    STORAGE_BUCKETS.STORY_IMAGES,
-    `${id}/pages/${String(pageNumber).padStart(3, '0')}`,
-    providerUrl
-  );
-};
-
-export const persistStoryCoverImage = (storyId, providerUrl) =>
-  persistGeneratedImage(
-    STORAGE_BUCKETS.STORY_IMAGES,
-    `${requireId(storyId, 'Story ID')}/cover`,
-    providerUrl
-  );
-
 export const getCharacterPhotoUrl = (path, expiresIn) =>
   getSignedUrl(STORAGE_BUCKETS.CHARACTER_PHOTOS, path, expiresIn);
 

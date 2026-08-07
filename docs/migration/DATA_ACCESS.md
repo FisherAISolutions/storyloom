@@ -53,4 +53,6 @@ Owner-filtered `get`, `update`, and `remove` operations return `NOT_FOUND` for b
 
 ## What remains on Base44
 
-React authentication, entity CRUD, uploads, durable generated media, display, and PDF downloads use Supabase. Base44 remains only for LLM and image generation plus its temporary supporting client/build integration. Provider image URLs exist only in local variables long enough to copy their bytes into private Supabase Storage; they are never database values. The OpenAI phase will replace this browser compatibility bridge with trusted server-side generation and direct Storage persistence.
+React authentication, entity CRUD, uploads, durable generated media, display, PDF downloads, and AI invocation use Supabase. `src/services/ai.js` is the single browser AI boundary and invokes the authenticated `story-ai` Edge Function. OpenAI runs only in that function; generated image bytes are uploaded there and the browser receives only schema-native private paths. The Phase 5 provider-URL/browser-copy bridge has been removed.
+
+The Edge Function performs explicit story/character ownership reads with the caller's JWT and RLS. It uses the service role only for trusted `ai_usage` inserts after verifying the caller. Stable errors flow through the AI service as `ServiceError` without exposing provider details. Setup and deployment are documented in `OPENAI_SETUP.md`.

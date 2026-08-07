@@ -120,7 +120,7 @@ test('auth wiring uses Supabase, protects routes, and clears private caches', ()
   assert.doesNotMatch(authSources, /user_metadata[^\n]*role/);
 });
 
-test('runtime CRUD and uploads no longer use Base44 entities', () => {
+test('runtime CRUD, uploads, and AI no longer use Base44 APIs', () => {
   const runtimeFiles = [
     'src/pages/CreateStory.jsx', 'src/pages/Characters.jsx', 'src/pages/Library.jsx',
     'src/pages/StoryEditor.jsx', 'src/components/ContinueStoryModal.jsx',
@@ -129,17 +129,15 @@ test('runtime CRUD and uploads no longer use Base44 entities', () => {
   const source = runtimeFiles.map(read).join('\n');
   assert.doesNotMatch(source, /base44\.entities|UploadFile/);
   assert.doesNotMatch(source, /photo_url|character_image_url|cover_image_url|\bimage_url\b/);
-  assert.match(source, /InvokeLLM/);
-  assert.match(source, /GenerateImage/);
+  assert.doesNotMatch(source, /base44\.integrations|InvokeLLM|GenerateImage/);
 });
 
-test('generated and uploaded images use deterministic private user-prefixed paths', () => {
+test('original photos use deterministic private user-prefixed paths', () => {
   const storage = read('src/services/storage.js');
   assert.match(storage, /segments\[0\] !== userId/);
   assert.match(storage, /`\$\{user\.id\}\/\$\{suffix\}\.\$\{requireImageType\(type\)\}`/);
   assert.match(storage, /`\$\{id\}\/original`/);
-  assert.match(storage, /`\$\{id\}\/pages\/\$\{String\(pageNumber\)\.padStart\(3, '0'\)\}`/);
-  assert.match(storage, /persistStoryCoverImage/);
+  assert.doesNotMatch(storage, /providerUrl|downloadGeneratedImage|persistGeneratedImage/);
 });
 
 test('editing invalidates only the corresponding translated page', () => {
@@ -163,4 +161,55 @@ test('PDF downloads private paths and does not mutate page ordering', () => {
   assert.match(pdf, /\[\.\.\.pages\]\.sort/);
   assert.match(pdf, /story\.cover_image_path \|\| orderedPages\[0\]\?\.image_path/);
   assert.doesNotMatch(pdf, /fetch\(/);
+});
+
+test('frontend AI uses one authenticated Supabase Edge Function boundary', () => {
+  const ai = read('src/services/ai.js');
+  const frontend = [ai, read('src/lib/storyStudio.js'), read('src/components/CoverCreator.jsx')].join('\n');
+  assert.match(ai, /functions\.invoke\('story-ai'/);
+  assert.doesNotMatch(frontend, /api\.openai\.com|OPENAI_API_KEY|VITE_OPENAI_API_KEY|base44/);
+});
+
+test('Edge Function authenticates, validates actions and ownership, and gates provider calls', () => {
+  const edge = read('supabase/functions/story-ai/index.ts');
+  assert.match(edge, /auth\.getUser\(token\)/);
+  assert.match(edge, /throw new AppError\('AUTH_REQUIRED'/);
+  assert.match(edge, /throw new AppError\('VALIDATION', 'Action is not supported\.'/);
+  assert.match(edge, /ownedStory\(client, storyId\)/);
+  assert.match(edge, /ownedCharacter\(client, characterId\)/);
+  assert.match(edge, /assertAiEntitlement/);
+  assert.ok(edge.indexOf('assertAiEntitlement') < edge.indexOf("structured(storyPrompt"));
+  assert.match(edge, /rateLimit\(userId, action\)/);
+});
+
+test('AI contracts bound counts, styles, languages, and validate structured output', () => {
+  const config = read('supabase/functions/story-ai/config.ts');
+  const edge = read('supabase/functions/story-ai/index.ts');
+  assert.match(config, /STORY_PAGE_COUNTS = new Set\(\[6, 10, 15\]\)/);
+  assert.match(config, /CONTINUATION_PAGE_COUNTS = new Set\(\[3, 5, 10\]\)/);
+  for (const style of ['watercolor', 'cartoon', 'crayon', 'pencil', 'claymation', 'collage']) assert.match(config, new RegExp(`${style}:`));
+  for (const language of ['es', 'fr', 'de', 'pt', 'ja', 'zh']) assert.match(config, new RegExp(`${language}:`));
+  assert.match(edge, /value\.pages\.length !== count/);
+  assert.match(edge, /value\.translations\.length !== texts\.length/);
+  assert.match(edge, /AI_RESPONSE_INVALID/);
+});
+
+test('generated images are decoded and uploaded server-side to deterministic paths', () => {
+  const edge = read('supabase/functions/story-ai/index.ts');
+  const openai = read('supabase/functions/story-ai/openai.ts');
+  assert.match(openai, /b64_json/);
+  assert.match(openai, /image\/png/);
+  assert.match(edge, /`\$\{userId\}\/\$\{characterId\}\/portrait\.png`/);
+  assert.match(edge, /pages\/\$\{String\(pageNumber\)\.padStart\(3, '0'\)\}\.png/);
+  assert.match(edge, /`\$\{userId\}\/\$\{storyId\}\/cover\.png`/);
+  assert.doesNotMatch(edge, /providerUrl|signedUrl/);
+});
+
+test('AI usage logging and future server-side entitlement hook exist', () => {
+  const edge = read('supabase/functions/story-ai/index.ts');
+  assert.match(edge, /service\.from\('ai_usage'\)\.insert/);
+  assert.match(edge, /input_tokens:/);
+  assert.match(edge, /output_tokens:/);
+  assert.match(edge, /image_count:/);
+  assert.match(edge, /Future Stripe\/webhook-maintained entitlements/);
 });

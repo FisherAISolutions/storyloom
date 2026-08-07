@@ -185,7 +185,15 @@ Private images render through cached, short-lived signed URLs. PDF export bypass
 
 Initial generation points `cover_image_path` at page 1's stored object. Repainting page 1 updates both its page path and the cover path. Repainting later pages does not change the cover. Saving a custom cover writes a separate `{user_id}/{story_id}/cover.{ext}` object, so it can intentionally diverge until page 1 is repainted.
 
-Base44 now remains responsible only for `InvokeLLM`, `GenerateImage`, and the temporary SDK/Vite infrastructure needed by those calls. Legacy Base44-hosted templates, hero media, and favicon remain deferred. OpenAI and Stripe are not implemented; future billing remains compatible with stable Supabase user IDs and server-authoritative `ai_usage`/entitlement design.
+At the completion of Phase 5, Base44 remained responsible only for `InvokeLLM`, `GenerateImage`, and the temporary SDK/Vite infrastructure needed by those calls. Legacy Base44-hosted templates, hero media, and favicon remained deferred. OpenAI and Stripe were not implemented in that phase; future billing remained compatible with stable Supabase user IDs and server-authoritative `ai_usage`/entitlement design.
+
+## Phase 6 OpenAI Edge Functions
+
+All active AI operations now use the authenticated Supabase `story-ai` Edge Function: initial structured stories, private-photo analysis, reference-photo character portraits, page illustrations, continuation suggestions/pages, ordered translations, and custom covers. Prompts were moved server-side without intentional semantic rewriting. Strict schemas and application validation enforce usable content and exact page/translation counts.
+
+OpenAI-generated image bytes are validated and uploaded directly inside the function to deterministic private Storage paths. No OpenAI URL, image data, API key, service-role credential, or subscription state enters browser persistence. The former Base44 URL-to-browser-to-Storage bridge is removed.
+
+Base44 is no longer an active data or AI provider. Its SDK package/client, Vite plugin/configuration, app-parameter compatibility code, historical files, favicon, and hosted static images remain only for the dedicated cleanup phase. Stripe remains unimplemented; `assertAiEntitlement()` is the server-authoritative insertion point for later webhook-maintained subscriptions and quotas. See `OPENAI_SETUP.md`.
 
 ## Phase 1 validation
 

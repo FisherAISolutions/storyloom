@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { suggestContinuation, generateContinuation, generatePageImage, resolveStoryCharacters } from '@/lib/storyStudio';
+import { suggestContinuation, generateContinuation, generatePageImage } from '@/lib/storyStudio';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Wand2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import * as storiesService from '@/services/stories';
 import * as storyPagesService from '@/services/storyPages';
-import { persistStoryPageImage } from '@/services/storage';
 
 export default function ContinueStoryModal({ story, pages, onClose, onDone }) {
   const [suggestion, setSuggestion] = useState('');
@@ -20,8 +19,7 @@ export default function ContinueStoryModal({ story, pages, onClose, onDone }) {
     let alive = true;
     (async () => {
       try {
-        const last = pages.slice(-2).map((p) => p.text);
-        const s = await suggestContinuation({ title: story.title, summary: story.summary, lastPages: last });
+        const s = await suggestContinuation({ storyId: story.id });
         if (alive) setSuggestion(s || '');
       } catch {
         if (alive) setSuggestion('');
@@ -39,13 +37,9 @@ export default function ContinueStoryModal({ story, pages, onClose, onDone }) {
     setRunning(true);
     setError('');
     try {
-      const characters = await resolveStoryCharacters(story);
       setProgress('Writing new pages…');
       const content = await generateContinuation({
-        title: story.title,
-        summary: story.summary,
-        theme: story.theme,
-        characters,
+        storyId: story.id,
         pageCount,
         continuationPrompt: suggestion.trim(),
       });
@@ -57,14 +51,12 @@ export default function ContinueStoryModal({ story, pages, onClose, onDone }) {
       const newRecords = [];
       for (let i = 0; i < content.pages.length; i++) {
         setProgress(`Painting page ${i + 1} of ${content.pages.length}…`);
-        const providerUrl = await generatePageImage({
-          text: content.pages[i].text,
-          theme: story.theme,
-          characters,
-          artStyle: story.art_style,
-        });
         const pageNumber = startNumber + i + 1;
-        const imagePath = await persistStoryPageImage(story.id, pageNumber, providerUrl);
+        const imagePath = await generatePageImage({
+          storyId: story.id,
+          pageNumber,
+          text: content.pages[i].text,
+        });
         const rec = await storyPagesService.create({
           story_id: story.id,
           page_number: pageNumber,

@@ -7,7 +7,7 @@ import { Loader2, Upload, Sparkles } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import PrivateImage from '@/components/PrivateImage';
 import * as charactersService from '@/services/characters';
-import { STORAGE_BUCKETS, getCharacterPhotoUrl, persistCharacterImage, uploadCharacterPhoto } from '@/services/storage';
+import { STORAGE_BUCKETS, uploadCharacterPhoto } from '@/services/storage';
 
 export default function Characters() {
   const [characters, setCharacters] = useState([]);
@@ -49,12 +49,10 @@ export default function Characters() {
       const character = await charactersService.create({ name: name.trim(), age: age ? Number(age) : undefined });
       const photoPath = await uploadCharacterPhoto(character.id, photo);
       await charactersService.update(character.id, { photo_path: photoPath });
-      const photoUrl = await getCharacterPhotoUrl(photoPath);
       setProgress('Studying your child’s likeness…');
-      const description = await analyzeChildCharacter(photoUrl);
+      const description = await analyzeChildCharacter(character.id);
       setProgress('Painting the storybook character…');
-      const providerUrl = await generateCharacterImage(description, photoUrl);
-      const characterImagePath = await persistCharacterImage(character.id, providerUrl);
+      const characterImagePath = await generateCharacterImage(character.id, description);
       await charactersService.update(character.id, {
         description,
         character_image_path: characterImagePath,
