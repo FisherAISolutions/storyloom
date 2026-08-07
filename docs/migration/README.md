@@ -4,7 +4,7 @@
 
 This repository is the migration copy of Story Loom Kids. The original live Base44 application remains untouched and is the behavioral reference. There are no production customers or records to transfer; Supabase will start with fresh users and data. Migration work must preserve the existing interface, workflows, prompts, art styles, story behavior, and generated-output intent.
 
-Phase 1 established the audit and documentation. Phase 2 adds a source-controlled Supabase backend foundation while the application continues to run on Base44.
+Phase 1 established the audit and documentation. Phase 2 added the source-controlled Supabase backend foundation. Phase 3 adds a lazy browser client and schema-aligned service layer while the application continues to run on Base44.
 
 ## Current architecture
 
@@ -160,6 +160,10 @@ The detailed executable checklist is in `PARITY_CHECKLIST.md`. High-risk parity 
 ## Phase 2 foundation
 
 The destination backend is defined by `supabase/migrations/20260807000000_storyloom_foundation.sql`, with setup and verification instructions in `SUPABASE_SETUP.md`. It creates fresh Supabase-owned UUID data, private storage, strict RLS, same-owner relational constraints, safe profile creation, and trusted-backend-only AI usage accounting. No React runtime path is switched in this phase.
+
+## Phase 3 data-access foundation
+
+The browser client, authenticated ownership model, CRUD service APIs, private Storage helpers, temporary signed-URL strategy, and service error contract are documented in `DATA_ACCESS.md`. These modules are not wired into React yet, so Base44 remains the active runtime. Phase 4 will migrate authentication and clear private URL cache state on logout/user changes.
 
 ## Phase 1 validation
 
