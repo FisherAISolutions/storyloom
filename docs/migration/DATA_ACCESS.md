@@ -1,6 +1,6 @@
 # Supabase Data Access Foundation
 
-Phase 3 adds the browser infrastructure that later migrations will consume. It is intentionally not imported by the current React pages or `AuthContext`, so an unconfigured Supabase project cannot break the still-active Base44 runtime.
+Phase 3 added the browser infrastructure. Phase 5 wires it into all active application CRUD, uploads, private image display, and PDF image retrieval. Supabase configuration is therefore required for authenticated application routes.
 
 ## Client and environment
 
@@ -19,7 +19,7 @@ Database RLS and the Phase 2 composite foreign keys remain authoritative. Client
 - `stories.js`: `list`, `get`, `create`, `update`, and service-only `remove`. Lists by `created_at DESC`.
 - `storyPages.js`: `listByStory`, `create`, `update`, and service-only `remove`. Lists by `page_number ASC`.
 - `characters.js`: `list`, `get`, `create`, `update`, and service-only `remove`. Lists by `created_at DESC`.
-- `storage.js`: allowlisted-bucket `getSignedUrl`, `download`, `upload`, and `remove`, plus character/story URL helpers and `clearSignedUrlCache`.
+- `storage.js`: allowlisted-bucket `getSignedUrl`, `download`, `upload`, and `remove`; deterministic original/generated image persistence; character/story URL helpers; and `clearSignedUrlCache`.
 
 Delete functions add no product behavior because no React component calls these modules yet.
 
@@ -27,7 +27,7 @@ Delete functions add no product behavior because no React component calls these 
 
 Database services expose schema-native `photo_path`, `character_image_path`, `image_path`, and `cover_image_path`. They do not synthesize Base44-style URL fields and never persist a signed URL.
 
-UI migration will resolve a path explicitly through the matching storage helper. Signed URLs default to five minutes and are cached in memory by user, bucket, and path until 30 seconds before expiration. Storage operations validate the allowlisted bucket and require the first path segment to equal the authenticated user's UUID before Supabase RLS performs the authoritative check. Phase 4 now calls `clearSignedUrlCache()` and clears TanStack Query data on logout and authenticated-user changes.
+`PrivateImage` resolves a path explicitly through the matching storage helper. Signed URLs default to five minutes and are cached in memory by user, bucket, and path until 30 seconds before expiration. Storage operations validate the allowlisted bucket and require the first path segment to equal the authenticated user's UUID before Supabase RLS performs the authoritative check. Phase 4 calls `clearSignedUrlCache()` and clears all TanStack Query data on logout and authenticated-user changes. Current CRUD screens use component-local state rather than query entries, so no Base44 entity responses remain in the query cache.
 
 ## Errors
 
@@ -53,4 +53,4 @@ Owner-filtered `get`, `update`, and `remove` operations return `NOT_FOUND` for b
 
 ## What remains on Base44
 
-React authentication now uses Supabase. Entity CRUD, uploads, LLM calls, and image generation remain temporarily on Base44. Later phases will migrate CRUD/storage and then server-side OpenAI execution.
+React authentication, entity CRUD, uploads, durable generated media, display, and PDF downloads use Supabase. Base44 remains only for LLM and image generation plus its temporary supporting client/build integration. Provider image URLs exist only in local variables long enough to copy their bytes into private Supabase Storage; they are never database values. The OpenAI phase will replace this browser compatibility bridge with trusted server-side generation and direct Storage persistence.

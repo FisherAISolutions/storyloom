@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
 import { Loader2, BookOpen } from 'lucide-react';
-import { Image } from '@/components/ui/image';
+import PrivateImage from '@/components/PrivateImage';
+import * as storiesService from '@/services/stories';
+import { STORAGE_BUCKETS } from '@/services/storage';
 
 export default function Library() {
   const [stories, setStories] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    base44.entities.Story
-      .list('-created_date')
+    storiesService
+      .list()
       .then(setStories)
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -45,8 +46,8 @@ export default function Library() {
               className="group overflow-hidden rounded-2xl border border-stone-200 bg-white transition hover:-translate-y-1 hover:shadow-xl hover:shadow-stone-200"
             >
               <div className="relative aspect-[3/4] overflow-hidden bg-stone-100">
-                {s.cover_image_url ? (
-                  <Image src={s.cover_image_url} alt={s.title} fittingType="fill" className="h-full w-full transition duration-500 group-hover:scale-105" />
+                {s.cover_image_path ? (
+                  <PrivateImage bucket={STORAGE_BUCKETS.STORY_IMAGES} path={s.cover_image_path} alt={s.title} fittingType="fill" className="h-full w-full transition duration-500 group-hover:scale-105" fallback={<div className="flex h-full items-center justify-center"><BookOpen className="h-8 w-8 text-stone-300" /></div>} />
                 ) : (
                   <div className="flex h-full items-center justify-center"><BookOpen className="h-8 w-8 text-stone-300" /></div>
                 )}

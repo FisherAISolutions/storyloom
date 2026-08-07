@@ -72,7 +72,7 @@ Use the untouched live Base44 app as the behavioral reference. Mark an item comp
 - [ ] Translation output length/order is validated against story pages.
 - [ ] Page image regeneration uses the edited draft (if present), theme, resolved characters, and saved art style.
 - [ ] Repainting persists both page text and image as current behavior does.
-- [ ] Regenerating page 1 synchronizes `Story.cover_image_url` to the new page image.
+- [ ] Regenerating page 1 synchronizes `Story.cover_image_path` to the new page image path.
 - [ ] Regenerating any other page does not alter the cover.
 - [ ] Custom cover opens with the existing cover and a prefilled editable prompt.
 - [ ] Custom cover generation preserves title, summary, theme, art-style, and no-text prompt behavior.
@@ -111,6 +111,10 @@ Use the untouched live Base44 app as the behavioral reference. Mark an item comp
 - [ ] A representative story with all supported image formats exports and opens successfully.
 
 ## Security and final removal
+
+### Phase 5 validation note
+
+Static contract tests verify newest-first story/character ordering, ascending page ordering, caller ownership rejection, path-only persistence, deterministic user-prefixed storage paths, per-page translation invalidation, page-1-only cover synchronization, private PDF downloads, and auth cache clearing. Build and lint validation also passed. Against the configured project, an anonymous REST table read was denied (401) and anonymous `story-images` listing returned zero objects. End-to-end image copying/PDF rendering against a real signed-in account and two-user RLS Storage isolation were not performed in this phase, so the corresponding checklist items remain unchecked.
 
 - [ ] Built frontend contains no OpenAI key or Supabase service-role key.
 - [ ] Edge Functions verify the caller and row/storage ownership for every referenced resource.

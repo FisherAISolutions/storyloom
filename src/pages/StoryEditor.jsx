@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
 import { generatePageImage, resolveStoryCharacters, translateStory } from '@/lib/storyStudio';
 import { downloadStoryPdf } from '@/lib/storyPdf';
 import CoverCreator from '@/components/CoverCreator';
@@ -9,9 +8,13 @@ import LanguagePicker from '@/components/LanguagePicker';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ChevronLeft, ChevronRight, RefreshCw, Save, Loader2, Pencil, BookOpen, Download, Palette, Plus } from 'lucide-react';
-import { Image } from '@/components/ui/image';
+import PrivateImage from '@/components/PrivateImage';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { invalidatePageTranslations, shouldSyncCoverForPage } from '@/lib/storyState';
+import * as storiesService from '@/services/stories';
+import * as storyPagesService from '@/services/storyPages';
+import { STORAGE_BUCKETS, persistStoryPageImage } from '@/services/storage';
 
 export default function StoryEditor() {
   const { id } = useParams();
@@ -29,19 +32,19 @@ export default function StoryEditor() {
   const [continueOpen, setContinueOpen] = useState(false);
   const [language, setLanguage] = useState('en');
   const [translating, setTranslating] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     (async () => {
       try {
-        const s = await base44.entities.Story.get(id);
+        const s = await storiesService.get(id);
         setStory(s);
-        const ps = await base44.entities.StoryPage.filter({ story_id: id });
-        ps.sort((a, b) => a.page_number - b.page_number);
+        const ps = await storyPagesService.listByStory(id);
         setPages(ps);
         if (ps[0]) setDraft(ps[0].text);
         const chars = await resolveStoryCharacters(s);
         setStoryCharacters(chars);
-      } catch {}
+      } catch (e) { setError(e?.message || 'This story could not be loaded.'); }
       setLoading(false);
     })();
   }, [id]);
@@ -59,21 +62,18 @@ export default function StoryEditor() {
     if (!page) return;
     setSaving(true);
     try {
-      const updated = await base44.entities.StoryPage.update(page.id, { text: draft });
+      const updated = await storyPagesService.update(page.id, { text: draft });
       const copy = [...pages];
       copy[current] = updated;
       setPages(copy);
       // Translations for this page are now stale — drop them so they regenerate on next toggle.
       if (story.translations && Object.keys(story.translations).length) {
-        const translations = { ...story.translations };
-        for (const lang of Object.keys(translations)) {
-          if (Array.isArray(translations[lang])) translations[lang][current] = undefined;
-        }
-        await base44.entities.Story.update(story.id, { translations });
+        const translations = invalidatePageTranslations(story.translations, current);
+        await storiesService.update(story.id, { translations });
         setStory({ ...story, translations });
       }
       setEditing(false);
-    } catch {}
+    } catch (e) { setError(e?.message || 'The page text could not be saved.'); }
     setSaving(false);
   }
 
@@ -82,7 +82,7 @@ export default function StoryEditor() {
     setDownloading(true);
     try {
       await downloadStoryPdf(story, pages);
-    } catch {}
+    } catch (e) { setError(e?.message || 'The PDF could not be created.'); }
     setDownloading(false);
   }
 
@@ -90,21 +90,22 @@ export default function StoryEditor() {
     if (!page || !story) return;
     setRegenerating(true);
     try {
-      const url = await generatePageImage({
+      const providerUrl = await generatePageImage({
         text: draft || page.text,
         theme: story.theme,
         characters: storyCharacters,
         artStyle: story.art_style,
       });
-      const updated = await base44.entities.StoryPage.update(page.id, { image_url: url, text: draft || page.text });
+      const imagePath = await persistStoryPageImage(story.id, page.page_number, providerUrl);
+      const updated = await storyPagesService.update(page.id, { image_path: imagePath, text: draft || page.text });
       const copy = [...pages];
       copy[current] = updated;
       setPages(copy);
-      if (current === 0) {
-        await base44.entities.Story.update(story.id, { cover_image_url: url });
-        setStory({ ...story, cover_image_url: url });
+      if (shouldSyncCoverForPage(current)) {
+        await storiesService.update(story.id, { cover_image_path: imagePath });
+        setStory({ ...story, cover_image_path: imagePath });
       }
-    } catch {}
+    } catch (e) { setError(e?.message || 'The page could not be repainted.'); }
     setRegenerating(false);
   }
 
@@ -117,9 +118,9 @@ export default function StoryEditor() {
       const texts = pages.map((p) => p.text);
       const translated = await translateStory({ texts, language: lang });
       const translations = { ...(story.translations || {}), [lang]: translated };
-      const updated = await base44.entities.Story.update(story.id, { translations });
+      const updated = await storiesService.update(story.id, { translations });
       setStory({ ...story, translations });
-    } catch {}
+    } catch (e) { setError(e?.message || 'The story could not be translated.'); }
     setTranslating(false);
   }
 
@@ -141,7 +142,7 @@ export default function StoryEditor() {
   if (!page) {
     return (
       <div className="py-24 text-center">
-        <p className="text-stone-500">This story has no pages yet.</p>
+        <p className="text-stone-500">{error || 'This story has no pages yet.'}</p>
         <Link to="/create" className="mt-4 inline-block rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white">Create a story</Link>
       </div>
     );
@@ -174,7 +175,7 @@ export default function StoryEditor() {
         <CoverCreator
           story={story}
           onClose={() => setCoverOpen(false)}
-          onSaved={(url) => setStory({ ...story, cover_image_url: url })}
+          onSaved={(coverImagePath) => setStory({ ...story, cover_image_path: coverImagePath })}
         />
       )}
 
@@ -192,8 +193,8 @@ export default function StoryEditor() {
         {/* Image side */}
         <div className="relative overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-sm">
           <div className="relative aspect-[4/3] md:aspect-[3/4]">
-            {page.image_url ? (
-              <Image src={page.image_url} alt={`Page ${current + 1}`} fittingType="fill" className="h-full w-full" />
+            {page.image_path ? (
+              <PrivateImage bucket={STORAGE_BUCKETS.STORY_IMAGES} path={page.image_path} alt={`Page ${current + 1}`} fittingType="fill" className="h-full w-full" fallback={<div className="flex h-full items-center justify-center bg-stone-50"><BookOpen className="h-8 w-8 text-stone-300" /></div>} />
             ) : (
               <div className="flex h-full items-center justify-center bg-stone-50"><BookOpen className="h-8 w-8 text-stone-300" /></div>
             )}
@@ -295,6 +296,7 @@ export default function StoryEditor() {
           </div>
         </div>
       </div>
+      {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
     </div>
   );
 }

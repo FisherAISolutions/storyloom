@@ -4,7 +4,7 @@
 
 This repository is the migration copy of Story Loom Kids. The original live Base44 application remains untouched and is the behavioral reference. There are no production customers or records to transfer; Supabase will start with fresh users and data. Migration work must preserve the existing interface, workflows, prompts, art styles, story behavior, and generated-output intent.
 
-Phase 1 established the audit and documentation. Phase 2 added the Supabase backend foundation. Phase 3 added the browser service layer. Phase 4 moves normal user authentication to Supabase while CRUD, uploads, and AI remain temporarily on Base44.
+Phase 1 established the audit and documentation. Phase 2 added the Supabase backend foundation. Phase 3 added the browser service layer. Phase 4 moved normal user authentication to Supabase. Phase 5 makes Supabase authoritative for application CRUD and private Storage; Base44 remains only for temporary AI execution.
 
 ## Current architecture
 
@@ -163,17 +163,29 @@ The destination backend is defined by `supabase/migrations/20260807000000_storyl
 
 ## Phase 3 data-access foundation
 
-The browser client, authenticated ownership model, CRUD service APIs, private Storage helpers, temporary signed-URL strategy, and service error contract are documented in `DATA_ACCESS.md`. Phase 4 now uses the client for Auth only; CRUD and Storage services remain unwired until Phase 5.
+The browser client, authenticated ownership model, CRUD service APIs, private Storage helpers, temporary signed-URL strategy, and service error contract are documented in `DATA_ACCESS.md`. Phase 5 now consumes these services throughout the runtime application.
 
 ## Phase 4 authentication
 
 Supabase Auth is authoritative for email/password login, confirmation-link signup, Google OAuth initiation, password recovery, session persistence, protected routes, and logout. React receives only `{ id, email, role }`; roles come from `public.profiles`, and profile failures default to `user`. Logout and user replacement clear private signed URLs and TanStack Query data.
 
-Legacy Base44 access-token/query bootstrapping and every normal `base44.auth` call are removed. Base44 app ID, base URL, and functions-version configuration remain because entity and AI calls still use the tokenless `requiresAuth: false` client. This hybrid is provisional: it may fail or expose only the Base44 app's public data depending on backend configuration. No Supabase token is sent to Base44, and Phase 5 CRUD should follow promptly.
+Legacy Base44 access-token/query bootstrapping and every normal `base44.auth` call are removed. Base44 app ID, base URL, and functions-version configuration remain only because the temporary AI calls use the tokenless `requiresAuth: false` client. No Supabase token is sent to Base44.
 
 `OAuthConsent.jsx` was removed because it was unreachable, unimported, and solely implemented Base44 MCP platform authorization.
 
 Stripe billing remains a future dedicated phase. Stable Supabase user IDs and trusted AI usage records leave room for webhook-maintained customer/subscription/entitlement/quota tables. Browser state and editable auth metadata must never be authoritative for plan access.
+
+## Phase 5 CRUD and private Storage
+
+Story, StoryPage, and ChildCharacter runtime reads and writes now use the authenticated Supabase services. New generated records use Postgres UUIDs, derive ownership from Supabase Auth, and persist only `photo_path`, `character_image_path`, `image_path`, and `cover_image_path`.
+
+Original photos upload to `character-photos/{user_id}/{character_id}/original.{ext}`. Temporary Base44-generated image URLs are an isolated compatibility input only: the browser fetches the returned image without credentials, validates JPEG/PNG/WebP, uploads it to the appropriate private Supabase bucket, and persists only the resulting path. A provider response that cannot be safely fetched (including browser CORS failure) stops that generation step and is surfaced; the app never falls back to persisting the provider URL.
+
+Private images render through cached, short-lived signed URLs. PDF export bypasses display URLs and downloads authenticated blobs directly from `story-images`; it uses a custom cover when present, otherwise page 1, and sorts a copied page array.
+
+Initial generation points `cover_image_path` at page 1's stored object. Repainting page 1 updates both its page path and the cover path. Repainting later pages does not change the cover. Saving a custom cover writes a separate `{user_id}/{story_id}/cover.{ext}` object, so it can intentionally diverge until page 1 is repainted.
+
+Base44 now remains responsible only for `InvokeLLM`, `GenerateImage`, and the temporary SDK/Vite infrastructure needed by those calls. Legacy Base44-hosted templates, hero media, and favicon remain deferred. OpenAI and Stripe are not implemented; future billing remains compatible with stable Supabase user IDs and server-authoritative `ai_usage`/entitlement design.
 
 ## Phase 1 validation
 

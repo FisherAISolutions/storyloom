@@ -5,36 +5,42 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Wand2, Save, X } from 'lucide-react';
 import { Image } from '@/components/ui/image';
+import PrivateImage from '@/components/PrivateImage';
+import * as storiesService from '@/services/stories';
+import { STORAGE_BUCKETS, persistStoryCoverImage } from '@/services/storage';
 
 export default function CoverCreator({ story, onClose, onSaved }) {
   const [prompt, setPrompt] = useState('');
-  const [imageUrl, setImageUrl] = useState(story.cover_image_url || '');
+  const [imageUrl, setImageUrl] = useState('');
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     setPrompt(
       `A children's book cover illustration for "${story.title}". ${story.summary || ''} Theme: ${story.theme}. Style: ${getStylePrompt(story.art_style || DEFAULT_ART_STYLE)}. No text or title in the image.`
     );
-    setImageUrl(story.cover_image_url || '');
+    setImageUrl('');
   }, [story]);
 
   async function generate() {
     setGenerating(true);
+    setError('');
     try {
       const { url } = await base44.integrations.Core.GenerateImage({ prompt });
       setImageUrl(url);
-    } catch {}
+    } catch (e) { setError(e?.message || 'The cover could not be painted.'); }
     setGenerating(false);
   }
 
   async function save() {
     setSaving(true);
     try {
-      const updated = await base44.entities.Story.update(story.id, { cover_image_url: imageUrl, status: story.status === 'generating' ? 'ready' : story.status });
-      onSaved?.(imageUrl);
+      const coverImagePath = await persistStoryCoverImage(story.id, imageUrl);
+      await storiesService.update(story.id, { cover_image_path: coverImagePath, status: story.status === 'generating' ? 'ready' : story.status });
+      onSaved?.(coverImagePath);
       onClose?.();
-    } catch {}
+    } catch (e) { setError(e?.message || 'The cover could not be saved.'); }
     setSaving(false);
   }
 
@@ -62,6 +68,8 @@ export default function CoverCreator({ story, onClose, onSaved }) {
             <div className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-stone-200 bg-stone-50">
               {imageUrl ? (
                 <Image src={imageUrl} alt="cover" fittingType="fill" className="h-full w-full" />
+              ) : story.cover_image_path ? (
+                <PrivateImage bucket={STORAGE_BUCKETS.STORY_IMAGES} path={story.cover_image_path} alt="cover" fittingType="fill" className="h-full w-full" />
               ) : (
                 <div className="flex h-full items-center justify-center px-4 text-center text-sm text-stone-400">Your cover preview will appear here</div>
               )}
@@ -76,6 +84,7 @@ export default function CoverCreator({ story, onClose, onSaved }) {
             </Button>
           </div>
         </div>
+        {error && <p className="mt-3 text-sm text-red-600" role="alert">{error}</p>}
       </div>
     </div>
   );

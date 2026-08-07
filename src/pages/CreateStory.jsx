@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
 import { TEMPLATES } from '@/lib/templates';
 import { generateStoryContent, generatePageImage } from '@/lib/storyStudio';
 import { ART_STYLES, DEFAULT_ART_STYLE } from '@/lib/artStyles';
@@ -11,6 +10,10 @@ import { Loader2, Wand2, Check } from 'lucide-react';
 import { Image } from '@/components/ui/image';
 import { cn } from '@/lib/utils';
 import CharacterSlots from '@/components/CharacterSlots';
+import * as storiesService from '@/services/stories';
+import * as storyPagesService from '@/services/storyPages';
+import * as charactersService from '@/services/characters';
+import { persistStoryPageImage } from '@/services/storage';
 
 /** Convert UI slots into the characters array used by the AI. */
 function slotsToCharacters(slots, savedCharacters) {
@@ -49,9 +52,10 @@ export default function CreateStory() {
   const [artStyle, setArtStyle] = useState(DEFAULT_ART_STYLE);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    base44.entities.ChildCharacter.list().then(setSavedCharacters).catch(() => {});
+    charactersService.list().then(setSavedCharacters).catch(() => setSavedCharacters([]));
     const tplId = params.get('template');
     const idea = params.get('idea');
     if (tplId) {
@@ -74,12 +78,16 @@ export default function CreateStory() {
     const premise = mode === 'template' ? selected.idea : customPrompt.trim();
     if (!premise) return;
     setLoading(true);
+    setError('');
     try {
       setProgress('Writing your story…');
       const characters = slotsToCharacters(slots, savedCharacters);
       const content = await generateStoryContent({ prompt: premise, theme, characters, pageCount });
+      if (!Array.isArray(content?.pages) || content.pages.length !== pageCount) {
+        throw new Error('The story generator did not return the requested number of pages. Please try again.');
+      }
       const { child_character_id, secondary_characters } = slotsToStorage(slots);
-      const story = await base44.entities.Story.create({
+      const story = await storiesService.create({
         title: content.title,
         summary: content.summary,
         theme,
@@ -89,27 +97,29 @@ export default function CreateStory() {
         secondary_characters: secondary_characters.length ? secondary_characters : undefined,
         page_count: content.pages.length,
       });
-      let coverUrl = '';
+      let coverPath = null;
       for (let i = 0; i < content.pages.length; i++) {
         setProgress(`Painting page ${i + 1} of ${content.pages.length}…`);
-        const imageUrl = await generatePageImage({
+        const providerUrl = await generatePageImage({
           text: content.pages[i].text,
           theme,
           characters,
           artStyle,
         });
-        if (i === 0) coverUrl = imageUrl;
-        await base44.entities.StoryPage.create({
+        const imagePath = await persistStoryPageImage(story.id, i + 1, providerUrl);
+        if (i === 0) coverPath = imagePath;
+        await storyPagesService.create({
           story_id: story.id,
           page_number: i + 1,
           text: content.pages[i].text,
-          image_url: imageUrl,
+          image_path: imagePath,
         });
       }
-      await base44.entities.Story.update(story.id, { status: 'ready', cover_image_url: coverUrl });
+      await storiesService.update(story.id, { status: 'ready', cover_image_path: coverPath });
       navigate(`/story/${story.id}`);
     } catch (e) {
       setProgress('');
+      setError(e?.message || 'Story creation stopped before it was complete. Your completed pages were preserved.');
       setLoading(false);
     }
   }
@@ -240,6 +250,7 @@ export default function CreateStory() {
         </Button>
         {progress && <span className="text-sm text-stone-500">{progress}</span>}
       </div>
+      {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
     </div>
   );
 }

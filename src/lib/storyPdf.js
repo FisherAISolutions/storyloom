@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { download, STORAGE_BUCKETS } from '@/services/storage';
 
 function blobToDataUrl(blob) {
   return new Promise((resolve, reject) => {
@@ -18,9 +19,8 @@ function loadImageFromDataUrl(dataUrl) {
   });
 }
 
-async function getImage(url) {
-  const res = await fetch(url);
-  const blob = await res.blob();
+async function getImage(path) {
+  const blob = await download(STORAGE_BUCKETS.STORY_IMAGES, path);
   const dataUrl = await blobToDataUrl(blob);
   const img = await loadImageFromDataUrl(dataUrl);
   return { dataUrl, w: img.naturalWidth, h: img.naturalHeight, isPng: blob.type.includes('png') };
@@ -43,11 +43,12 @@ export async function downloadStoryPdf(story, pages) {
   const usableW = pageW - margin * 2;
 
   // Cover
-  const coverUrl = story.cover_image_url || pages[0]?.image_url;
+  const orderedPages = [...pages].sort((a, b) => a.page_number - b.page_number);
+  const coverPath = story.cover_image_path || orderedPages[0]?.image_path;
   const imgMaxH = pageH - margin * 2 - 60;
-  if (coverUrl) {
+  if (coverPath) {
     try {
-      const { dataUrl, w, h, isPng } = await getImage(coverUrl);
+      const { dataUrl, w, h, isPng } = await getImage(coverPath);
       const box = fitContain(w, h, usableW, imgMaxH);
       const pos = placeCenter(margin, margin, box.w, box.h, usableW, imgMaxH);
       pdf.addImage(dataUrl, isPng ? 'PNG' : 'JPEG', pos.x, pos.y, box.w, box.h, undefined, 'FAST');
@@ -71,15 +72,14 @@ export async function downloadStoryPdf(story, pages) {
   pdf.setTextColor(0);
 
   // Story pages — image on top, text below
-  pages.sort((a, b) => a.page_number - b.page_number);
   const pageImgMaxH = pageH - margin * 2 - 90;
-  for (let i = 0; i < pages.length; i++) {
+  for (let i = 0; i < orderedPages.length; i++) {
     pdf.addPage();
-    const p = pages[i];
+    const p = orderedPages[i];
 
-    if (p.image_url) {
+    if (p.image_path) {
       try {
-        const { dataUrl, w, h, isPng } = await getImage(p.image_url);
+        const { dataUrl, w, h, isPng } = await getImage(p.image_path);
         const box = fitContain(w, h, usableW, pageImgMaxH);
         const pos = placeCenter(margin, margin, box.w, box.h, usableW, pageImgMaxH);
         pdf.addImage(dataUrl, isPng ? 'PNG' : 'JPEG', pos.x, pos.y, box.w, box.h, undefined, 'FAST');

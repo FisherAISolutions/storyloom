@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
 import { analyzeChildCharacter, generateCharacterImage } from '@/lib/storyStudio';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Upload, Sparkles } from 'lucide-react';
-import { Image } from '@/components/ui/image';
 import { useToast } from '@/components/ui/use-toast';
+import PrivateImage from '@/components/PrivateImage';
+import * as charactersService from '@/services/characters';
+import { STORAGE_BUCKETS, getCharacterPhotoUrl, persistCharacterImage, uploadCharacterPhoto } from '@/services/storage';
 
 export default function Characters() {
   const [characters, setCharacters] = useState([]);
@@ -22,7 +23,7 @@ export default function Characters() {
   async function load() {
     setLoading(true);
     try {
-      setCharacters(await base44.entities.ChildCharacter.list('-created_date'));
+      setCharacters(await charactersService.list());
     } catch {}
     setLoading(false);
   }
@@ -32,31 +33,37 @@ export default function Characters() {
     const f = e.target.files?.[0];
     if (!f) return;
     setPhoto(f);
-    setPreview(URL.createObjectURL(f));
+    setPreview((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return URL.createObjectURL(f);
+    });
   }
+
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
 
   async function handleCreate() {
     if (!name.trim() || !photo) return;
     setCreating(true);
     try {
       setProgress('Uploading photo…');
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: photo });
+      const character = await charactersService.create({ name: name.trim(), age: age ? Number(age) : undefined });
+      const photoPath = await uploadCharacterPhoto(character.id, photo);
+      await charactersService.update(character.id, { photo_path: photoPath });
+      const photoUrl = await getCharacterPhotoUrl(photoPath);
       setProgress('Studying your child’s likeness…');
-      const description = await analyzeChildCharacter(file_url);
+      const description = await analyzeChildCharacter(photoUrl);
       setProgress('Painting the storybook character…');
-      const characterImage = await generateCharacterImage(description, file_url);
-      await base44.entities.ChildCharacter.create({
-        name: name.trim(),
-        age: age ? Number(age) : undefined,
+      const providerUrl = await generateCharacterImage(description, photoUrl);
+      const characterImagePath = await persistCharacterImage(character.id, providerUrl);
+      await charactersService.update(character.id, {
         description,
-        photo_url: file_url,
-        character_image_url: characterImage,
+        character_image_path: characterImagePath,
       });
       toast({ title: 'Character ready!', description: `${name} can now star in stories.` });
-      setName(''); setAge(''); setPhoto(null); setPreview('');
+      setName(''); setAge(''); setPhoto(null); setPreview((current) => { if (current) URL.revokeObjectURL(current); return ''; });
       await load();
     } catch (e) {
-      toast({ title: 'Something went wrong', variant: 'destructive' });
+      toast({ title: 'Character creation stopped', description: e?.message || 'Completed work was preserved. Please try again.', variant: 'destructive' });
     }
     setProgress('');
     setCreating(false);
@@ -131,7 +138,7 @@ export default function Characters() {
             {characters.map((c) => (
               <div key={c.id} className="overflow-hidden rounded-2xl border border-stone-200 bg-white">
                 <div className="relative aspect-square overflow-hidden">
-                  <Image src={c.character_image_url} alt={c.name} fittingType="fill" className="h-full w-full" />
+                  <PrivateImage bucket={STORAGE_BUCKETS.CHARACTER_IMAGES} path={c.character_image_path} alt={c.name} fittingType="fill" className="h-full w-full" fallback={<div className="flex h-full items-center justify-center bg-stone-50 text-xs text-stone-400">Portrait unavailable</div>} />
                 </div>
                 <div className="p-3">
                   <h3 className="font-display text-base font-semibold">{c.name}</h3>

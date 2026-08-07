@@ -1,5 +1,6 @@
 import { base44 } from '@/api/base44Client';
 import { getStylePrompt, DEFAULT_ART_STYLE } from '@/lib/artStyles';
+import * as charactersService from '@/services/characters';
 
 /**
  * Story Studio — shared AI helpers.
@@ -57,7 +58,7 @@ export async function resolveStoryCharacters(story) {
 
   if (story.child_character_id && !seen.has(story.child_character_id)) {
     try {
-      const c = await base44.entities.ChildCharacter.get(story.child_character_id);
+      const c = await charactersService.get(story.child_character_id);
       chars.push({ name: c.name, description: c.description });
       seen.add(story.child_character_id);
     } catch {}
@@ -67,7 +68,7 @@ export async function resolveStoryCharacters(story) {
   for (const s of secondary) {
     if (s.character_id && !seen.has(s.character_id)) {
       try {
-        const c = await base44.entities.ChildCharacter.get(s.character_id);
+        const c = await charactersService.get(s.character_id);
         chars.push({ name: c.name, description: c.description });
         seen.add(s.character_id);
       } catch {}

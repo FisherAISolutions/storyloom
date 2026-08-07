@@ -14,6 +14,7 @@ import {
   INITIAL_AUTH_STATE,
   toAppUser,
 } from '../src/lib/authState.js';
+import { invalidatePageTranslations, shouldSyncCoverForPage } from '../src/lib/storyState.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
@@ -117,4 +118,49 @@ test('auth wiring uses Supabase, protects routes, and clears private caches', ()
   assert.match(app, /path="\/reset-password"/);
   assert.doesNotMatch(authSources, /base44\.auth/);
   assert.doesNotMatch(authSources, /user_metadata[^\n]*role/);
+});
+
+test('runtime CRUD and uploads no longer use Base44 entities', () => {
+  const runtimeFiles = [
+    'src/pages/CreateStory.jsx', 'src/pages/Characters.jsx', 'src/pages/Library.jsx',
+    'src/pages/StoryEditor.jsx', 'src/components/ContinueStoryModal.jsx',
+    'src/components/CoverCreator.jsx', 'src/lib/storyStudio.js',
+  ];
+  const source = runtimeFiles.map(read).join('\n');
+  assert.doesNotMatch(source, /base44\.entities|UploadFile/);
+  assert.doesNotMatch(source, /photo_url|character_image_url|cover_image_url|\bimage_url\b/);
+  assert.match(source, /InvokeLLM/);
+  assert.match(source, /GenerateImage/);
+});
+
+test('generated and uploaded images use deterministic private user-prefixed paths', () => {
+  const storage = read('src/services/storage.js');
+  assert.match(storage, /segments\[0\] !== userId/);
+  assert.match(storage, /`\$\{user\.id\}\/\$\{suffix\}\.\$\{requireImageType\(type\)\}`/);
+  assert.match(storage, /`\$\{id\}\/original`/);
+  assert.match(storage, /`\$\{id\}\/pages\/\$\{String\(pageNumber\)\.padStart\(3, '0'\)\}`/);
+  assert.match(storage, /persistStoryCoverImage/);
+});
+
+test('editing invalidates only the corresponding translated page', () => {
+  const original = { es: ['uno', 'dos', 'tres'], fr: ['un', 'deux', 'trois'], metadata: 'kept' };
+  const result = invalidatePageTranslations(original, 1);
+  assert.deepEqual(result.es, ['uno', undefined, 'tres']);
+  assert.deepEqual(result.fr, ['un', undefined, 'trois']);
+  assert.equal(result.metadata, 'kept');
+  assert.deepEqual(original.es, ['uno', 'dos', 'tres']);
+});
+
+test('only repainting page one synchronizes the cover', () => {
+  assert.equal(shouldSyncCoverForPage(0), true);
+  assert.equal(shouldSyncCoverForPage(1), false);
+  assert.equal(shouldSyncCoverForPage(9), false);
+});
+
+test('PDF downloads private paths and does not mutate page ordering', () => {
+  const pdf = read('src/lib/storyPdf.js');
+  assert.match(pdf, /download\(STORAGE_BUCKETS\.STORY_IMAGES, path\)/);
+  assert.match(pdf, /\[\.\.\.pages\]\.sort/);
+  assert.match(pdf, /story\.cover_image_path \|\| orderedPages\[0\]\?\.image_path/);
+  assert.doesNotMatch(pdf, /fetch\(/);
 });
