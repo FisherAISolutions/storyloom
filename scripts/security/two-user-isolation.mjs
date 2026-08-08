@@ -151,16 +151,25 @@ try {
   }
 
   const forgedPaths = [
-    `${userB.id}/../escape.png`,
-    `${userB.id}/${created.bCharacter.id}/../portrait.png`,
-    `${userB.id}//${created.bCharacter.id}/portrait.png`,
-    `missing-prefix/${created.bCharacter.id}/portrait.png`,
+    { path: `${userB.id}/../escape.png`, behavior: 'reject' },
+    { path: `${userB.id}/${created.bCharacter.id}/../portrait.png`, behavior: 'reject' },
+    {
+      path: `${userB.id}//${created.bCharacter.id}/portrait.png`,
+      behavior: 'normalize',
+      canonical: `${userB.id}/${created.bCharacter.id}/portrait.png`,
+    },
+    { path: `missing-prefix/${created.bCharacter.id}/portrait.png`, behavior: 'reject' },
   ];
-  for (const path of forgedPaths) {
+  for (const { path, behavior, canonical } of forgedPaths) {
     const upload = await userBClient.storage.from('character-images').upload(path, onePixelPng, { contentType: 'image/png' });
+    if (behavior === 'normalize' && !upload.error) {
+      ok(upload.data?.path === canonical, `extra slash is normalized only to User B canonical path: ${path}`);
+      await userBClient.storage.from('character-images').remove([canonical]);
+      continue;
+    }
     if (!upload.error) {
       await userBClient.storage.from('character-images').remove([path]);
-      throw new Error(`FAILED: malformed Storage path was accepted: ${path}`);
+      throw new Error(`FAILED: malformed Storage path was accepted without safe canonicalization: ${path}`);
     }
     ok(true, `malformed Storage path rejected: ${path}`);
   }

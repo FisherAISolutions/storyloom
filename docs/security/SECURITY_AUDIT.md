@@ -65,7 +65,7 @@ Before the fix, a new session event started remote `getUser()` and profile resol
 
 The original policies checked only the first folder segment. They did not explicitly forbid dot segments, double separators, or names outside Story Loom's resource layouts.
 
-**Fixed in migration:** `is_storyloom_storage_path()` now recognizes only canonical per-bucket paths, all four Storage policies call it, and database media columns use matching constraints. Browser path validation additionally rejects empty, dot, backslash, and control-character segments.
+**Fixed in migration:** `is_storyloom_storage_path()` now recognizes only canonical per-bucket paths, all four Storage policies call it, and database media columns use matching constraints. Browser path validation additionally rejects empty, dot, backslash, and control-character segments. The hosted Storage gateway canonicalizes doubled slashes before policy evaluation; the live harness now accepts that case only when the returned object path is the exact single-slash canonical path inside the same authenticated user's namespace.
 
 #### P2-2: database media columns could hold external or signed URLs
 

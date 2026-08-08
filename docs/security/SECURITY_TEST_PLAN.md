@@ -94,7 +94,7 @@ After every failed write, confirm B's valid control story is unchanged and reada
 
 Test `character-photos`, `character-images`, and `story-images`. For an A-owned canonical object, B must be unable to list, download, create a signed URL, overwrite/upsert, or delete it. Anonymous list must expose no object and anonymous download/signing must fail.
 
-Explicitly attempt and reject:
+Explicitly attempt these malformed inputs:
 
 ```text
 {userA_UUID}/...
@@ -103,6 +103,8 @@ Explicitly attempt and reject:
 {userB_UUID}//{resource_UUID}/portrait.png
 missing-prefix/{resource_UUID}/portrait.png
 ```
+
+Traversal and missing-prefix paths must be rejected. Supabase Storage currently normalizes a doubled slash before policy evaluation; for that case, require the returned path to equal the single-slash canonical path inside User B's own namespace, then remove that canonical object. Any other successful normalization or owner change fails the harness.
 
 After every B delete/overwrite attempt, download as A to prove the original still exists. Confirm all buckets are private and bucket MIME/size limits match the migrations.
 
