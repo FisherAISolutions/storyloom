@@ -69,7 +69,12 @@ async function privatePhoto(client: SupabaseClient, userId: string, character: R
   if (typeof character.photo_path !== 'string' || !character.photo_path.startsWith(`${userId}/${character.id}/`)) throw new AppError('PERMISSION_DENIED', 'The character photo is unavailable.', 403);
   const { data, error } = await client.storage.from('character-photos').download(character.photo_path);
   if (error || !data) throw new AppError('STORAGE', 'The character photo could not be downloaded.', 500);
-  if (!['image/jpeg', 'image/png', 'image/webp'].includes(data.type) || data.size > 10 * 1024 * 1024) throw new AppError('VALIDATION', 'The character photo format is invalid.');
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(data.type) || data.size <= 0 || data.size > 10 * 1024 * 1024) throw new AppError('VALIDATION', 'The character photo format is invalid.');
+  const header = new Uint8Array(await data.slice(0, 12).arrayBuffer());
+  const jpeg = data.type === 'image/jpeg' && header[0] === 0xff && header[1] === 0xd8 && header[2] === 0xff;
+  const png = data.type === 'image/png' && header[0] === 0x89 && header[1] === 0x50 && header[2] === 0x4e && header[3] === 0x47 && header[4] === 0x0d && header[5] === 0x0a && header[6] === 0x1a && header[7] === 0x0a;
+  const webp = data.type === 'image/webp' && new TextDecoder().decode(header.slice(0, 4)) === 'RIFF' && new TextDecoder().decode(header.slice(8, 12)) === 'WEBP';
+  if (!jpeg && !png && !webp) throw new AppError('VALIDATION', 'The character photo contents are invalid.');
   return data;
 }
 async function uploadImage(client: SupabaseClient, bucket: string, path: string, blob: Blob) {

@@ -18,6 +18,19 @@ const IMAGE_EXTENSIONS = Object.freeze({
   'image/webp': 'webp',
 });
 
+function matchesImageSignature(bytes, type) {
+  if (type === 'image/jpeg') return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (type === 'image/png') {
+    return bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47
+      && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a;
+  }
+  if (type === 'image/webp') {
+    return String.fromCharCode(...bytes.slice(0, 4)) === 'RIFF'
+      && String.fromCharCode(...bytes.slice(8, 12)) === 'WEBP';
+  }
+  return false;
+}
+
 function requireBucket(bucket) {
   if (!ALLOWED_BUCKETS.has(bucket)) {
     throw new ServiceError('VALIDATION', 'Unsupported storage bucket.');
@@ -28,7 +41,12 @@ function requireBucket(bucket) {
 function requireOwnedPath(path, userId) {
   const normalized = requireId(path, 'Storage path').replace(/^\/+/, '');
   const segments = normalized.split('/');
-  if (segments.length < 2 || segments.some((segment) => !segment)) {
+  if (
+    segments.length < 3
+    || segments.some((segment) => !segment || segment === '.' || segment === '..')
+    || normalized.includes('\\')
+    || /[\u0000-\u001f\u007f]/.test(normalized)
+  ) {
     throw new ServiceError('VALIDATION', 'Storage path is malformed.');
   }
   if (segments[0] !== userId) {
@@ -117,6 +135,14 @@ async function ownedImagePath(suffix, type) {
 export async function uploadCharacterPhoto(characterId, file) {
   const id = requireId(characterId, 'Character ID');
   if (!file) throw new ServiceError('VALIDATION', 'A photo is required.');
+  requireImageType(file.type);
+  if (!Number.isFinite(file.size) || file.size <= 0 || file.size > 10 * 1024 * 1024) {
+    throw new ServiceError('VALIDATION', 'The photo must be no larger than 10 MB.');
+  }
+  const header = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  if (!matchesImageSignature(header, file.type.toLowerCase())) {
+    throw new ServiceError('VALIDATION', 'The photo contents do not match its image type.');
+  }
   const path = await ownedImagePath(`${id}/original`, file.type);
   return upload(STORAGE_BUCKETS.CHARACTER_PHOTOS, path, file, { contentType: file.type, upsert: true });
 }

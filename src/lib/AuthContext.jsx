@@ -41,6 +41,19 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
+    // A different authenticated subject must never inherit the previous
+    // subject's rendered state while getUser/profile verification is pending.
+    // Clear synchronously before the first await so protected routes return to
+    // their loading boundary and all private caches are discarded immediately.
+    if (didAuthenticatedUserChange(userIdRef.current, session.user.id)) {
+      clearUserScopedState();
+      userIdRef.current = null;
+      setUser(null);
+      setIsAuthenticated(false);
+      setIsLoadingAuth(true);
+      setAuthChecked(false);
+    }
+
     try {
       const supabase = getSupabaseClient();
       const { data: userData, error: userError } = await supabase.auth.getUser();
