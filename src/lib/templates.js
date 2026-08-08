@@ -4,7 +4,7 @@ export const TEMPLATES = [
     title: 'The Moonlit Adventure',
     theme: 'bedtime & dreams',
     idea: 'A child who befriends a sleepy moon and sails across a starry sky to help the moon find its way home before morning.',
-    image: 'https://media.base44.com/images/public/6a73b3e4dcf23c280022aaa6/e9442bf46_generated_image.png',
+    image: '/images/templates/moonlit.jpg',
     accent: 'from-indigo-200 to-blue-100',
   },
   {
@@ -12,7 +12,7 @@ export const TEMPLATES = [
     title: 'The Tiny Seed',
     theme: 'nature & growth',
     idea: 'A tiny seed learns about patience, rain, and sunshine as it grows into a flower that lights up a whole garden.',
-    image: 'https://media.base44.com/images/public/6a73b3e4dcf23c280022aaa6/cadea0eb3_generated_image.png',
+    image: '/images/templates/seed.jpg',
     accent: 'from-emerald-200 to-lime-100',
   },
   {
@@ -20,7 +20,7 @@ export const TEMPLATES = [
     title: 'Forest Friends',
     theme: 'friendship & kindness',
     idea: 'A shy fox, a bouncy rabbit, and a wise deer team up to throw a surprise forest party for a lonely hedgehog.',
-    image: 'https://media.base44.com/images/public/6a73b3e4dcf23c280022aaa6/51606452d_generated_image.png',
+    image: '/images/templates/forest.jpg',
     accent: 'from-amber-200 to-orange-100',
   },
   {
@@ -28,7 +28,7 @@ export const TEMPLATES = [
     title: 'The Little Explorer',
     theme: 'courage & discovery',
     idea: 'A young explorer follows a map of doodles over hills and rivers to discover that the treasure was the journey itself.',
-    image: 'https://media.base44.com/images/public/6a73b3e4dcf23c280022aaa6/191b0628b_generated_image.png',
+    image: '/images/templates/explorer.jpg',
     accent: 'from-orange-200 to-rose-100',
   },
   {
@@ -36,7 +36,7 @@ export const TEMPLATES = [
     title: 'Under the Sea',
     theme: 'wonder & curiosity',
     idea: 'A gentle whale gives a curious child a ride through a glowing coral city where fish make music out of bubbles.',
-    image: 'https://media.base44.com/images/public/6a73b3e4dcf23c280022aaa6/e5e5c576d_generated_image.png',
+    image: '/images/templates/sea.jpg',
     accent: 'from-cyan-200 to-teal-100',
   },
   {
@@ -44,7 +44,7 @@ export const TEMPLATES = [
     title: 'The Star Keeper',
     theme: 'magic & wonder',
     idea: 'A child who collects fallen stars discovers one tiny star is homesick and sets off on a cozy quest to return it to the sky.',
-    image: 'https://media.base44.com/images/public/6a73b3e4dcf23c280022aaa6/6e7348364_generated_image.png',
+    image: '/images/templates/stars.jpg',
     accent: 'from-violet-200 to-indigo-100',
   },
   {
@@ -52,7 +52,7 @@ export const TEMPLATES = [
     title: 'The Timid Dragon',
     theme: 'bravery & bedtime',
     idea: 'A friendly dragon who is afraid of the dark learns that the night sky is full of gentle light and new friends.',
-    image: 'https://media.base44.com/images/public/6a73b3e4dcf23c280022aaa6/1bfcdf824_generated_image.png',
+    image: '/images/templates/timid-dragon.jpg',
     accent: 'from-indigo-200 to-violet-100',
   },
   {
@@ -60,7 +60,7 @@ export const TEMPLATES = [
     title: 'The Rainbow Cloud',
     theme: 'wonder & dreams',
     idea: 'A cheerful little cloud who wants to become a rainbow discovers that kindness is what gives it color.',
-    image: 'https://media.base44.com/images/public/6a73b3e4dcf23c280022aaa6/a55bbea1b_generated_image.png',
+    image: '/images/templates/rainbow-cloud.jpg',
     accent: 'from-sky-200 to-rose-100',
   },
   {
@@ -68,7 +68,7 @@ export const TEMPLATES = [
     title: 'The Baking Bear',
     theme: 'cozy & friendship',
     idea: 'A cuddly bear learns to bake a birthday cake for a friend, with a few floury mishaps along the way.',
-    image: 'https://media.base44.com/images/public/6a73b3e4dcf23c280022aaa6/9f220637b_generated_image.png',
+    image: '/images/templates/baking-bear.jpg',
     accent: 'from-amber-200 to-orange-100',
   },
 ];

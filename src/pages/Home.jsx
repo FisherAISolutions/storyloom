@@ -35,7 +35,7 @@ export default function Home() {
           <div className="relative mx-auto w-full max-w-sm">
             <div className="pointer-events-none absolute -inset-6 rounded-full bg-rose-200/40 blur-3xl" />
             <Image
-              src="https://media.base44.com/images/public/6a73b3e4dcf23c280022aaa6/737cc045a_luna.webp"
+              src="/images/home/hero-child.webp"
               alt="A watercolor illustration of a child holding a daisy in a dreamy storybook garden"
               fittingType="fill"
               className="relative aspect-square w-full rounded-3xl shadow-xl ring-1 ring-white/60"

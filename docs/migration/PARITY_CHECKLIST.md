@@ -118,11 +118,11 @@ Static contract tests verify newest-first story/character ordering, ascending pa
 
 ### Phase 6 validation note
 
-IMPLEMENTED: authenticated action routing, ownership checks, strict structured-output validation, supported-count/style/language allowlists, private-photo vision, reference-photo portrait editing, direct server-side image persistence, safe errors, usage logging, and a future entitlement hook. MOCK/STATIC VERIFIED: frontend isolation from OpenAI, absence of active Base44 AI calls/provider URL persistence, authorization/validation code paths, deterministic generated paths, page/translation count validation, entitlement ordering, and usage logging. LIVE OPENAI VERIFIED by the project owner after deployment: signup/login, character creation and photo analysis, portrait generation, a 15-page story, editing/repainting, custom cover persistence/library rendering, and all supported translations. Initial 24/30-page generation remains intentionally untested live because of image cost.
+IMPLEMENTED: authenticated action routing, ownership checks, strict structured-output validation, supported-count/style/language allowlists, private-photo vision, reference-photo portrait editing, direct server-side image persistence, safe errors, usage logging, and a future entitlement hook. MOCK/STATIC VERIFIED: frontend isolation from OpenAI, absence of active Base44 AI calls/provider URL persistence, authorization/validation code paths, deterministic generated paths, page/translation count validation, entitlement ordering, and usage logging. LIVE OPENAI VERIFIED by the project owner after deployment: signup/login, character creation and photo analysis, portrait generation, story generation at 6, 10, 15, 24, and 30 pages, editing/repainting, custom cover persistence/library rendering, and all supported translations.
 
 ### Post-live parity fixes
 
-- Initial story-length UI and Edge validation now allow exactly 6, 10, 15, 24, and 30 pages. Exact-count structured-output validation applies to every allowed length. The 24/30 paths have static contract coverage but were intentionally not live-generated because of image cost.
+- Initial story-length UI and Edge validation allows exactly 6, 10, 15, 24, and 30 pages. Exact-count structured-output validation applies to every allowed length, and all five lengths have been live-tested.
 - Character-ready notifications now remove immediately through the close control and automatically after five seconds. Toast timers and listeners are cleared when dismissed or when the final consumer unmounts.
 - Continuation choices and server validation remain exactly 3, 5, and 10 pages.
 
@@ -132,7 +132,7 @@ IMPLEMENTED: authenticated action routing, ownership checks, strict structured-o
 - [ ] Child photos are not anonymously public unless explicitly approved.
 - [ ] Logs and user-facing errors contain no tokens, secrets, or sensitive photo data.
 - [ ] Two-user isolation tests pass for stories, pages, characters, translations, and storage.
-- [ ] No Base44 package/import/plugin/API URL/environment variable/token convention/runtime asset remains.
-- [ ] All Base44-hosted template, hero, and favicon assets have project-controlled replacements.
-- [ ] Legacy `base44/` reference files are removed only after equivalent schema/policy verification.
+- [x] No Base44 package/import/plugin/API URL/environment variable/token convention/runtime asset remains.
+- [x] All formerly Base44-hosted template, hero, and favicon assets have project-controlled replacements.
+- [x] Legacy `base44/` reference files were removed after equivalent schema/policy verification.
 - [ ] Build, lint, typecheck, tests, and production smoke checks pass without Base44 services.

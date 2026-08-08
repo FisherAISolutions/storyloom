@@ -175,4 +175,4 @@ supabase migration list --local
 supabase status
 ```
 
-The React application should still use Base44 after these checks. Runtime wiring begins only in Phase 3.
+Historical Phase 2 note: runtime wiring began in Phase 3. The completed application now uses Supabase for authentication, data, Storage, and server functions.

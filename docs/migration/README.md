@@ -2,11 +2,19 @@
 
 ## Purpose and scope
 
-This repository is the migration copy of Story Loom Kids. The original live Base44 application remains untouched and is the behavioral reference. There are no production customers or records to transfer; Supabase will start with fresh users and data. Migration work must preserve the existing interface, workflows, prompts, art styles, story behavior, and generated-output intent.
+This repository records the completed Story Loom Kids platform migration. The original Base44 application was the behavioral reference during the work. There were no production customers or records to transfer; Supabase started with fresh users and data. The migration preserved the existing interface, workflows, prompts, art styles, story behavior, and generated-output intent.
 
-Phase 1 established the audit and documentation. Phase 2 added the Supabase backend foundation. Phase 3 added the browser service layer. Phase 4 moved normal user authentication to Supabase. Phase 5 makes Supabase authoritative for application CRUD and private Storage; Base44 remains only for temporary AI execution.
+Phases 1–5 established the audit, Supabase backend, browser service layer, authentication, CRUD, and private Storage. Phase 6 moved AI execution to the authenticated `story-ai` Edge Function. Phase 7 removed the remaining legacy SDK, build plugin, configuration, compatibility code, and hosted static assets.
 
-## Current architecture
+## Migration completion status
+
+**ACTIVE RUNTIME DEPENDENCIES: zero.**
+
+The current application uses React/Vite, Supabase Auth, PostgreSQL with RLS, private Storage, Supabase Edge Functions, and server-side OpenAI. Production and local development require no Base44 package, API, environment variable, build plugin, deployment metadata, or hosted asset. Stripe remains planned but unimplemented; the server-authoritative AI entitlement hook is preserved for the later billing phase.
+
+Sections below labeled historical preserve the audit trail and must not be interpreted as current setup instructions.
+
+## Historical Phase 1 architecture (Base44)
 
 - React 18 and Vite 6 frontend with React Router routes for home, creation, characters, library, and story editing.
 - `@base44/vite-plugin` supplies Base44 development proxying and platform helpers.
@@ -16,7 +24,7 @@ Phase 1 established the audit and documentation. Phase 2 added the Supabase back
 - Uploaded and generated media are persisted as external URL strings on entity records.
 - PDF generation is browser-side with jsPDF and fetches all images by URL.
 
-## Target architecture
+## Implemented target architecture
 
 - Preserve the React/Vite/React Router frontend and existing UI components.
 - Use Supabase Auth for email/password, email verification, Google OAuth, password recovery, logout, and session persistence.
@@ -26,7 +34,7 @@ Phase 1 established the audit and documentation. Phase 2 added the Supabase back
 - Use Supabase Edge Functions for trusted OpenAI text generation, vision analysis, and image generation/editing. OpenAI and service-role secrets never enter the Vite bundle.
 - Return controlled storage paths or signed/public URLs appropriate to the bucket policy; do not depend on temporary third-party generation URLs.
 
-## Base44 dependency inventory
+## Historical Base44 dependency inventory
 
 ### Packages and build integration
 
@@ -193,7 +201,13 @@ All active AI operations now use the authenticated Supabase `story-ai` Edge Func
 
 OpenAI-generated image bytes are validated and uploaded directly inside the function to deterministic private Storage paths. No OpenAI URL, image data, API key, service-role credential, or subscription state enters browser persistence. The former Base44 URL-to-browser-to-Storage bridge is removed.
 
-Base44 is no longer an active data or AI provider. Its SDK package/client, Vite plugin/configuration, app-parameter compatibility code, historical files, favicon, and hosted static images remain only for the dedicated cleanup phase. Stripe remains unimplemented; `assertAiEntitlement()` is the server-authoritative insertion point for later webhook-maintained subscriptions and quotas. See `OPENAI_SETUP.md`.
+Base44 was no longer an active data or AI provider after Phase 6. Its remaining SDK package/client, Vite plugin/configuration, app-parameter compatibility code, historical files, favicon, and hosted static images were removed in Phase 7. Stripe remains unimplemented; `assertAiEntitlement()` is the server-authoritative insertion point for later webhook-maintained subscriptions and quotas. See `OPENAI_SETUP.md`.
+
+## Phase 7 platform removal
+
+The SDK and Vite plugin packages, legacy client and app-parameter bootstrap, platform metadata directory, and legacy environment-variable expectations were removed. The nine template images and homepage hero were copied unchanged into `public/images/`; the favicon is now a local Story Loom asset. The generic image component no longer contains Wix/CDN rewriting and continues to render local paths, normal HTTPS URLs, and signed Supabase URLs.
+
+Historical Base44 references remain in this migration record, tests that assert the absence of legacy APIs, and a migration comment documenting that legacy records were intentionally not imported. They are documentation or negative assertions, not active dependencies.
 
 ## Phase 1 validation
 

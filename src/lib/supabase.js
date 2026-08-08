@@ -32,9 +32,9 @@ function readBrowserConfig() {
 /**
  * Lazily returns the single browser Supabase client.
  *
- * Lazy initialization keeps the still-active Base44 runtime usable before
- * Supabase environment variables are configured. The SDK's browser defaults
- * persist and refresh sessions; Phase 4 will subscribe to auth state changes.
+ * Lazy initialization keeps public pages renderable before Supabase environment
+ * variables are configured. The SDK's browser defaults persist and refresh
+ * sessions; AuthContext subscribes to authentication state changes.
  */
 export function getSupabaseClient() {
   if (!client) {
