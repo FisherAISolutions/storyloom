@@ -18,6 +18,9 @@ const CreateStory = lazy(() => import('@/pages/CreateStory'));
 const Characters = lazy(() => import('@/pages/Characters'));
 const Library = lazy(() => import('@/pages/Library'));
 const StoryEditor = lazy(() => import('@/pages/StoryEditor'));
+const Pricing = lazy(() => import('@/pages/Pricing'));
+const Billing = lazy(() => import('@/pages/Billing'));
+const BillingSuccess = lazy(() => import('@/pages/BillingSuccess'));
 
 const withPageLoader = (page) => (
   <Suspense fallback={<div className="flex justify-center py-24">Loading…</div>}>
@@ -57,6 +60,9 @@ function AppRoutes() {
           <Route path="/characters" element={withPageLoader(<Characters />)} />
           <Route path="/library" element={withPageLoader(<Library />)} />
           <Route path="/story/:id" element={withPageLoader(<StoryEditor />)} />
+          <Route path="/pricing" element={withPageLoader(<Pricing />)} />
+          <Route path="/billing" element={withPageLoader(<Billing />)} />
+          <Route path="/billing/success" element={withPageLoader(<BillingSuccess />)} />
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />

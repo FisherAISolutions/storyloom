@@ -1,7 +1,7 @@
 import { getSupabaseClient } from '@/lib/supabase';
 import { ServiceError } from '@/services/errors';
 
-const ERROR_CODES = new Set(['AUTH_REQUIRED', 'PERMISSION_DENIED', 'VALIDATION', 'AI_PROVIDER', 'AI_RESPONSE_INVALID', 'STORAGE', 'DATABASE', 'RATE_LIMIT']);
+const ERROR_CODES = new Set(['AUTH_REQUIRED', 'PERMISSION_DENIED', 'VALIDATION', 'AI_PROVIDER', 'AI_RESPONSE_INVALID', 'STORAGE', 'DATABASE', 'RATE_LIMIT', 'ENTITLEMENT_LIMIT', 'ENTITLEMENT_UNAVAILABLE']);
 
 async function invokeAi(action, payload = {}) {
   const { data, error } = await getSupabaseClient().functions.invoke('story-ai', { body: { action, ...payload } });

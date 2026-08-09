@@ -8,10 +8,10 @@ Story Loom Kids is a React application for creating personalized, illustrated ch
 - Supabase Auth manages user identity and sessions.
 - Supabase PostgreSQL stores profiles, stories, pages, characters, and AI usage. Row Level Security enforces ownership.
 - Private Supabase Storage buckets hold uploaded photos and generated character/story artwork.
-- The `story-ai` Supabase Edge Function validates authenticated requests, checks ownership and the server-side entitlement hook, calls OpenAI, and persists generated images.
+- The `story-ai` Supabase Edge Function validates authenticated requests, checks ownership and transactionally reserves server-authoritative subscription credits before calling OpenAI.
 - OpenAI and Supabase service-role credentials never enter the browser bundle.
 
-Stripe subscriptions are planned but are not implemented. Entitlements must remain server-authoritative when billing is added.
+Stripe subscriptions use hosted Checkout, Customer Portal, signed webhook synchronization, and Supabase-backed usage reservations. Browser state and Checkout redirects are never authoritative. See `docs/billing/STRIPE_SETUP.md` and `docs/billing/ENTITLEMENTS.md`.
 
 ## Local setup
 
@@ -50,6 +50,9 @@ Configure server-only secrets and deploy the AI function:
 ```bash
 supabase secrets set OPENAI_API_KEY=your-key ALLOWED_ORIGINS=https://your-app.example
 supabase functions deploy story-ai
+supabase functions deploy billing-checkout
+supabase functions deploy billing-portal
+supabase functions deploy stripe-webhook --no-verify-jwt
 ```
 
 Supabase supplies its hosted functions with project connection values. Do not commit secrets. See `docs/migration/OPENAI_SETUP.md` and `docs/migration/SUPABASE_SETUP.md` for detailed verification guidance.

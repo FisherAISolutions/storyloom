@@ -233,11 +233,14 @@ test('generated images are decoded and uploaded server-side to deterministic pat
   assert.doesNotMatch(edge, /providerUrl|signedUrl/);
 });
 
-test('AI usage logging and future server-side entitlement hook exist', () => {
+test('AI usage logging and transactional server-side entitlement gate exist', () => {
   const edge = read('supabase/functions/story-ai/index.ts');
+  const entitlement = read('supabase/functions/story-ai/entitlements.ts');
   assert.match(edge, /service\.from\('ai_usage'\)\.insert/);
   assert.match(edge, /input_tokens:/);
   assert.match(edge, /output_tokens:/);
   assert.match(edge, /image_count:/);
-  assert.match(edge, /Future Stripe\/webhook-maintained entitlements/);
+  assert.match(entitlement, /reserve_ai_entitlement/);
+  assert.match(edge, /finalizeAiEntitlement/);
+  assert.match(edge, /releaseAiEntitlement/);
 });

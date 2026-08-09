@@ -7,7 +7,7 @@ export function object(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new AppError('VALIDATION', 'Request body must be an object.');
   return value as Record<string, unknown>;
 }
-export function text(value: unknown, label: string, max = LIMITS.TEXT, optional = false): string {
+export function text(value: unknown, label: string, max: number = LIMITS.TEXT, optional = false): string {
   if (optional && (value === undefined || value === null)) return '';
   if (typeof value !== 'string' || !value.trim() || value.length > max) throw new AppError('VALIDATION', `${label} is invalid.`);
   return value.trim();

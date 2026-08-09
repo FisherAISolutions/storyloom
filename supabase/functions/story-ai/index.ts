@@ -4,6 +4,7 @@ import { AppError, jsonResponse, safeError } from './errors.ts';
 import { generateImage, structured } from './openai.ts';
 import { characterAnalysisPrompt, characterImagePrompt, continuationPrompt, continuationSuggestionPrompt, pageImagePrompt, storyPrompt, translationPrompt } from './prompts.ts';
 import { artStyle, characterInputs, integerIn, object, text, uuid } from './validation.ts';
+import { assertAiEntitlement, finalizeAiEntitlement, releaseAiEntitlement, type EntitlementReservation } from './entitlements.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
@@ -35,9 +36,6 @@ function rateLimit(userId: string, action: string) {
   if (current.count >= limit) throw new AppError('RATE_LIMIT', 'Too many AI requests. Please try again shortly.', 429);
   current.count += 1;
 }
-
-// Future Stripe/webhook-maintained entitlements and billing-period quotas plug in here.
-async function assertAiEntitlement(_input: { userId: string; operation: string; requestedPageCount?: number }) { return; }
 
 async function ownedStory(client: SupabaseClient, id: string) {
   const { data, error } = await client.from('stories').select('id,title,summary,theme,art_style,child_character_id,secondary_characters,page_count').eq('id', id).maybeSingle();
@@ -93,7 +91,7 @@ function validatePages(value: any, count: number) {
 }
 
 Deno.serve(async (request) => {
-  let headers: HeadersInit = {}; let userId = ''; let action = ''; let storyId: string | null = null;
+  let headers: HeadersInit = {}; let userId = ''; let action = ''; let storyId: string | null = null; let reservation: EntitlementReservation | null = null;
   try {
     headers = corsHeaders(request);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
@@ -105,57 +103,64 @@ Deno.serve(async (request) => {
     const client = auth.client;
     if (action === 'generate-story') {
       const pageCount = integerIn(body.pageCount, STORY_PAGE_COUNTS, 'Page count'); const premise = text(body.prompt, 'Story premise', LIMITS.PROMPT); const theme = text(body.theme, 'Theme', 200); const characters = characterInputs(body.characters || []);
-      await assertAiEntitlement({ userId, operation: action, requestedPageCount: pageCount });
+      reservation = await assertAiEntitlement({ service, userId, operation: action, requestedPageCount: pageCount });
       const schema = { type: 'object', properties: { title: { type: 'string' }, summary: { type: 'string' }, ...pageSchema(pageCount).properties }, required: ['title', 'summary', 'pages'], additionalProperties: false };
       const result = await structured(storyPrompt(premise, theme, characters, pageCount), 'story', schema); const value: any = validatePages(result.value, pageCount);
       if (typeof value.title !== 'string' || !value.title.trim() || typeof value.summary !== 'string') throw new AppError('AI_RESPONSE_INVALID', 'The generated story is invalid.', 502);
-      await usage(userId, action, null, result.model, true, result.usage); return jsonResponse({ data: value }, 200, headers);
+      await usage(userId, action, null, result.model, true, result.usage); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: value }, 200, headers);
     }
     storyId = typeof body.storyId === 'string' ? uuid(body.storyId, 'Story ID') : null;
     if (action === 'analyze-character' || action === 'generate-character-image') {
       const characterId = uuid(body.characterId, 'Character ID'); const character = await ownedCharacter(client, characterId); const photo = await privatePhoto(client, userId, character);
-      await assertAiEntitlement({ userId, operation: action });
+      reservation = await assertAiEntitlement({ service, userId, operation: action, requestedImageCount: action === 'generate-character-image' ? 1 : undefined });
       if (action === 'analyze-character') {
         const schema = { type: 'object', properties: { description: { type: 'string' } }, required: ['description'], additionalProperties: false };
         const result = await structured(characterAnalysisPrompt, 'character_description', schema, photo); const value: any = result.value;
         if (typeof value.description !== 'string' || !value.description.trim() || value.description.length > 2_000) throw new AppError('AI_RESPONSE_INVALID', 'The character description is invalid.', 502);
-        await usage(userId, action, null, result.model, true, result.usage); return jsonResponse({ data: { description: value.description.trim() } }, 200, headers);
+        await usage(userId, action, null, result.model, true, result.usage); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { description: value.description.trim() } }, 200, headers);
       }
       const description = text(body.description, 'Character description', 2_000); const result = await generateImage(characterImagePrompt(description), photo); const path = `${userId}/${characterId}/portrait.png`;
-      await uploadImage(client, 'character-images', path, result.blob); await usage(userId, action, null, result.model, true, result.usage, 1); return jsonResponse({ data: { character_image_path: path } }, 200, headers);
+      await uploadImage(client, 'character-images', path, result.blob); await usage(userId, action, null, result.model, true, result.usage, 1); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { character_image_path: path } }, 200, headers);
     }
     if (!storyId) throw new AppError('VALIDATION', 'Story ID is required.');
-    const story = await ownedStory(client, storyId); await assertAiEntitlement({ userId, operation: action, requestedPageCount: typeof body.pageCount === 'number' ? body.pageCount : undefined });
+    const story = await ownedStory(client, storyId);
     if (action === 'generate-page-image') {
-      const pageNumber = body.pageNumber; if (!Number.isInteger(pageNumber) || pageNumber < 1 || pageNumber > 25) throw new AppError('VALIDATION', 'Page number is invalid.');
+      const rawPageNumber = body.pageNumber; if (!Number.isInteger(rawPageNumber) || (rawPageNumber as number) < 1 || (rawPageNumber as number) > 30) throw new AppError('VALIDATION', 'Page number is invalid.'); const pageNumber = rawPageNumber as number;
+      const existingPage = await client.from('story_pages').select('image_path').eq('story_id', storyId).eq('page_number', pageNumber).maybeSingle();
+      if (existingPage.error) throw new AppError('DATABASE', 'The page could not be checked.', 500);
+      const meteredOperation = existingPage.data?.image_path ? 'generate-page-image-repaint' : 'generate-page-image-initial';
+      reservation = await assertAiEntitlement({ service, userId, operation: meteredOperation, storyId, requestedPageCount: pageNumber, requestedImageCount: 1 });
       const scene = text(body.text, 'Page text', LIMITS.TEXT); const characters = await storyCharacters(client, story); const result = await generateImage(pageImagePrompt(scene, story.theme || '', characters, story.art_style)); const path = `${userId}/${storyId}/pages/${String(pageNumber).padStart(3, '0')}.png`;
-      await uploadImage(client, 'story-images', path, result.blob); await usage(userId, action, storyId, result.model, true, result.usage, 1); return jsonResponse({ data: { image_path: path } }, 200, headers);
+      await uploadImage(client, 'story-images', path, result.blob); await usage(userId, meteredOperation, storyId, result.model, true, result.usage, 1); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { image_path: path } }, 200, headers);
     }
     if (action === 'suggest-continuation') {
+      reservation = await assertAiEntitlement({ service, userId, operation: action, storyId });
       const pages = await storyPages(client, storyId); const prompt = continuationSuggestionPrompt(story.title, story.summary || '', pages.slice(-2).map((page) => page.text || ''));
       const schema = { type: 'object', properties: { suggestion: { type: 'string' } }, required: ['suggestion'], additionalProperties: false }; const result = await structured(prompt, 'continuation_suggestion', schema); const value: any = result.value;
       if (typeof value.suggestion !== 'string' || !value.suggestion.trim() || value.suggestion.length > 2_000) throw new AppError('AI_RESPONSE_INVALID', 'The continuation suggestion is invalid.', 502);
-      await usage(userId, action, storyId, result.model, true, result.usage); return jsonResponse({ data: { suggestion: value.suggestion.trim() } }, 200, headers);
+      await usage(userId, action, storyId, result.model, true, result.usage); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { suggestion: value.suggestion.trim() } }, 200, headers);
     }
     if (action === 'continue-story') {
       const count = integerIn(body.pageCount, CONTINUATION_PAGE_COUNTS, 'Continuation page count'); const premise = text(body.continuationPrompt, 'Continuation premise', LIMITS.PROMPT); const characters = await storyCharacters(client, story);
+      reservation = await assertAiEntitlement({ service, userId, operation: action, storyId, requestedPageCount: count });
       const result = await structured(continuationPrompt(story.title, story.summary || '', characters, count, premise), 'continuation', pageSchema(count)); const value = validatePages(result.value, count);
-      await usage(userId, action, storyId, result.model, true, result.usage); return jsonResponse({ data: value }, 200, headers);
+      await usage(userId, action, storyId, result.model, true, result.usage); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: value }, 200, headers);
     }
     if (action === 'translate-story') {
       const language = text(body.language, 'Language', 8); if (!LANGUAGE_NAMES[language]) throw new AppError('VALIDATION', 'Language is not supported.'); const pages = await storyPages(client, storyId);
       if (!pages.length || pages.length > LIMITS.TRANSLATION_PAGES) throw new AppError('VALIDATION', 'The story page count cannot be translated.'); const texts = pages.map((page) => text(page.text, 'Page text', LIMITS.TEXT));
+      reservation = await assertAiEntitlement({ service, userId, operation: action, storyId, requestedPageCount: texts.length });
       const schema = { type: 'object', properties: { translations: { type: 'array', minItems: texts.length, maxItems: texts.length, items: { type: 'string' } } }, required: ['translations'], additionalProperties: false }; const result = await structured(translationPrompt(texts, language), 'translations', schema); const value: any = result.value;
       if (!Array.isArray(value.translations) || value.translations.length !== texts.length || value.translations.some((item: unknown) => typeof item !== 'string' || !item.trim())) throw new AppError('AI_RESPONSE_INVALID', 'The translations are invalid.', 502);
-      await usage(userId, action, storyId, result.model, true, result.usage); return jsonResponse({ data: { translations: value.translations } }, 200, headers);
+      await usage(userId, action, storyId, result.model, true, result.usage); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { translations: value.translations } }, 200, headers);
     }
     if (action === 'generate-cover') {
-      const prompt = text(body.prompt, 'Cover prompt', LIMITS.PROMPT); if (!ART_STYLE_PROMPTS[story.art_style]) throw new AppError('VALIDATION', 'Art style is not supported.'); const result = await generateImage(prompt); const path = `${userId}/${storyId}/cover.png`;
-      await uploadImage(client, 'story-images', path, result.blob); await usage(userId, action, storyId, result.model, true, result.usage, 1); return jsonResponse({ data: { cover_image_path: path } }, 200, headers);
+      const prompt = text(body.prompt, 'Cover prompt', LIMITS.PROMPT); if (!ART_STYLE_PROMPTS[story.art_style]) throw new AppError('VALIDATION', 'Art style is not supported.'); reservation = await assertAiEntitlement({ service, userId, operation: action, storyId, requestedImageCount: 1 }); const result = await generateImage(prompt); const path = `${userId}/${storyId}/cover.png`;
+      await uploadImage(client, 'story-images', path, result.blob); await usage(userId, action, storyId, result.model, true, result.usage, 1); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { cover_image_path: path } }, 200, headers);
     }
     throw new AppError('VALIDATION', 'Action is not supported.');
   } catch (caught) {
-    const error = safeError(caught); if (userId && action) await usage(userId, action, storyId, action.includes('image') || action === 'generate-cover' ? MODELS.IMAGE : MODELS.TEXT, false);
+    await releaseAiEntitlement(service, reservation); const error = safeError(caught); if (userId && action) await usage(userId, action, storyId, action.includes('image') || action === 'generate-cover' ? MODELS.IMAGE : MODELS.TEXT, false);
     return jsonResponse({ error: { code: error.code, message: error.message } }, error.status, headers);
   }
 });

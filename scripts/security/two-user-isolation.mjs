@@ -177,6 +177,19 @@ try {
 
   denied(await userAClient.from('ai_usage').select('id').limit(1), 'browser cannot read ai_usage');
   denied(await userAClient.from('ai_usage').insert({ user_id: userA.id, operation: 'forged' }), 'browser cannot forge ai_usage');
+  for (const table of ['billing_plans', 'stripe_customers', 'subscriptions', 'stripe_webhook_events', 'entitlement_overrides', 'entitlement_usage']) {
+    denied(await userAClient.from(table).select('*').limit(1), `browser cannot directly read authoritative ${table}`);
+    denied(await userAClient.from(table).insert({ user_id: userA.id }), `browser cannot forge authoritative ${table}`);
+  }
+  const billingSummary = await userAClient.rpc('get_billing_summary');
+  ok(!billingSummary.error && billingSummary.data?.plan_key && !JSON.stringify(billingSummary.data).match(/stripe_(customer|subscription|price)_id/), 'User A receives only a safe own billing summary');
+  const billingSummaryB = await userBClient.rpc('get_billing_summary');
+  ok(!billingSummaryB.error && billingSummaryB.data?.plan_key && !JSON.stringify(billingSummaryB.data).match(/stripe_(customer|subscription|price)_id/), 'User B receives only a safe own billing summary');
+  ok(billingSummary.data.plan_key !== billingSummaryB.data.plan_key, 'User A and User B summaries resolve their distinct server-side test plans');
+  denied(await userBClient.rpc('get_billing_summary', { p_user_id: userA.id }), 'User B cannot parameterize the safe summary to read User A billing state');
+  const forgedPortal = await userBClient.functions.invoke('billing-portal', { body: { customerId: `cus_phase10c_${userA.id.replaceAll('-', '').slice(0, 20)}` } });
+  ok(Boolean(forgedPortal.error), 'User B cannot open a Portal session with User A Stripe customer ID');
+  denied(await anonymousClient.rpc('get_billing_summary'), 'anonymous billing summary is denied');
 
   await edgeMustDeny(anonymousClient, { action: 'suggest-continuation', storyId: created.aStory.id }, 'anonymous Edge invocation is denied');
   const attacks = [

@@ -1,4 +1,4 @@
-export type ErrorCode = 'AUTH_REQUIRED' | 'PERMISSION_DENIED' | 'VALIDATION' | 'AI_PROVIDER' | 'AI_RESPONSE_INVALID' | 'STORAGE' | 'DATABASE' | 'RATE_LIMIT';
+export type ErrorCode = 'AUTH_REQUIRED' | 'PERMISSION_DENIED' | 'VALIDATION' | 'AI_PROVIDER' | 'AI_RESPONSE_INVALID' | 'STORAGE' | 'DATABASE' | 'RATE_LIMIT' | 'ENTITLEMENT_LIMIT' | 'ENTITLEMENT_UNAVAILABLE';
 
 export class AppError extends Error {
   constructor(public code: ErrorCode, message: string, public status = 400) { super(message); }

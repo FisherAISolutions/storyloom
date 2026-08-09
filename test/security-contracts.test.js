@@ -9,6 +9,7 @@ const read = (path) => readFileSync(resolve(root, path), 'utf8');
 const migration = read('supabase/migrations/20260807000000_storyloom_foundation.sql');
 const hardening = read('supabase/migrations/20260808000000_harden_private_paths.sql');
 const edge = read('supabase/functions/story-ai/index.ts');
+const billing = read('supabase/migrations/20260809000000_stripe_billing_entitlements.sql');
 
 test('every application table enables RLS and client privileges are explicit', () => {
   for (const table of ['profiles', 'child_characters', 'stories', 'story_pages', 'ai_usage']) {
@@ -77,8 +78,8 @@ test('Edge Function authenticates and authorizes before every provider boundary'
   assert.ok(edge.indexOf('const auth = await authenticate(request)') < edge.indexOf('await structured('));
   assert.ok(edge.indexOf('const character = await ownedCharacter(client, characterId)') < edge.indexOf('structured(characterAnalysisPrompt'));
   assert.ok(edge.indexOf('const story = await ownedStory(client, storyId)') < edge.indexOf("if (action === 'generate-page-image')"));
-  assert.ok(edge.indexOf('await assertAiEntitlement({ userId, operation: action') < edge.indexOf('generateImage(pageImagePrompt'));
-  assert.ok(edge.indexOf('await assertAiEntitlement({ userId, operation: action') < edge.indexOf("if (action === 'suggest-continuation')"));
+  assert.ok(edge.indexOf('reservation = await assertAiEntitlement') < edge.indexOf("structured(storyPrompt"));
+  assert.ok(edge.indexOf("operation: meteredOperation") < edge.indexOf('generateImage(pageImagePrompt'));
 });
 
 test('service role and OpenAI secrets remain outside browser source', () => {
@@ -109,7 +110,7 @@ test('server validation bounds costly and structured inputs', () => {
   assert.match(config, /PROMPT: 4_000/);
   assert.match(config, /CHARACTERS: 3/);
   assert.match(config, /IMAGE_BYTES: 20 \* 1024 \* 1024/);
-  assert.match(edge, /pageNumber < 1 \|\| pageNumber > 25/);
+  assert.match(edge, /rawPageNumber as number\) < 1 \|\| \(rawPageNumber as number\) > 30/);
   assert.match(edge, /LANGUAGE_NAMES\[language\]/);
   assert.match(openai, /bytes\[0\] !== 0x89/);
   assert.match(edge, /data\.size <= 0 \|\| data\.size > 10 \* 1024 \* 1024/);
@@ -120,4 +121,15 @@ test('server validation bounds costly and structured inputs', () => {
   const storage = read('src/services/storage.js');
   assert.match(storage, /file\.size > 10 \* 1024 \* 1024/);
   assert.match(storage, /matchesImageSignature\(header, file\.type\.toLowerCase\(\)\)/);
+});
+
+test('billing authority and ledger are server-only', () => {
+  for (const table of ['billing_plans','stripe_customers','subscriptions','stripe_webhook_events','entitlement_overrides','entitlement_usage']) {
+    assert.match(billing, new RegExp(`alter table public\\.${table} enable row level security`, 'i'));
+  }
+  assert.match(billing, /revoke all on public\.billing_plans,public\.stripe_customers,public\.subscriptions/);
+  assert.match(billing, /revoke all on function public\.reserve_ai_entitlement/);
+  assert.doesNotMatch(billing, /create policy[\s\S]+(stripe_customers|subscriptions|entitlement_usage)/i);
+  assert.match(billing, /pg_advisory_xact_lock/);
+  assert.match(billing, /status in \('reserved','consumed'\)/);
 });

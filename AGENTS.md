@@ -14,7 +14,7 @@ Start with `README.md` for local setup, environment variables, migrations, and d
 - Never expose or commit OpenAI keys, Supabase service-role credentials, or other server secrets.
 - Store durable private media as Supabase Storage paths, not signed URLs or temporary provider URLs.
 - Do not introduce Base44 packages, APIs, configuration, assets, or deployment dependencies.
-- Stripe subscriptions are planned but not implemented. Do not create client-trusted subscription or entitlement state; preserve the server-side entitlement boundary for the dedicated billing phase.
+- Stripe subscriptions use hosted Checkout, Customer Portal, verified webhooks, and server-authoritative Supabase entitlement reservations. Never create client-trusted subscription or entitlement state.
 
 ## Key files
 

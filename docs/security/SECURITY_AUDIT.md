@@ -1,18 +1,21 @@
 # Story Loom Kids Security Audit
 
-Audit date: 2026-08-07  
-Scope: authentication, profiles, user-owned database rows, private Storage, signed URLs, session/cache transitions, `story-ai`, AI usage, secrets, CORS, migrations, validation, and error behavior.
+Audit date: 2026-08-09
+Scope: authentication, profiles, user-owned database rows, private Storage, signed URLs, session/cache transitions, `story-ai`, AI usage, billing isolation, secrets, CORS, migrations, validation, and error behavior.
 
 ## Executive result
 
 The repository has a strong least-privilege design: ordinary browser clients receive only a publishable key, every application table has RLS, owner filters are duplicated in services, same-owner composite foreign keys prevent relationship forgery, Storage is private, AI resource checks use the caller's JWT, and the service role is confined to authoritative usage logging.
 
-Anonymous live verification passed. Full two-user runtime proof is **MANUALLY REQUIRED** because two confirmed ordinary test-account credentials were not available. The new hardening migration is source-controlled but was not pushed automatically. Production readiness is therefore conditional on deploying it and completing the ordinary-user harness and browser transition checks in `SECURITY_TEST_PLAN.md`.
+The deployed two-user harness passed **80 ordinary-user/anonymous assertions** on August 9, 2026. This includes billing-table/ledger denial, distinct caller-only billing summaries, paid-state forgery denial, cross-user AI denial, and rejection of a Portal request carrying the other user's customer identifier. The ephemeral confirmed users and server-side fixtures were removed after the run. Browser session-transition checks in `SECURITY_TEST_PLAN.md` remain a separate production gate.
 
 ## Verification status
 
 ### Automated verified
 
+- The deployed two-user harness passed 80/80 assertions using normal user JWTs; no service-role credential was used by the user-facing clients.
+- Both users were denied direct reads and writes for every authoritative billing table; their safe summary RPCs returned distinct server-resolved plans without Stripe identifiers.
+- User B could not parameterize the safe summary, open a Portal session using User A's supplied customer identifier, or invoke any User A AI resource operation.
 - Deployed anonymous REST reads for `profiles`, `child_characters`, `stories`, `story_pages`, and `ai_usage` returned 401.
 - Anonymous listing of all three private buckets returned zero objects.
 - Anonymous and invalid-JWT `story-ai` calls returned 401.
@@ -29,8 +32,8 @@ Anonymous live verification passed. Full two-user runtime proof is **MANUALLY RE
 - `ai_usage`: RLS enabled, no browser grants/policies, same-owner story FK, service-role insert only after authentication.
 - Edge authentication derives the user from `auth.getUser(token)` and ignores browser owner/role/subscription fields.
 - All story/character AI operations load the resource through a caller-scoped RLS client before provider calls.
-- `assertAiEntitlement()` is server-side and precedes provider calls. It remains intentionally allow-all until Stripe is implemented.
-- Service role appears only in the Edge Function and is used only for `ai_usage`; resource reads and Storage operations use the caller client.
+- `assertAiEntitlement()` is server-side, transactionally reserves authoritative Stripe/free/override credits, and precedes provider calls. A deployed exhausted-quota request returned `ENTITLEMENT_LIMIT` with no consumed reservation or successful image usage.
+- Service role remains confined to Edge Functions for authoritative billing, usage logging, and generated-asset writes; resource authorization reads use the caller client.
 - OpenAI key and API origin are absent from browser source. The key is read only with `Deno.env` in server code.
 - CORS uses an exact configured-origin allowlist and has no wildcard fallback.
 - Queries use Supabase/PostgREST builders; no user-controlled raw SQL construction was found.
@@ -38,11 +41,7 @@ Anonymous live verification passed. Full two-user runtime proof is **MANUALLY RE
 
 ### Manually required
 
-- Execute the two-user harness with two confirmed normal accounts.
-- Inspect provider/Edge logs during forged AI calls to prove zero OpenAI spend.
 - Verify A→B browser switching, reload, refresh, expiry/revocation, and password recovery without stale UI.
-- Confirm deployed RLS/policies/functions match source after applying the new migration.
-- Reconcile the linked project's empty CLI migration history before using `supabase db push`; its dry run currently proposes all three migrations, including the already-existing foundation.
 - Verify production `ALLOWED_ORIGINS`, Auth Site URL/redirect allowlists, Google provider configuration if enabled, and log retention/access.
 
 ## Findings
@@ -107,17 +106,17 @@ The in-memory minute window is a useful local throttle but can reset on cold sta
 
 | Boundary | Conclusion |
 | --- | --- |
-| Profiles | Strong static design; anonymous live denial passed; two-user mutation/read proof pending harness |
-| Child characters | Owner RLS and same-owner reference constraint verified statically; live A/B proof pending |
-| Stories | Owner RLS and canonical media references verified statically; live A/B proof pending |
-| Story pages | Parent-owner RLS plus composite FK verified statically; live A/B proof pending |
-| Secondary characters | Strict shape and same-owner trigger verified statically; malformed/foreign runtime proof pending |
-| Storage | Anonymous live isolation passed; canonical-policy migration added; live A/B proof pending deployment |
+| Profiles | Two-user own-row reads and cross-user mutation/read denial passed live |
+| Child characters | Owner RLS, cross-user CRUD denial, and same-owner references passed live |
+| Stories | Owner RLS, cross-user CRUD denial, and canonical media references passed live |
+| Story pages | Parent-owner RLS and composite ownership denial passed live |
+| Secondary characters | Strict shape and same-owner trigger malformed/foreign cases passed live |
+| Storage | Anonymous and two-user read/sign/overwrite/delete isolation passed live |
 | Signed URLs/cache | Five-minute transient cache and logout/user-change clearing verified; browser switch proof pending |
-| Edge/AI ownership | Authentication and ownership-before-provider ordering verified; live cross-user/provider-log proof pending |
+| Edge/AI ownership | Authentication, ownership-before-provider ordering, cross-user denial, and entitlement-before-provider denial passed live |
 | AI usage | No browser grants/policies and service-only insert verified |
 | Secrets | No privileged browser references found; production bundle scan required after final build |
 
 ## Production decision
 
-The repository is ready for the remaining verification work, but user isolation should not yet be labeled fully production-proven. Apply the hardening migration, deploy the matching Edge source, pass the normal two-user harness, and complete manual session-transition/provider-log checks. After those gates pass, the architecture is suitable for dependency hardening and then the dedicated Stripe phase.
+The deployed data, Storage, AI, and billing authorization boundaries have ordinary-user two-user runtime proof. Production launch still requires the separate browser session-transition checks and production origin/Auth/logging configuration review listed above. Stripe remains test-mode only and its economics remain provisional.

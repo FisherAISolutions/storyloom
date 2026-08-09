@@ -53,11 +53,9 @@ Create OAuth credentials in Google Cloud for the intended environments. In Supab
 
 The configured project currently reports Google disabled. Enable it before expecting the visible Google buttons to complete sign-in.
 
-## Future Stripe compatibility
+## Stripe billing
 
-Stripe is intentionally deferred. The stable `auth.users.id`/`profiles.id` identity and server-only `ai_usage` table allow a later billing phase to add customer, subscription, price/tier, entitlement, quota-period, and webhook-event tables without changing authentication ownership.
-
-Authoritative subscription status and entitlements must be written by verified Stripe webhooks or trusted server operations. They must not live only in browser state, `user_metadata`, or other user-editable fields. Checkout and Customer Portal sessions will be created server-side, and AI functions will enforce quotas from server-maintained subscription/tier state.
+Stripe Checkout and Customer Portal sessions are created by authenticated Edge Functions. Verified Stripe webhooks maintain customer/subscription state, and `story-ai` transactionally reserves server-authoritative entitlements before provider calls. Billing authority never lives in browser state or editable user metadata. See `docs/billing/STRIPE_SETUP.md` and `docs/billing/ENTITLEMENTS.md`.
 
 ## 4. Database design
 

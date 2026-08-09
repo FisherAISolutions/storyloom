@@ -43,7 +43,7 @@ The server-only file needs `OPENAI_API_KEY`; it may also set `ALLOWED_ORIGINS` a
 - Generated PNGs use deterministic paths and `upsert`: portrait, page, and cover retries replace the same object rather than accumulating files.
 - Story counts are limited to 6/10/15; continuation counts to 3/5/10; page numbers, prompt sizes, character counts, languages, and art-style IDs are bounded.
 - A lightweight per-isolate throttle supplements authentication and input limits. It is not a distributed billing quota.
-- `assertAiEntitlement()` runs server-side before every provider request. A later Stripe phase should replace its allow-all body with webhook-maintained entitlement and billing-period quota checks.
+- `assertAiEntitlement()` runs server-side before every provider request and transactionally reserves webhook-maintained, billing-period entitlement. Successful operations finalize usage and failures release reservations. See `docs/billing/ENTITLEMENTS.md`.
 - Failures return stable safe codes and do not include provider bodies, stack traces, secrets, or image bytes.
 
 ## Persistence and consistency
