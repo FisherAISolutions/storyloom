@@ -25,3 +25,11 @@ export function PublicOnlyRoute() {
   if (isAuthenticated) return <Navigate to="/" replace />;
   return <Outlet />;
 }
+
+export function AdminRoute() {
+  const { user, isAuthenticated, isLoadingAuth, authChecked } = useAuth();
+  if (isLoadingAuth || !authChecked) return <AuthLoading />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user?.role !== 'admin') return <Navigate to="/" replace />;
+  return <Outlet />;
+}

@@ -97,6 +97,7 @@ export default function CreateStory() {
         secondary_characters: secondary_characters.length ? secondary_characters : undefined,
         page_count: content.pages.length,
       });
+      try { await storiesService.linkGeneration(story.id, content.analytics_request_id); } catch { console.error('Story analytics link failed'); }
       let coverPath = null;
       for (let i = 0; i < content.pages.length; i++) {
         setProgress(`Painting page ${i + 1} of ${content.pages.length}…`);

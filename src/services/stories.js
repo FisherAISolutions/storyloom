@@ -70,6 +70,14 @@ export async function create(input) {
   return data;
 }
 
+export async function linkGeneration(storyId, requestId) {
+  const id = requireId(storyId, 'Story ID');
+  const correlationId = requireId(requestId, 'Analytics request ID');
+  await requireAuthenticatedUser();
+  const { error } = await getSupabaseClient().rpc('link_story_ai_usage', { p_story_id: id, p_request_id: correlationId });
+  if (error) throw toServiceError(error, 'Story generation analytics link');
+}
+
 export async function update(id, input) {
   const storyId = requireId(id, 'Story ID');
   const payload = storyPayload(input);

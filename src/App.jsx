@@ -4,7 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter as Router, Navigate, Route, Routes, useSearchParams } from 'react-router-dom';
 import { queryClientInstance } from '@/lib/query-client';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
-import ProtectedRoute, { PublicOnlyRoute } from '@/components/ProtectedRoute';
+import ProtectedRoute, { AdminRoute, PublicOnlyRoute } from '@/components/ProtectedRoute';
 import ScrollToTop from '@/components/ScrollToTop';
 import PageNotFound from '@/lib/PageNotFound';
 import Layout from '@/components/Layout';
@@ -21,6 +21,7 @@ const StoryEditor = lazy(() => import('@/pages/StoryEditor'));
 const Pricing = lazy(() => import('@/pages/Pricing'));
 const Billing = lazy(() => import('@/pages/Billing'));
 const BillingSuccess = lazy(() => import('@/pages/BillingSuccess'));
+const AdminAiEconomics = lazy(() => import('@/pages/AdminAiEconomics'));
 
 const withPageLoader = (page) => (
   <Suspense fallback={<div className="flex justify-center py-24">Loading…</div>}>
@@ -63,6 +64,9 @@ function AppRoutes() {
           <Route path="/pricing" element={withPageLoader(<Pricing />)} />
           <Route path="/billing" element={withPageLoader(<Billing />)} />
           <Route path="/billing/success" element={withPageLoader(<BillingSuccess />)} />
+          <Route element={<AdminRoute />}>
+            <Route path="/admin/ai-economics" element={withPageLoader(<AdminAiEconomics />)} />
+          </Route>
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />

@@ -13,6 +13,8 @@ Story Loom Kids is a React application for creating personalized, illustrated ch
 
 Stripe subscriptions use hosted Checkout, Customer Portal, signed webhook synchronization, and Supabase-backed usage reservations. Browser state and Checkout redirects are never authoritative. See `docs/billing/STRIPE_SETUP.md` and `docs/billing/ENTITLEMENTS.md`.
 
+Admin AI economics are computed from trusted usage and entitlement records through an admin-only RPC. Provider prices are versioned server-side and intentionally unconfigured until reviewed; see `docs/analytics/AI_ECONOMICS.md`.
+
 ## Local setup
 
 Requirements: Node.js with npm, a Supabase project, and the Supabase CLI for database/function deployment.

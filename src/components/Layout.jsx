@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
-import { Home, Sparkles, Users, BookMarked, BookOpen, LogOut, CreditCard } from 'lucide-react';
+import { Home, Sparkles, Users, BookMarked, BookOpen, LogOut, CreditCard, ChartNoAxesCombined } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -14,7 +14,8 @@ const nav = [
 
 export default function Layout() {
   const location = useLocation();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const visibleNav = user?.role === 'admin' ? [...nav, { to: '/admin/ai-economics', label: 'AI economics', icon: ChartNoAxesCombined }] : nav;
   const [logoutError, setLogoutError] = useState('');
 
   const handleLogout = async () => {
@@ -37,7 +38,7 @@ export default function Layout() {
           </Link>
           <div className="flex items-center gap-2">
           <nav className="hidden items-center gap-1 md:flex">
-            {nav.map(({ to, label, icon: Icon }) => {
+            {visibleNav.map(({ to, label, icon: Icon }) => {
               const active = location.pathname === to;
               return (
                 <Link
@@ -64,7 +65,7 @@ export default function Layout() {
         <Outlet />
       </main>
       <nav className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-stone-200 bg-[#fdfbf7]/90 backdrop-blur-md py-2 md:hidden">
-        {nav.map(({ to, label, icon: Icon }) => {
+        {visibleNav.map(({ to, label, icon: Icon }) => {
           const active = location.pathname === to;
           return (
             <Link
