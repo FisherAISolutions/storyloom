@@ -1,0 +1,18 @@
+import { Link } from 'react-router-dom';
+import LegalPage from '@/components/LegalPage';
+
+export default function Privacy() {
+  return (
+    <LegalPage title="Privacy Policy">
+      <section><h2>Who this service is for</h2><p>Story Loom Kids is a creative tool intended for parents, guardians, and other adults. Children should not create or manage accounts or submit personal information independently. The account holder is responsible for deciding what information and photos to provide.</p></section>
+      <section><h2>Information we process</h2><p>We process account information such as an email address and authentication identifiers. When you use the service, we also process the character names, optional ages, descriptions and photos you provide; story ideas, generated text, translations and illustrations; and technical records needed for security, usage limits, and reliable operation.</p><p>We do not receive or store full payment-card details. Stripe handles payment information on its hosted payment pages.</p></section>
+      <section><h2>How information is used</h2><p>We use information to authenticate users, create and save characters and stories, generate and edit content, provide subscriptions, enforce usage limits, prevent abuse, troubleshoot failures, and protect the service and its users.</p></section>
+      <section><h2>Service providers</h2><ul><li>Supabase provides authentication, database, private file storage, and server functions.</li><li>OpenAI processes prompts, story content, and images as needed to provide AI generation features.</li><li>Stripe processes payments and maintains subscription status.</li></ul><p>These providers process information on our behalf under their own contractual and security terms. Do not upload information you are not authorized to share.</p></section>
+      <section><h2>Storage and security</h2><p>Character photos and generated images are stored in private storage. Application data is protected with authenticated access controls designed to keep each account's content separate. No internet service can guarantee absolute security, so use a strong unique password and keep account access private.</p></section>
+      <section><h2>Retention and choices</h2><p>We retain account and story information while needed to provide the service, meet legal obligations, resolve disputes, and protect the service. You may request access, correction, or deletion through the <Link to="/support" className="font-medium text-stone-900 underline">Support page</Link>. Some records may be retained where required for security, billing, or legal purposes.</p></section>
+      <section><h2>Children's privacy</h2><p>The service is not directed to children for independent use or account creation. Adults should avoid including unnecessary sensitive information about a child and should only upload a child's photo with appropriate authority. Contact us promptly if you believe a child submitted personal information without appropriate adult involvement.</p></section>
+      <section><h2>Changes and contact</h2><p>We may update this policy as the product or legal requirements change. Material changes will be reflected on this page. Privacy questions can be sent through the <Link to="/support" className="font-medium text-stone-900 underline">Support page</Link>.</p></section>
+      <p className="rounded-xl bg-amber-50 p-4 text-xs text-amber-900">This policy is a practical launch template and is not legal advice. The product owner should have it reviewed for the business's location and customers before launch.</p>
+    </LegalPage>
+  );
+}

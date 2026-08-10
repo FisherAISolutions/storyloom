@@ -21,6 +21,18 @@ export function response(body: unknown, status: number, headers: HeadersInit = {
   return new Response(JSON.stringify(body), { status, headers: { ...headers, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
 }
 
+export function appUrl() {
+  const configured = Deno.env.get('APP_URL')?.trim();
+  if (!configured) throw new BillingError('BILLING_CONFIG', 'Billing is not configured for this environment.', 503);
+  let parsed: URL;
+  try { parsed = new URL(configured); } catch { throw new BillingError('BILLING_CONFIG', 'Billing is not configured for this environment.', 503); }
+  const isLocalTest = STRIPE_KEY.startsWith('sk_test_') && (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1');
+  if (parsed.origin !== configured.replace(/\/$/, '') || (parsed.protocol !== 'https:' && !isLocalTest)) {
+    throw new BillingError('BILLING_CONFIG', 'Billing is not configured for this environment.', 503);
+  }
+  return parsed.origin;
+}
+
 export async function authenticate(request: Request) {
   const authorization = request.headers.get('Authorization');
   if (!authorization?.startsWith('Bearer ')) throw new BillingError('AUTH_REQUIRED', 'Authentication is required.', 401);

@@ -22,6 +22,9 @@ const Pricing = lazy(() => import('@/pages/Pricing'));
 const Billing = lazy(() => import('@/pages/Billing'));
 const BillingSuccess = lazy(() => import('@/pages/BillingSuccess'));
 const AdminAiEconomics = lazy(() => import('@/pages/AdminAiEconomics'));
+const Privacy = lazy(() => import('@/pages/Privacy'));
+const Terms = lazy(() => import('@/pages/Terms'));
+const Support = lazy(() => import('@/pages/Support'));
 
 const withPageLoader = (page) => (
   <Suspense fallback={<div className="flex justify-center py-24">Loading…</div>}>
@@ -54,14 +57,17 @@ function AppRoutes() {
       </Route>
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/reset-password" element={<ResetPassword />} />
-      <Route element={<ProtectedRoute />}>
-        <Route element={<Layout />}>
-          <Route path="/" element={withPageLoader(<Home />)} />
+      <Route element={<Layout />}>
+        <Route path="/" element={withPageLoader(<Home />)} />
+        <Route path="/pricing" element={withPageLoader(<Pricing />)} />
+        <Route path="/privacy" element={withPageLoader(<Privacy />)} />
+        <Route path="/terms" element={withPageLoader(<Terms />)} />
+        <Route path="/support" element={withPageLoader(<Support />)} />
+        <Route element={<ProtectedRoute />}>
           <Route path="/create" element={withPageLoader(<CreateStory />)} />
           <Route path="/characters" element={withPageLoader(<Characters />)} />
           <Route path="/library" element={withPageLoader(<Library />)} />
           <Route path="/story/:id" element={withPageLoader(<StoryEditor />)} />
-          <Route path="/pricing" element={withPageLoader(<Pricing />)} />
           <Route path="/billing" element={withPageLoader(<Billing />)} />
           <Route path="/billing/success" element={withPageLoader(<BillingSuccess />)} />
           <Route element={<AdminRoute />}>

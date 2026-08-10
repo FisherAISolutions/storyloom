@@ -1,4 +1,4 @@
-import { BillingError, authenticate, cors, customerFor, response, safeFailure, service, stripe } from '../_shared/billing.ts';
+import { BillingError, appUrl, authenticate, cors, customerFor, response, safeFailure, service, stripe } from '../_shared/billing.ts';
 
 Deno.serve(async (request) => {
   let headers: HeadersInit = {};
@@ -13,8 +13,8 @@ Deno.serve(async (request) => {
     const active = await service.from('subscriptions').select('id').eq('user_id', user.id).in('status', ['active','trialing']).limit(1);
     if (active.error) throw new BillingError('DATABASE', 'Subscription status could not be loaded.', 500);
     if (active.data?.length) throw new BillingError('USE_PORTAL', 'Manage your existing subscription from Billing.');
-    const customer = await customerFor(user); const appUrl = Deno.env.get('APP_URL') || 'http://localhost:5173';
-    const session = await stripe('checkout/sessions', { mode: 'subscription', customer, 'line_items[0][price]': plan.data.stripe_price_id, 'line_items[0][quantity]': '1', client_reference_id: user.id, 'subscription_data[metadata][supabase_user_id]': user.id, 'subscription_data[metadata][plan_key]': plan.data.plan_key, success_url: `${appUrl}/billing/success`, cancel_url: `${appUrl}/pricing?checkout=cancelled` });
+    const returnOrigin = appUrl(); const customer = await customerFor(user);
+    const session = await stripe('checkout/sessions', { mode: 'subscription', customer, 'line_items[0][price]': plan.data.stripe_price_id, 'line_items[0][quantity]': '1', client_reference_id: user.id, 'subscription_data[metadata][supabase_user_id]': user.id, 'subscription_data[metadata][plan_key]': plan.data.plan_key, success_url: `${returnOrigin}/billing/success`, cancel_url: `${returnOrigin}/pricing?checkout=cancelled` });
     return response({ data: { url: session.url } }, 200, headers);
   } catch (caught) { const error = safeFailure(caught); return response({ error: { code: error.code, message: error.message } }, error.status, headers); }
 });

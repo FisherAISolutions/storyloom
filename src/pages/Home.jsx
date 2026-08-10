@@ -54,7 +54,7 @@ export default function Home() {
         <div className="flex items-end justify-between">
           <div>
             <h2 className="font-display text-2xl font-semibold tracking-tight md:text-3xl">Story templates</h2>
-            <p className="mt-1 text-sm text-stone-500">Watercolor worlds, ready to be told. Tap one to begin.</p>
+            <p className="mt-1 text-sm text-stone-500">Illustrated worlds, ready to be told. Tap one to begin.</p>
           </div>
         </div>
         <div className="mt-8 grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 md:grid-cols-3">
@@ -117,7 +117,7 @@ export default function Home() {
       <section className="grid gap-4 md:grid-cols-3 md:gap-6">
         {[
         { n: '01', t: 'Star your child', d: 'Upload a photo to create a storybook character of your child.' },
-        { n: '02', t: 'Choose or imagine', d: 'Pick a template or type your own idea — pirates, fairies, brave little otters.' },,
+        { n: '02', t: 'Choose or imagine', d: 'Pick a template or type your own idea — pirates, fairies, brave little otters.' },
         { n: '03', t: 'AI paints the pages', d: 'The story is written and each page is illustrated in the style you choose, then edit the story to your liking.' }].
         map((s) =>
         <div key={s.n} className="rounded-2xl border border-stone-200 bg-white p-6">

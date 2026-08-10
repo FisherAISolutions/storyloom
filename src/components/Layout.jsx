@@ -4,7 +4,7 @@ import { Home, Sparkles, Users, BookMarked, BookOpen, LogOut, CreditCard, ChartN
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/AuthContext';
 
-const nav = [
+const authenticatedNav = [
   { to: '/', label: 'Home', icon: Home },
   { to: '/create', label: 'Create', icon: Sparkles },
   { to: '/characters', label: 'Characters', icon: Users },
@@ -15,7 +15,9 @@ const nav = [
 export default function Layout() {
   const location = useLocation();
   const { logout, user } = useAuth();
-  const visibleNav = user?.role === 'admin' ? [...nav, { to: '/admin/ai-economics', label: 'AI economics', icon: ChartNoAxesCombined }] : nav;
+  const visibleNav = user
+    ? (user.role === 'admin' ? [...authenticatedNav, { to: '/admin/ai-economics', label: 'AI economics', icon: ChartNoAxesCombined }] : authenticatedNav)
+    : [];
   const [logoutError, setLogoutError] = useState('');
 
   const handleLogout = async () => {
@@ -54,9 +56,17 @@ export default function Layout() {
               );
             })}
           </nav>
-          <button onClick={() => { void handleLogout(); }} className="rounded-full p-2 text-stone-500 hover:bg-stone-200/60 hover:text-stone-900" aria-label="Log out">
-            <LogOut className="h-4 w-4" />
-          </button>
+          {user ? (
+            <button onClick={() => { void handleLogout(); }} className="rounded-full p-2 text-stone-500 hover:bg-stone-200/60 hover:text-stone-900" aria-label="Log out">
+              <LogOut className="h-4 w-4" />
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Link to="/pricing" className="hidden rounded-full px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-200/60 sm:block">Pricing</Link>
+              <Link to="/login" className="rounded-full px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-200/60">Log in</Link>
+              <Link to="/register" className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800">Get started</Link>
+            </div>
+          )}
           </div>
         </div>
       </header>
@@ -64,7 +74,18 @@ export default function Layout() {
       <main className="mx-auto max-w-7xl px-5 py-8 pb-24 md:pb-12">
         <Outlet />
       </main>
-      <nav className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-stone-200 bg-[#fdfbf7]/90 backdrop-blur-md py-2 md:hidden">
+      <footer className="border-t border-stone-200/70 px-5 py-8 text-sm text-stone-500">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 sm:flex-row">
+          <p>&copy; {new Date().getFullYear()} Story Loom Kids</p>
+          <nav aria-label="Footer" className="flex flex-wrap justify-center gap-x-5 gap-y-2">
+            <Link to="/pricing" className="hover:text-stone-900">Pricing</Link>
+            <Link to="/privacy" className="hover:text-stone-900">Privacy</Link>
+            <Link to="/terms" className="hover:text-stone-900">Terms</Link>
+            <Link to="/support" className="hover:text-stone-900">Support</Link>
+          </nav>
+        </div>
+      </footer>
+      {user && <nav className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-stone-200 bg-[#fdfbf7]/90 backdrop-blur-md py-2 md:hidden">
         {visibleNav.map(({ to, label, icon: Icon }) => {
           const active = location.pathname === to;
           return (
@@ -80,7 +101,7 @@ export default function Layout() {
             </Link>
           );
         })}
-      </nav>
+      </nav>}
     </div>
   );
 }

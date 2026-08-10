@@ -9,6 +9,8 @@ import GoogleIcon from '@/components/GoogleIcon';
 import { safeReturnTo } from '@/lib/authReturnTo';
 import { resendSignupConfirmation, signInWithGoogle, signUpWithPassword } from '@/services/auth';
 
+const googleAuthEnabled = import.meta.env.VITE_GOOGLE_AUTH_ENABLED === 'true';
+
 function confirmationRedirect() {
   const callback = new URL('/auth/callback', window.location.origin);
   callback.searchParams.set('returnTo', safeReturnTo());
@@ -75,8 +77,8 @@ export default function Register() {
 
   return (
     <AuthLayout icon={UserPlus} title="Create your account" subtitle="Sign up to get started" footer={<>Already have an account? <Link to="/login" className="font-medium text-primary hover:underline">Log in</Link></>}>
-      <Button variant="outline" className="mb-6 h-12 w-full" onClick={handleGoogle} disabled={loading}><GoogleIcon className="mr-2 h-5 w-5" />Continue with Google</Button>
-      <div className="relative mb-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t" /></div><div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-3 text-muted-foreground">or</span></div></div>
+      {googleAuthEnabled && <><Button variant="outline" className="mb-6 h-12 w-full" onClick={handleGoogle} disabled={loading}><GoogleIcon className="mr-2 h-5 w-5" />Continue with Google</Button>
+      <div className="relative mb-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t" /></div><div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-3 text-muted-foreground">or</span></div></div></>}
       {error && <div className="mb-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2"><Label htmlFor="email">Email</Label><Input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-12" required /></div>

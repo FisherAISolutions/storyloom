@@ -28,9 +28,13 @@ Copy `.env.example` to `.env.local` and provide the project's public browser val
 ```text
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=your-public-publishable-key
+VITE_SUPPORT_EMAIL=support@your-verified-domain.example
+VITE_GOOGLE_AUTH_ENABLED=false
 ```
 
 Never place the service-role key or OpenAI API key in a `VITE_` variable.
+
+Production deployment, Supabase owner actions, Stripe live cutover, and the final smoke test are collected in [`docs/launch/PRODUCTION_LAUNCH_CHECKLIST.md`](docs/launch/PRODUCTION_LAUNCH_CHECKLIST.md).
 
 Start the frontend:
 

@@ -9,6 +9,8 @@ import GoogleIcon from '@/components/GoogleIcon';
 import { safeReturnTo } from '@/lib/authReturnTo';
 import { signInWithGoogle, signInWithPassword } from '@/services/auth';
 
+const googleAuthEnabled = import.meta.env.VITE_GOOGLE_AUTH_ENABLED === 'true';
+
 export default function Login() {
   const [params] = useSearchParams();
   const [email, setEmail] = useState('');
@@ -51,10 +53,10 @@ export default function Login() {
       subtitle="Log in to continue your stories"
       footer={<>Need an account? <Link to="/register" className="font-medium text-primary hover:underline">Sign up</Link></>}
     >
-      <Button variant="outline" className="mb-6 h-12 w-full text-sm font-medium" onClick={handleGoogle} disabled={loading}>
+      {googleAuthEnabled && <><Button variant="outline" className="mb-6 h-12 w-full text-sm font-medium" onClick={handleGoogle} disabled={loading}>
         <GoogleIcon className="mr-2 h-5 w-5" /> Continue with Google
       </Button>
-      <div className="relative mb-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t" /></div><div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-3 text-muted-foreground">or</span></div></div>
+      <div className="relative mb-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t" /></div><div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-3 text-muted-foreground">or</span></div></div></>}
       {error && <div className="mb-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
