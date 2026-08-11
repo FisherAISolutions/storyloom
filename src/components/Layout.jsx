@@ -36,7 +36,7 @@ export default function Layout() {
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-stone-900 text-white">
               <BookOpen className="h-5 w-5" />
             </div>
-            <span className="font-display text-xl font-semibold tracking-tight">Storyloom</span>
+            <span className="font-display whitespace-nowrap text-base font-semibold tracking-tight sm:text-xl">MyStorybook AI</span>
           </Link>
           <div className="flex items-center gap-2">
           <nav className="hidden items-center gap-1 md:flex">
@@ -64,7 +64,7 @@ export default function Layout() {
             <div className="flex items-center gap-2">
               <Link to="/pricing" className="hidden rounded-full px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-200/60 sm:block">Pricing</Link>
               <Link to="/login" className="rounded-full px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-200/60">Log in</Link>
-              <Link to="/register" className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800">Get started</Link>
+              <Link to="/register" className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800">Create account</Link>
             </div>
           )}
           </div>
@@ -76,7 +76,7 @@ export default function Layout() {
       </main>
       <footer className="border-t border-stone-200/70 px-5 py-8 text-sm text-stone-500">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 sm:flex-row">
-          <p>&copy; {new Date().getFullYear()} Story Loom Kids</p>
+          <p>&copy; {new Date().getFullYear()} MyStorybook AI <span className="hidden sm:inline">&middot; Your child. Their adventure. Their storybook.</span></p>
           <nav aria-label="Footer" className="flex flex-wrap justify-center gap-x-5 gap-y-2">
             <Link to="/pricing" className="hover:text-stone-900">Pricing</Link>
             <Link to="/privacy" className="hover:text-stone-900">Privacy</Link>

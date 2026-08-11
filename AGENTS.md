@@ -2,7 +2,7 @@
 
 ## Project context
 
-Story Loom Kids is a user-owned React/Vite application backed by Supabase and OpenAI. Preserve the existing UI, prompts, art styles, workflows, and generated-output behavior unless a task explicitly requests a change.
+MyStorybook AI (formerly Story Loom Kids) is a user-owned React/Vite application backed by Supabase and OpenAI. Preserve the existing UI, prompts, art styles, workflows, and generated-output behavior unless a task explicitly requests a change.
 
 Start with `README.md` for local setup, environment variables, migrations, and deployment.
 

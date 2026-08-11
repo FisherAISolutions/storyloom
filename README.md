@@ -1,6 +1,6 @@
-# Story Loom Kids
+# MyStorybook AI
 
-Story Loom Kids is a React application for creating personalized, illustrated children's stories. The browser uses Supabase for authentication and app data; trusted AI work runs through a Supabase Edge Function backed by OpenAI.
+MyStorybook AI is a React application for creating personalized, illustrated children's stories. Its production domain is `https://mystorybookai.online`. The browser uses Supabase for authentication and app data; trusted AI work runs through a Supabase Edge Function backed by OpenAI.
 
 ## Architecture
 
@@ -28,7 +28,7 @@ Copy `.env.example` to `.env.local` and provide the project's public browser val
 ```text
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=your-public-publishable-key
-VITE_SUPPORT_EMAIL=support@your-verified-domain.example
+VITE_SUPPORT_EMAIL=support@mystorybookai.online
 VITE_GOOGLE_AUTH_ENABLED=false
 ```
 
@@ -54,7 +54,7 @@ supabase db push
 Configure server-only secrets and deploy the AI function:
 
 ```bash
-supabase secrets set OPENAI_API_KEY=your-key ALLOWED_ORIGINS=https://your-app.example
+supabase secrets set OPENAI_API_KEY=your-key ALLOWED_ORIGINS=https://mystorybookai.online
 supabase functions deploy story-ai
 supabase functions deploy billing-checkout
 supabase functions deploy billing-portal

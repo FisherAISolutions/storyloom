@@ -1,4 +1,4 @@
-# Story Loom Entitlements
+# MyStorybook AI Entitlements
 
 ## Verification labels (August 9, 2026)
 

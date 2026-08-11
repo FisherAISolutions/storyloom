@@ -1,6 +1,16 @@
 import { getSupabaseClient } from '@/lib/supabase';
 import { ServiceError } from '@/services/errors';
 
+const PLAN_NAMES = Object.freeze({
+  free: 'MyStorybook AI Free',
+  family: 'MyStorybook AI Family',
+  creator: 'MyStorybook AI Creator',
+});
+
+function withPublicPlanName(plan) {
+  return plan && PLAN_NAMES[plan.plan_key] ? { ...plan, display_name: PLAN_NAMES[plan.plan_key] } : plan;
+}
+
 async function invoke(functionName, body = {}) {
   const { data, error } = await getSupabaseClient().functions.invoke(functionName, { body });
   if (error) {
@@ -14,13 +24,13 @@ async function invoke(functionName, body = {}) {
 export async function getPlans() {
   const { data, error } = await getSupabaseClient().rpc('get_public_billing_plans');
   if (error) throw new ServiceError('BILLING_ERROR', 'Plans could not be loaded.');
-  return data || [];
+  return (data || []).map(withPublicPlanName);
 }
 
 export async function getEntitlements() {
   const { data, error } = await getSupabaseClient().rpc('get_billing_summary');
   if (error) throw new ServiceError('BILLING_ERROR', 'Billing usage could not be loaded.');
-  return data;
+  return withPublicPlanName(data);
 }
 
 export const getSubscription = getEntitlements;

@@ -7,11 +7,11 @@ Replace every example value before launch. Never commit the real values.
 ```dotenv
 VITE_SUPABASE_URL=https://PROJECT_REF.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_REPLACE
-VITE_SUPPORT_EMAIL=support@YOUR_VERIFIED_DOMAIN
+VITE_SUPPORT_EMAIL=support@mystorybookai.online
 VITE_GOOGLE_AUTH_ENABLED=false
 ```
 
-All `VITE_*` values are included in the browser bundle. The Supabase publishable key is intentionally public and is constrained by Auth, grants, and RLS. `VITE_SUPPORT_EMAIL` is displayed on the public Support page. Set `VITE_GOOGLE_AUTH_ENABLED=true` only after Google sign-in is configured and tested for the production Supabase project. Do not put OpenAI, Stripe secret, webhook secret, or Supabase service-role credentials in frontend variables.
+All `VITE_*` values are included in the browser bundle. The Supabase publishable key is intentionally public and is constrained by Auth, grants, and RLS. `VITE_SUPPORT_EMAIL` is displayed on the public Support page; create and actively monitor `support@mystorybookai.online` before using the suggested value. Set `VITE_GOOGLE_AUTH_ENABLED=true` only after Google sign-in is configured and tested for the production Supabase project. Do not put OpenAI, Stripe secret, webhook secret, or Supabase service-role credentials in frontend variables.
 
 ## Supabase Edge Function secrets (server only)
 
@@ -21,8 +21,8 @@ Required:
 OPENAI_API_KEY=REPLACE
 STRIPE_SECRET_KEY=sk_live_REPLACE
 STRIPE_WEBHOOK_SECRET=whsec_REPLACE
-APP_URL=https://YOUR_PRODUCTION_DOMAIN
-ALLOWED_ORIGINS=https://YOUR_PRODUCTION_DOMAIN
+APP_URL=https://mystorybookai.online
+ALLOWED_ORIGINS=https://mystorybookai.online
 STRIPE_LIVE_MODE=enabled
 ```
 
@@ -34,10 +34,18 @@ During Stripe test mode, keep `STRIPE_LIVE_MODE` unset and use `sk_test_...`, th
 
 ## Supabase Auth URLs
 
-- Site URL: `https://YOUR_PRODUCTION_DOMAIN`
-- Exact production redirect routes: `https://YOUR_PRODUCTION_DOMAIN/auth/callback` and `https://YOUR_PRODUCTION_DOMAIN/reset-password`
+- Site URL: `https://mystorybookai.online`
+- Exact production redirect routes: `https://mystorybookai.online/auth/callback` and `https://mystorybookai.online/reset-password`
 - Keep local redirects only for deliberate local development.
 - If Google sign-in is enabled, configure its provider credentials and the Supabase provider callback shown in the dashboard; test it on the production domain.
+
+## Supabase email templates
+
+In Supabase Dashboard, review the confirmation, invitation, magic-link, email-change, and password-recovery templates before launch. Replace any old product name with **MyStorybook AI**, use the new name in subjects and sender display text, and confirm every generated link returns to `https://mystorybookai.online`. This repository does not modify hosted email templates automatically.
+
+## Frontend domain
+
+Connect `mystorybookai.online` to the production frontend project, make HTTPS mandatory, and configure `https://mystorybookai.online` as the canonical production deployment. The repository's `vercel.json` supplies the SPA fallback for direct route navigation.
 
 ## Secret verification
 

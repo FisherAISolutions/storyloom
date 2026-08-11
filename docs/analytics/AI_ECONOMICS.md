@@ -2,7 +2,7 @@
 
 ## Purpose and status
 
-Story Loom records privacy-conscious provider usage so provisional Stripe test prices and quotas can eventually be calibrated from evidence. The dashboard at `/admin/ai-economics` is read-only and admin-only. Stripe remains **TEST MODE**, plan limits remain **PROVISIONAL**, and every displayed provider cost is labeled **ESTIMATED**.
+MyStorybook AI records privacy-conscious provider usage so provisional Stripe test prices and quotas can eventually be calibrated from evidence. The dashboard at `/admin/ai-economics` is read-only and admin-only. Stripe remains **TEST MODE**, plan limits remain **PROVISIONAL**, and every displayed provider cost is labeled **ESTIMATED**.
 
 Provider price fields ship as `NULL`. This is deliberate: Phase 11 does not invent OpenAI prices. Until reviewed prices are entered, request counts, token counts, image counts, reliability, classifications, and sample sizes remain useful while dollar totals display “Not configured.”
 

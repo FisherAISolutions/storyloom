@@ -1,0 +1,16 @@
+{
+  "name": "MyStorybook AI",
+  "short_name": "MyStorybook AI",
+  "description": "Personalized AI storybooks starring your child.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fdfbf7",
+  "theme_color": "#1c1917",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

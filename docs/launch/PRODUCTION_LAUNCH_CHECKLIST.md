@@ -1,4 +1,4 @@
-# Story Loom Kids production launch checklist
+# MyStorybook AI production launch checklist
 
 ## Automated / verified
 
@@ -25,7 +25,7 @@
 - [ ] Confirm all three Storage buckets remain private and current owner-only policies are active.
 - [ ] Set production `OPENAI_API_KEY`, `APP_URL`, and `ALLOWED_ORIGINS`; preserve the tested OpenAI model defaults.
 - [ ] Deploy `story-ai`, `billing-checkout`, `billing-portal`, and `stripe-webhook` from the reviewed repository state.
-- [ ] Run `supabase migration list` and `supabase db push --dry-run`; confirm all seven existing migrations match and no push is pending. Never paste or rerun old migrations manually.
+- [ ] Run `supabase migration list` and `supabase db push --dry-run`; confirm all eight existing migrations, including the MyStorybook AI plan-label migration, match and no push is pending. Never paste or rerun old migrations manually.
 - [ ] Configure reviewed provider rates in `ai_provider_pricing` when available; until then, treat cost/margin analytics as unpriced.
 - [ ] Review `PRICING_RECOMMENDATION.md` and approve final prices and quotas. The repository's Stripe prices must not be changed without this approval.
 - [ ] Complete every step in `STRIPE_LIVE_CUTOVER.md`.

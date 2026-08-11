@@ -11,7 +11,7 @@ export default function Support() {
       </div>
       <section className="rounded-3xl border border-stone-200 bg-white p-7 text-center">
         <Mail className="mx-auto h-7 w-7 text-stone-400" />
-        <h2 className="mt-3 font-display text-2xl font-semibold">Contact Story Loom Kids</h2>
+        <h2 className="mt-3 font-display text-2xl font-semibold">Contact MyStorybook AI</h2>
         {supportEmail ? <p className="mt-3 text-stone-600">Email <a className="font-medium text-stone-900 underline" href={`mailto:${supportEmail}`}>{supportEmail}</a>. Include a short description of the problem, but never send your password or payment-card details.</p> : <p role="alert" className="mt-3 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">The support email has not been published yet. The product owner must set <code>VITE_SUPPORT_EMAIL</code> before launch.</p>}
       </section>
     </div>

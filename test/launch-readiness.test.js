@@ -28,3 +28,19 @@ test('Vercel serves the SPA entry point for direct route navigation', () => {
   const config = JSON.parse(read('vercel.json'));
   assert.deepEqual(config.rewrites, [{ source: '/(.*)', destination: '/index.html' }]);
 });
+
+test('public launch surfaces use MyStorybook AI branding and production metadata', () => {
+  const publicSources = [
+    'index.html',
+    'src/components/Layout.jsx',
+    'src/pages/Home.jsx',
+    'src/pages/Pricing.jsx',
+    'src/pages/Privacy.jsx',
+    'src/pages/Support.jsx',
+    'src/pages/Terms.jsx',
+  ].map(read).join('\n');
+  assert.match(publicSources, /MyStorybook AI/);
+  assert.doesNotMatch(publicSources, /Story Loom|Storyloom|story-loom/i);
+  assert.match(read('index.html'), /https:\/\/mystorybookai\.online\//);
+  assert.match(read('package.json'), /"name": "mystorybook-ai"/);
+});

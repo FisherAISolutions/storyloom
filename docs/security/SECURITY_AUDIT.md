@@ -1,4 +1,4 @@
-# Story Loom Kids Security Audit
+# MyStorybook AI Security Audit
 
 Audit date: 2026-08-09
 Scope: authentication, profiles, user-owned database rows, private Storage, signed URLs, session/cache transitions, `story-ai`, AI usage, billing isolation, secrets, CORS, migrations, validation, and error behavior.
@@ -62,7 +62,7 @@ Before the fix, a new session event started remote `getUser()` and profile resol
 
 #### P2-1: owner-prefix Storage policies accepted noncanonical names
 
-The original policies checked only the first folder segment. They did not explicitly forbid dot segments, double separators, or names outside Story Loom's resource layouts.
+The original policies checked only the first folder segment. They did not explicitly forbid dot segments, double separators, or names outside MyStorybook AI's resource layouts.
 
 **Fixed in migration:** `is_storyloom_storage_path()` now recognizes only canonical per-bucket paths, all four Storage policies call it, and database media columns use matching constraints. Browser path validation additionally rejects empty, dot, backslash, and control-character segments. The hosted Storage gateway canonicalizes doubled slashes before policy evaluation; the live harness now accepts that case only when the returned object path is the exact single-slash canonical path inside the same authenticated user's namespace.
 

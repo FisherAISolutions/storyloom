@@ -18,7 +18,7 @@ Create an API key in the OpenAI developer platform, then configure it directly a
 ```powershell
 supabase login
 supabase link --project-ref <your-project-ref>
-supabase secrets set OPENAI_API_KEY=<your-openai-key> ALLOWED_ORIGINS=http://localhost:5173,https://preview.example.com,https://storyloom.example.com
+supabase secrets set OPENAI_API_KEY=<your-openai-key> ALLOWED_ORIGINS=http://localhost:5173,https://preview.example.com,https://mystorybookai.online
 supabase functions deploy story-ai
 ```
 

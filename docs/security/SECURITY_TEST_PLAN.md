@@ -1,8 +1,8 @@
-# Story Loom Kids Security Test Plan
+# MyStorybook AI Security Test Plan
 
 ## Purpose
 
-This plan proves that User A, User B, and an anonymous client cannot cross Story Loom's authentication, database, Storage, Edge Function, AI ownership, session, or cache boundaries. Run it against a non-production Supabase project first. If production verification is required, use dedicated ordinary test accounts and records whose names begin with `Phase 8`; never use the service-role key in this harness.
+This plan proves that User A, User B, and an anonymous client cannot cross MyStorybook AI's authentication, database, Storage, Edge Function, AI ownership, session, or cache boundaries. Run it against a non-production Supabase project first. If production verification is required, use dedicated ordinary test accounts and records whose names begin with `Phase 8`; never use the service-role key in this harness.
 
 Record each result as one of:
 

@@ -1,6 +1,6 @@
 # Stripe Test-Mode Setup
 
-Story Loom is implemented for Stripe-hosted Checkout, Customer Portal, signed webhooks, and server-authoritative Supabase entitlements. Begin in Stripe test mode only.
+MyStorybook AI is implemented for Stripe-hosted Checkout, Customer Portal, signed webhooks, and server-authoritative Supabase entitlements. Begin in Stripe test mode only.
 
 ## Phase 10B/10C verification status (August 9, 2026)
 
@@ -25,8 +25,8 @@ The Phase 10B test account uses these explicitly provisional test-mode objects:
 | Plan key | Test product | Monthly test price | Test Price ID |
 | --- | --- | ---: | --- |
 | `free` | none | $0 | none |
-| `family` | Story Loom Family (Provisional Test) | $12 | `price_1U2LvcHEiMUagmivI9mPEREH` |
-| `creator` | Story Loom Creator (Provisional Test) | $24 | `price_1U2LvdHEiMUagmivD6tjJMkF` |
+| `family` | MyStorybook AI Family (Provisional Test) | $12 | `price_1U2LvcHEiMUagmivI9mPEREH` |
+| `creator` | MyStorybook AI Creator (Provisional Test) | $24 | `price_1U2LvdHEiMUagmivD6tjJMkF` |
 
 The non-secret identifiers are mapped by `20260809010000_stripe_test_price_mapping.sql`; the browser still submits only a `plan_key`. Replace this migration's test identifiers as part of a deliberate live launch rather than treating them as production configuration.
 
@@ -85,7 +85,7 @@ Stripe recommends subscription webhooks because subscription activity is asynchr
 
 ## 5. Test flow
 
-1. Sign into a test Story Loom user.
+1. Sign into a test MyStorybook AI user.
 2. Open `/pricing`, choose a paid test plan, and complete hosted Checkout with Stripe test card `4242 4242 4242 4242`, a future expiry, any CVC, and any postal code.
 3. Confirm `/billing/success` initially treats the redirect as UX only and refreshes the authoritative summary.
 4. Confirm the webhook event succeeds and `subscriptions` contains the correct Supabase UUID, Price, status, and period.
