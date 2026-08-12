@@ -31,12 +31,12 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-[#fdfbf7] text-stone-800">
       <header className="sticky top-0 z-40 border-b border-stone-200/70 bg-[#fdfbf7]/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
-          <Link to="/" className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-stone-900 text-white">
-              <BookOpen className="h-5 w-5" />
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-3 py-4 sm:px-5">
+          <Link to="/" className="flex items-center gap-1.5 sm:gap-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-stone-900 text-white sm:h-9 sm:w-9">
+              <BookOpen className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
-            <span className="font-display whitespace-nowrap text-base font-semibold tracking-tight sm:text-xl">MyStorybook AI</span>
+            <span className="font-display whitespace-nowrap text-sm font-semibold tracking-tight sm:text-xl">MyStorybook AI</span>
           </Link>
           <div className="flex items-center gap-2">
           <nav className="hidden items-center gap-1 md:flex">
@@ -61,10 +61,10 @@ export default function Layout() {
               <LogOut className="h-4 w-4" />
             </button>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <Link to="/pricing" className="hidden rounded-full px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-200/60 sm:block">Pricing</Link>
-              <Link to="/login" className="rounded-full px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-200/60">Log in</Link>
-              <Link to="/register" className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800">Create account</Link>
+              <Link to="/login" className="whitespace-nowrap rounded-full px-2 py-2 text-xs font-medium text-stone-600 hover:bg-stone-200/60 sm:px-4 sm:text-sm">Log in</Link>
+              <Link to="/register" className="whitespace-nowrap rounded-full bg-stone-900 px-3 py-2 text-xs font-medium text-white hover:bg-stone-800 sm:px-4 sm:text-sm">Create account</Link>
             </div>
           )}
           </div>

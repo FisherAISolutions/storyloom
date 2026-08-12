@@ -79,6 +79,87 @@
   }
 }
 
+@layer components {
+  .storybook-spread {
+    position: relative;
+    isolation: isolate;
+    box-shadow: 0 30px 55px -28px rgba(49, 31, 17, 0.78), 0 8px 18px -10px rgba(49, 31, 17, 0.48);
+  }
+
+  .storybook-mobile-page {
+    position: relative;
+  }
+
+  .storybook-spread::before,
+  .storybook-mobile-page::before {
+    content: '';
+    position: absolute;
+    inset: 5px;
+    z-index: 0;
+    border-radius: inherit;
+    border: 1px solid rgba(255, 245, 220, 0.42);
+    pointer-events: none;
+  }
+
+  .storybook-page {
+    position: relative;
+    z-index: 1;
+    box-shadow: inset 0 0 34px rgba(76, 48, 25, 0.12);
+    transition: box-shadow 180ms ease, filter 180ms ease;
+  }
+
+  .storybook-page-selected {
+    box-shadow: inset 0 0 0 4px rgba(13, 128, 124, 0.8), inset 0 0 34px rgba(76, 48, 25, 0.12);
+  }
+
+  .storybook-page-text {
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  .storybook-gutter {
+    position: absolute;
+    inset-block: 10px;
+    left: 50%;
+    z-index: 5;
+    width: 46px;
+    transform: translateX(-50%);
+    background: linear-gradient(90deg, transparent, rgba(45, 26, 14, 0.28), rgba(255, 251, 239, 0.42), rgba(45, 26, 14, 0.28), transparent);
+    filter: blur(2px);
+    pointer-events: none;
+  }
+
+  .storybook-turn {
+    perspective: 1600px;
+  }
+
+  .storybook-turn-next {
+    animation: storybook-turn-next 360ms cubic-bezier(.2,.75,.3,1);
+    transform-origin: right center;
+  }
+
+  .storybook-turn-previous {
+    animation: storybook-turn-previous 360ms cubic-bezier(.2,.75,.3,1);
+    transform-origin: left center;
+  }
+}
+
+@keyframes storybook-turn-next {
+  from { opacity: .55; transform: rotateY(-7deg) translateX(10px); }
+  to { opacity: 1; transform: rotateY(0) translateX(0); }
+}
+
+@keyframes storybook-turn-previous {
+  from { opacity: .55; transform: rotateY(7deg) translateX(-10px); }
+  to { opacity: 1; transform: rotateY(0) translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .storybook-turn-next,
+  .storybook-turn-previous {
+    animation: none;
+  }
+}
+
 
 
 @layer base {
