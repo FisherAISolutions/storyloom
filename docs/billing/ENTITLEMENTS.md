@@ -15,9 +15,9 @@ The active plan is resolved server-side in this order:
 
 1. A time-bounded, auditable `entitlement_overrides` row.
 2. A webhook-maintained subscription with status `active` or `trialing` and a current Stripe billing period.
-3. The explicitly limited `free` plan.
+3. The internal zero-generation `unpaid` fallback.
 
-`past_due`, `unpaid`, `canceled`, `incomplete`, `incomplete_expired`, and `paused` subscriptions receive no paid entitlement. They fall back to the limited free plan. This is intentionally conservative.
+`past_due`, `unpaid`, `canceled`, `incomplete`, `incomplete_expired`, and `paused` subscriptions receive no paid entitlement. They fall back to the internal `unpaid` plan with zero story and image generation units. Active or trialing Starter subscriptions use the stable internal `free` key and receive the original low-tier limits. This is intentionally conservative.
 
 ## Provisional credit model
 

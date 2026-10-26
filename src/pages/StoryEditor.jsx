@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { BookOpen, Download, Info, Loader2, Palette, Pencil, Plus, RefreshCw, Save } from 'lucide-react';
+import { BookOpen, Download, Globe2, Info, Loader2, Palette, Pencil, Plus, RefreshCw, Save } from 'lucide-react';
 import { generatePageImage, translateStory } from '@/lib/storyStudio';
 import { downloadStoryPdf } from '@/lib/storyPdf';
 import { invalidatePageTranslations, shouldSyncCoverForPage } from '@/lib/storyState';
@@ -14,6 +14,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import * as storiesService from '@/services/stories';
 import * as storyPagesService from '@/services/storyPages';
+import * as communityService from '@/services/community';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 export default function StoryEditor() {
   const { id } = useParams();
@@ -34,6 +36,8 @@ export default function StoryEditor() {
   const [language, setLanguage] = useState('en');
   const [translating, setTranslating] = useState(false);
   const [error, setError] = useState('');
+  const [communityState, setCommunityState] = useState(null);
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -43,6 +47,7 @@ export default function StoryEditor() {
         const loadedPages = await storyPagesService.listByStory(id);
         setPages(loadedPages);
         if (loadedPages[0]) setDraft(loadedPages[0].text);
+        communityService.getOwnerState(id).then(setCommunityState).catch(() => {});
       } catch (loadError) {
         setError(loadError?.message || 'This story could not be loaded.');
       }
@@ -174,6 +179,9 @@ export default function StoryEditor() {
     setEditing(false);
   }
 
+  async function shareCommunity() { setSharing(true); setError(''); try { setCommunityState(await communityService.share(story.id)); } catch (shareError) { setError(shareError?.message || 'The story could not be shared.'); } setSharing(false); }
+  async function unpublishCommunity() { setSharing(true); setError(''); try { setCommunityState(await communityService.unpublish(communityState.id)); } catch (shareError) { setError(shareError?.message || 'The story could not be unpublished.'); } setSharing(false); }
+
   if (loading) return <div className="flex justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-stone-400" /></div>;
   if (!page) {
     return <div className="py-24 text-center"><p className="text-stone-500">{error || 'This story has no pages yet.'}</p><Link to="/create" className="mt-4 inline-block rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white">Create a story</Link></div>;
@@ -192,6 +200,7 @@ export default function StoryEditor() {
           <LanguagePicker value={language} onChange={changeLanguage} translating={translating} />
           <Button onClick={() => setCoverOpen(true)} variant="outline" size="sm" className="rounded-full bg-white"><Palette className="mr-1.5 h-3.5 w-3.5" /> Cover</Button>
           <Button onClick={downloadPdf} disabled={downloading} size="sm" className="rounded-full bg-[#087f7c] hover:bg-[#066c69]">{downloading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Download className="mr-1.5 h-3.5 w-3.5" />} PDF</Button>
+          {communityState?.status === 'published' ? <Button onClick={unpublishCommunity} disabled={sharing} variant="outline" size="sm" className="rounded-full bg-white">Unpublish</Button> : <AlertDialog><AlertDialogTrigger asChild><Button disabled={sharing} variant="outline" size="sm" className="rounded-full bg-white"><Globe2 className="mr-1.5 h-3.5 w-3.5"/> Share to Community</Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Share this story publicly?</AlertDialogTitle><AlertDialogDescription>Your story title, generated cover, story text, and generated illustrations will be publicly viewable. Your account email, original uploaded photo, billing information, and private account details will not be shown.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Keep private</AlertDialogCancel><AlertDialogAction onClick={shareCommunity}>Confirm and share</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>}
         </div>
       </header>
 

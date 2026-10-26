@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Image } from '@/components/ui/image';
 import BookCard from '@/components/BookCard';
 import { LANGUAGES } from '@/lib/storyStudio';
+import { useEffect, useState } from 'react';
+import CommunityStoryCard from '@/components/CommunityStoryCard';
+import * as communityService from '@/services/community';
 
 const benefits = [
   { icon: Users, title: 'Make them the hero', description: 'Turn a photo into a storybook character who can star in adventures made just for them.' },
@@ -29,6 +32,8 @@ const steps = [
 ];
 
 export default function Home() {
+  const [communityStories, setCommunityStories] = useState([]);
+  useEffect(() => { communityService.listPublished(6).then(setCommunityStories).catch(() => {}); }, []);
   return (
     <div className="space-y-20">
       <section className="relative -mx-5 -mt-8 overflow-hidden border-b border-amber-100 bg-[radial-gradient(circle_at_78%_25%,rgba(186,230,227,0.55),transparent_32%),linear-gradient(135deg,#fffdf8_0%,#fff8ef_55%,#f8fcfa_100%)] px-5 py-12 sm:py-16 md:px-10 lg:px-14">
@@ -113,6 +118,20 @@ export default function Home() {
           <div className="flex items-start gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white shadow-sm"><Globe className="h-5 w-5 text-stone-600" /></div><div><h2 className="font-display text-xl font-semibold tracking-tight md:text-2xl">Stories in 7 languages</h2><p className="mt-1 max-w-md text-sm text-stone-500">Translate a finished story with one tap—perfect for bilingual bedtimes and faraway family.</p></div></div>
           <div className="flex flex-wrap gap-2">{LANGUAGES.map((language) => <span key={language.code} className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-sm text-stone-700"><span className="text-base leading-none">{language.flag}</span> {language.label}</span>)}</div>
         </div>
+      </section>
+
+      <section aria-labelledby="community-heading">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><p className="text-xs font-semibold uppercase tracking-[.2em] text-[#ed6a5e]">Community Stories</p><h2 id="community-heading" className="mt-2 font-display text-3xl font-semibold text-[#12304b]">Stories From Our Community</h2><p className="mt-2 text-stone-500">Discover magical adventures created by families with MyStorybook AI.</p></div><Button asChild variant="outline" className="rounded-full"><Link to="/community">Explore Community Stories</Link></Button></div>
+        {communityStories.length ? <div className="mt-7 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{communityStories.map(story => <CommunityStoryCard key={story.slug} story={story}/>)}</div> : <div className="mt-7 rounded-3xl border border-amber-200 bg-amber-50/60 p-8 text-center"><h3 className="font-display text-2xl font-semibold">Be one of the first to share an adventure.</h3><Button asChild className="mt-4 rounded-full"><Link to="/create">Create a Storybook</Link></Button></div>}
+      </section>
+
+      <section aria-labelledby="reviews-heading" className="rounded-3xl bg-[#12304b] px-6 py-10 text-white md:px-10">
+        <div className="text-center"><span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[.18em] text-amber-200">Sample testimonials · Example feedback</span><h2 id="reviews-heading" className="mt-4 font-display text-3xl font-semibold">What Families Are Saying</h2><p className="mt-2 text-sm text-slate-300">A look at the kind of feedback MyStorybook AI is built to inspire. These are examples, not verified customer reviews.</p></div>
+        <div className="mt-7 grid gap-4 md:grid-cols-3">{[
+          '“My daughter loved seeing herself as the hero of her own adventure. Being able to edit the pages made it feel truly personal.”',
+          '“Creating a story together was easy, and the custom illustrations made it feel like a real picture book.”',
+          '“I loved being able to change the story and regenerate an illustration when I wanted something different.”',
+        ].map((quote,index)=><blockquote key={quote} className="rounded-2xl bg-white/10 p-5"><div className="text-amber-300" aria-hidden="true">★★★★★</div><p className="mt-3 font-display leading-7">{quote}</p><footer className="mt-4 text-xs font-semibold uppercase tracking-wider text-slate-300">{index===1?'Example family feedback':'Sample parent feedback'}</footer></blockquote>)}</div>
       </section>
 
       <section className="rounded-3xl border border-stone-200 bg-white px-6 py-10 text-center md:px-10">

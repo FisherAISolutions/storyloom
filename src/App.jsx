@@ -25,6 +25,9 @@ const AdminAiEconomics = lazy(() => import('@/pages/AdminAiEconomics'));
 const Privacy = lazy(() => import('@/pages/Privacy'));
 const Terms = lazy(() => import('@/pages/Terms'));
 const Support = lazy(() => import('@/pages/Support'));
+const Community = lazy(() => import('@/pages/Community'));
+const PublicStory = lazy(() => import('@/pages/PublicStory'));
+const AdminCommunity = lazy(() => import('@/pages/AdminCommunity'));
 
 const withPageLoader = (page) => (
   <Suspense fallback={<div className="flex justify-center py-24">Loading…</div>}>
@@ -63,6 +66,8 @@ function AppRoutes() {
         <Route path="/privacy" element={withPageLoader(<Privacy />)} />
         <Route path="/terms" element={withPageLoader(<Terms />)} />
         <Route path="/support" element={withPageLoader(<Support />)} />
+        <Route path="/community" element={withPageLoader(<Community />)} />
+        <Route path="/community/:slug" element={withPageLoader(<PublicStory />)} />
         <Route element={<ProtectedRoute />}>
           <Route path="/create" element={withPageLoader(<CreateStory />)} />
           <Route path="/characters" element={withPageLoader(<Characters />)} />
@@ -72,6 +77,7 @@ function AppRoutes() {
           <Route path="/billing/success" element={withPageLoader(<BillingSuccess />)} />
           <Route element={<AdminRoute />}>
             <Route path="/admin/ai-economics" element={withPageLoader(<AdminAiEconomics />)} />
+            <Route path="/admin/community" element={withPageLoader(<AdminCommunity />)} />
           </Route>
         </Route>
       </Route>

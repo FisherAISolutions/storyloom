@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
-import { Home, Sparkles, Users, BookMarked, BookOpen, LogOut, CreditCard, ChartNoAxesCombined } from 'lucide-react';
+import { Home, Sparkles, Users, BookMarked, BookOpen, LogOut, CreditCard, ChartNoAxesCombined, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -16,7 +16,7 @@ export default function Layout() {
   const location = useLocation();
   const { logout, user } = useAuth();
   const visibleNav = user
-    ? (user.role === 'admin' ? [...authenticatedNav, { to: '/admin/ai-economics', label: 'AI economics', icon: ChartNoAxesCombined }] : authenticatedNav)
+    ? (user.role === 'admin' ? [...authenticatedNav, { to: '/admin/ai-economics', label: 'AI economics', icon: ChartNoAxesCombined }, { to: '/admin/community', label: 'Moderate', icon: ShieldCheck }] : authenticatedNav)
     : [];
   const [logoutError, setLogoutError] = useState('');
 
@@ -63,6 +63,7 @@ export default function Layout() {
           ) : (
             <div className="flex items-center gap-1 sm:gap-2">
               <Link to="/pricing" className="hidden rounded-full px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-200/60 sm:block">Pricing</Link>
+              <Link to="/community" className="hidden rounded-full px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-200/60 md:block">Community</Link>
               <Link to="/login" className="whitespace-nowrap rounded-full px-2 py-2 text-xs font-medium text-stone-600 hover:bg-stone-200/60 sm:px-4 sm:text-sm">Log in</Link>
               <Link to="/register" className="whitespace-nowrap rounded-full bg-stone-900 px-3 py-2 text-xs font-medium text-white hover:bg-stone-800 sm:px-4 sm:text-sm">Create account</Link>
             </div>
@@ -79,6 +80,7 @@ export default function Layout() {
           <p>&copy; {new Date().getFullYear()} MyStorybook AI <span className="hidden sm:inline">&middot; Your child. Their adventure. Their storybook.</span></p>
           <nav aria-label="Footer" className="flex flex-wrap justify-center gap-x-5 gap-y-2">
             <Link to="/pricing" className="hover:text-stone-900">Pricing</Link>
+            <Link to="/community" className="hover:text-stone-900">Community</Link>
             <Link to="/privacy" className="hover:text-stone-900">Privacy</Link>
             <Link to="/terms" className="hover:text-stone-900">Terms</Link>
             <Link to="/support" className="hover:text-stone-900">Support</Link>

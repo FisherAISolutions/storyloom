@@ -7,7 +7,7 @@ Do this only after the production frontend, Supabase Auth URLs, Edge Functions, 
 - [ ] Create the live **Family** recurring monthly product and price using the owner-approved launch price.
 - [ ] Create the live **Creator** recurring monthly product and price using the owner-approved launch price.
 - [ ] Record both live `price_...` IDs and verify the currency, amount, and monthly interval.
-- [ ] Update the server-side `billing_plans.stripe_price_id` mappings for `family` and `creator` through a reviewed new forward migration. Do not expose Price IDs to the browser and do not edit an applied migration.
+- [ ] Update the server-side `billing_plans.stripe_price_id` mappings for Starter (`free`), `family`, and `creator` through a reviewed new forward migration. Do not expose Price IDs to the browser and do not edit an applied migration.
 - [ ] Obtain a restricted production Stripe secret key if its permissions cover Customers, Checkout Sessions, Billing Portal Sessions, Subscriptions, Products, and Prices; otherwise use the live secret key. Store it only as the Supabase `STRIPE_SECRET_KEY` secret.
 - [ ] In Stripe live mode, create the webhook endpoint `https://PROJECT_REF.supabase.co/functions/v1/stripe-webhook`.
 - [ ] Subscribe only to `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `customer.subscription.paused`, and `customer.subscription.resumed`.
