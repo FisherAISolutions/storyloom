@@ -11,11 +11,12 @@ MyStorybook AI is implemented for Stripe-hosted Checkout, Customer Portal, signe
 
 ## 1. Create test products and recurring prices
 
-In Stripe test mode, create monthly recurring Prices for `family` and `creator`. Then map their `price_...` identifiers in trusted SQL (Price IDs are identifiers, not secrets, but the browser never chooses them):
+In Stripe test mode, create monthly recurring Prices for Starter (`free`), `family`, and `creator`. Then map their `price_...` identifiers in trusted SQL (Price IDs are identifiers, not secrets, but the browser never chooses them):
 
 ```sql
 update public.billing_plans set stripe_price_id = 'price_TEST_FAMILY' where plan_key = 'family';
 update public.billing_plans set stripe_price_id = 'price_TEST_CREATOR' where plan_key = 'creator';
+update public.billing_plans set stripe_price_id = 'price_TEST_STARTER' where plan_key = 'free';
 ```
 
 Keep the database display text synchronized with the Stripe Dashboard. Seeded prices and quotas are provisional.
@@ -24,7 +25,8 @@ The Phase 10B test account uses these explicitly provisional test-mode objects:
 
 | Plan key | Test product | Monthly test price | Test Price ID |
 | --- | --- | ---: | --- |
-| `free` | none | $0 | none |
+| `unpaid` | internal fallback | $0 | none |
+| `free` | MyStorybook AI Starter | $1 | owner must supply test Price ID |
 | `family` | MyStorybook AI Family (Provisional Test) | $12 | `price_1U2LvcHEiMUagmivI9mPEREH` |
 | `creator` | MyStorybook AI Creator (Provisional Test) | $24 | `price_1U2LvdHEiMUagmivD6tjJMkF` |
 

@@ -12,6 +12,7 @@ const portal = read('supabase/functions/billing-portal/index.ts');
 const webhook = read('supabase/functions/stripe-webhook/index.ts');
 const shared = read('supabase/functions/_shared/billing.ts');
 const edge = read('supabase/functions/story-ai/index.ts');
+const starter = read('supabase/migrations/20260813000000_starter_paid_plan.sql');
 
 test('Checkout authenticates and maps plan keys instead of accepting prices', () => {
   assert.ok(checkout.indexOf('await authenticate(request)') < checkout.indexOf("stripe('checkout/sessions'"));
@@ -21,6 +22,23 @@ test('Checkout authenticates and maps plan keys instead of accepting prices', ()
   assert.match(checkout, /billing_plans/);
   assert.match(checkout, /\.in\('status', \['active','trialing'\]\)/);
   assert.match(checkout, /USE_PORTAL/);
+});
+
+test('Starter is paid while unpaid fallback has zero generation quotas', () => {
+  assert.match(starter, /plan_key='free'/);
+  assert.match(starter, /display_name='MyStorybook AI Starter'/);
+  assert.match(starter, /monthly_price_cents=100/);
+  assert.match(starter, /values \('unpaid', 'No active plan', '\$0', 0, null, 0, 0, 6/);
+  assert.match(starter, /status in \('active','trialing'\)/);
+  assert.match(starter, /plan_key='unpaid'/);
+  assert.match(starter, /plan_key<>'unpaid'/);
+  assert.match(checkout, /plan\.data\.plan_key === 'unpaid'/);
+  assert.doesNotMatch(checkout, /plan\.data\.plan_key === 'free'/);
+});
+
+test('Starter preserves low-tier quotas and Family and Creator remain unchanged', () => {
+  assert.match(migration, /\('free',[\s\S]*?, 1, 10, 6, 0\)/);
+  assert.doesNotMatch(starter, /where plan_key='family'|where plan_key='creator'/);
 });
 
 test('Portal uses only the authenticated user customer mapping', () => {

@@ -9,7 +9,7 @@ Deno.serve(async (request) => {
     if (!body || typeof body.plan_key !== 'string' || Object.keys(body).some((key) => key !== 'plan_key')) throw new BillingError('VALIDATION', 'Choose a supported plan.');
     const plan = await service.from('billing_plans').select('plan_key,stripe_price_id').eq('plan_key', body.plan_key).eq('active', true).maybeSingle();
     if (plan.error) throw new BillingError('DATABASE', 'Plans could not be loaded.', 500);
-    if (!plan.data || plan.data.plan_key === 'free' || !plan.data.stripe_price_id) throw new BillingError('PLAN_UNAVAILABLE', 'That subscription plan is not available.');
+    if (!plan.data || plan.data.plan_key === 'unpaid' || !plan.data.stripe_price_id) throw new BillingError('PLAN_UNAVAILABLE', 'That subscription plan is not available.');
     const active = await service.from('subscriptions').select('id').eq('user_id', user.id).in('status', ['active','trialing']).limit(1);
     if (active.error) throw new BillingError('DATABASE', 'Subscription status could not be loaded.', 500);
     if (active.data?.length) throw new BillingError('USE_PORTAL', 'Manage your existing subscription from Billing.');

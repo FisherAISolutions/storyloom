@@ -2,7 +2,8 @@ import { getSupabaseClient } from '@/lib/supabase';
 import { ServiceError } from '@/services/errors';
 
 const PLAN_NAMES = Object.freeze({
-  free: 'MyStorybook AI Free',
+  free: 'MyStorybook AI Starter',
+  unpaid: 'No active plan',
   family: 'MyStorybook AI Family',
   creator: 'MyStorybook AI Creator',
 });
