@@ -1,4 +1,3 @@
--- Convert the public low tier to paid Starter while retaining `free` as its stable key.
 -- `unpaid` is an internal, zero-generation fallback and is excluded from public plans.
 insert into public.billing_plans
   (plan_key, display_name, monthly_price_display, monthly_price_cents, stripe_price_id, story_units_limit, image_units_limit, max_story_pages, sort_order, active)
@@ -6,7 +5,8 @@ values ('unpaid', 'No active plan', '$0', 0, null, 0, 0, 6, -1, true)
 on conflict (plan_key) do update set
   display_name=excluded.display_name, monthly_price_display=excluded.monthly_price_display,
   monthly_price_cents=excluded.monthly_price_cents, stripe_price_id=null,
-  story_units_limit=0, image_units_limit=0, max_story_pages=6, sort_order=-1, active=true;
+  story_units_limit-- Convert the public low tier to paid Starter while retaining `free` as its stable key.
+=0, image_units_limit=0, max_story_pages=6, sort_order=-1, active=true;
 
 update public.billing_plans
 set display_name='MyStorybook AI Starter', monthly_price_display='$1', monthly_price_cents=100,

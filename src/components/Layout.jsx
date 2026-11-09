@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
-import { Home, Sparkles, Users, BookMarked, BookOpen, LogOut, CreditCard, ChartNoAxesCombined, ShieldCheck } from 'lucide-react';
+import { Home, Sparkles, Users, BookMarked, BookOpen, LogOut, CreditCard, Globe2, ChartNoAxesCombined, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -9,6 +9,7 @@ const authenticatedNav = [
   { to: '/create', label: 'Create', icon: Sparkles },
   { to: '/characters', label: 'Characters', icon: Users },
   { to: '/library', label: 'Library', icon: BookMarked },
+  { to: '/community', label: 'Community', icon: Globe2 },
   { to: '/billing', label: 'Billing', icon: CreditCard },
 ];
 
