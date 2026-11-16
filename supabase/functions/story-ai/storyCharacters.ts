@@ -13,6 +13,12 @@ function value(input: unknown, max = 500) {
 function snapshotDescription(snapshot: any, state: any) {
   if (!snapshot?.bible_snapshot || typeof snapshot.bible_snapshot !== 'object') return value(snapshot?.locked_description, 8_000);
   const baseline = snapshot.bible_snapshot;
+  const baselineDetailCount = BIBLE_FIELDS.filter((field) => value(baseline[field])).length;
+  if (baselineDetailCount < 3 && snapshot.locked_description) {
+    if (!state || state.change_kind === 'return_to_baseline') return value(snapshot.locked_description, 8_000);
+    const changedDetails = Object.values({ ...(state.appearance_override || {}), ...(state.outfit_snapshot || {}) }).filter((detail) => value(detail)).join('; ');
+    return `${value(snapshot.locked_description, 6_500)}${changedDetails ? ` Current intentional appearance: ${value(changedDetails, 1_000)}.` : ''}${state.change_description ? ` ${value(state.change_description, 500)}.` : ''}`;
+  }
   const overrides = state?.change_kind === 'return_to_baseline'
     ? {}
     : { ...(state?.appearance_override || {}), ...(state?.outfit_snapshot || {}) };

@@ -161,8 +161,18 @@ test('repainting keeps story prose separate from illustration instructions', () 
   assert.match(editor, /storyPagesService\.update\(page\.id, \{ image_path: imagePath \}\)/);
   assert.doesNotMatch(editor, /image_path: imagePath, text:/);
   assert.doesNotMatch(studio, /generatePageImage\(\{ storyId, pageNumber, text \}\)/);
-  assert.match(edge, /existingPage\.data\.illustration_scene \|\| existingPage\.data\.text/);
-  assert.doesNotMatch(edge, /text\(body\.text, 'Page text'/);
+  assert.match(edge, /existingPage\.data!\.illustration_scene \|\| existingPage\.data!\.text/);
+  assert.match(edge, /legacyPageRequest[\s\S]+text\(body\.text, 'Legacy page text'/);
+});
+
+test('page image generation supports both persisted-page and legacy pre-insert flows', () => {
+  const edge = read('supabase/functions/story-ai/index.ts');
+  assert.match(edge, /const story = await ownedStory\(client, storyId\)/);
+  assert.match(edge, /const legacyPageRequest = !existingPage\.data/);
+  assert.match(edge, /legacyPageRequest && pageNumber > story\.page_count && !segment\.data/);
+  assert.match(edge, /legacyPageRequest[\s\S]+\? text\(body\.text, 'Legacy page text'/);
+  assert.match(edge, /: text\(existingPage\.data!\.illustration_scene \|\| existingPage\.data!\.text, 'Illustration scene'/);
+  assert.ok(edge.indexOf('reservation = await assertAiEntitlement') < edge.indexOf('generateImage(pageImagePrompt'));
 });
 
 test('only repainting page one synchronizes the cover', () => {

@@ -157,18 +157,22 @@ Deno.serve(async (request) => {
       const rawPageNumber = body.pageNumber; if (!Number.isInteger(rawPageNumber) || (rawPageNumber as number) < 1 || (rawPageNumber as number) > 30) throw new AppError('VALIDATION', 'Page number is invalid.'); const pageNumber = rawPageNumber as number;
       const existingPage = await client.from('story_pages').select('text,illustration_scene,illustration_instructions,image_path').eq('story_id', storyId).eq('page_number', pageNumber).maybeSingle();
       if (existingPage.error) throw new AppError('DATABASE', 'The page could not be checked.', 500);
-      if (!existingPage.data) throw new AppError('PERMISSION_DENIED', 'The page is unavailable.', 403);
+      const legacyPageRequest = !existingPage.data;
+      if (legacyPageRequest && typeof body.text !== 'string') throw new AppError('PERMISSION_DENIED', 'The page is unavailable.', 403);
       const meteredOperation = existingPage.data?.image_path ? 'generate-page-image-repaint' : 'generate-page-image-initial';
       if (meteredOperation === 'generate-page-image-repaint') generationKind = 'repaint';
       else {
         const segment = await service.from('story_generation_segments').select('request_id').eq('user_id', userId).eq('story_id', storyId).lte('start_page', pageNumber).gte('end_page', pageNumber).order('created_at', { ascending: false }).limit(1).maybeSingle();
         if (segment.error) throw new AppError('DATABASE', 'Page generation context could not be loaded.', 500);
+        if (legacyPageRequest && pageNumber > story.page_count && !segment.data) throw new AppError('PERMISSION_DENIED', 'The page is unavailable.', 403);
         generationKind = segment.data ? 'continuation_illustration' : 'initial_page_illustration'; parentRequestId = segment.data?.request_id || null;
       }
       pageCountMetadata = pageNumber;
       reservation = await assertAiEntitlement({ service, userId, requestId: correlationId, operation: meteredOperation, storyId, requestedPageCount: pageNumber, requestedImageCount: 1 });
-      const scene = text(existingPage.data.illustration_scene || existingPage.data.text, 'Illustration scene', LIMITS.PROMPT);
-      const illustrationInstructions = typeof existingPage.data.illustration_instructions === 'string' ? existingPage.data.illustration_instructions.trim().slice(0, LIMITS.PROMPT) : '';
+      const scene = legacyPageRequest
+        ? text(body.text, 'Legacy page text', LIMITS.PROMPT)
+        : text(existingPage.data!.illustration_scene || existingPage.data!.text, 'Illustration scene', LIMITS.PROMPT);
+      const illustrationInstructions = typeof existingPage.data?.illustration_instructions === 'string' ? existingPage.data.illustration_instructions.trim().slice(0, LIMITS.PROMPT) : '';
       const context = await worldContext(client, storyId, pageNumber); const allCharacters = await storyCharacters(client, story, pageNumber);
       const presentKeys = new Set(Array.isArray(context.scene?.characters_present) ? context.scene.characters_present.filter((value: unknown) => typeof value === 'string') : []);
       const characters = presentKeys.size ? allCharacters.filter((character) => presentKeys.has(character.key)) : allCharacters;

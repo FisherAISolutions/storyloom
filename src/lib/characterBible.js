@@ -21,6 +21,23 @@ export function hasAppearanceDetails(value = {}) {
   return Object.values(normalizeAppearanceBible(value)).some(Boolean);
 }
 
+export function buildSnapshotCharacterDescription(character = {}) {
+  const bible = normalizeAppearanceBible(character.appearance_bible);
+  const structured = buildCharacterDescription({
+    characterKind: character.character_kind,
+    species: character.species,
+    age: character.age,
+    pronouns: character.pronouns,
+    appearanceBible: bible,
+    appearanceLocked: character.appearance_locked !== false,
+  });
+  const legacy = typeof character.description === 'string' ? character.description.trim() : '';
+  const detailCount = Object.values(bible).filter(Boolean).length;
+  if (!legacy || detailCount >= 3) return structured;
+  const suffix = character.appearance_locked === false ? '' : ' Keep these appearance details consistent in every illustration.';
+  return `${legacy.slice(0, 7_800)}${suffix}`.trim();
+}
+
 export function buildCharacterDescription({ characterKind = 'human', species = '', age, pronouns = '', appearanceBible = {}, appearanceLocked = true }) {
   const bible = normalizeAppearanceBible(appearanceBible);
   const kindLabel = characterKind === 'mythical' ? 'mythical or fantasy creature' : characterKind;

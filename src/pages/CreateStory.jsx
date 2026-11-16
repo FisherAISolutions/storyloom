@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { TEMPLATES } from '@/lib/templates';
 import { generateStoryContent, generatePageImage } from '@/lib/storyStudio';
 import { ART_STYLES, DEFAULT_ART_STYLE, getStylePrompt } from '@/lib/artStyles';
-import { buildCharacterDescription, normalizeAppearanceBible } from '@/lib/characterBible';
+import { buildCharacterDescription, buildSnapshotCharacterDescription, normalizeAppearanceBible } from '@/lib/characterBible';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -42,7 +42,7 @@ function slotsToSnapshots(storyId, slots, savedCharacters) {
         name: character.name || '', role: index === 0 ? 'primary' : 'supporting', display_order: index,
         age: character.age, character_kind: character.character_kind || 'human', species: character.species || 'human',
         pronouns: character.pronouns, bible_snapshot: bible,
-        locked_description: buildCharacterDescription({ characterKind: character.character_kind, species: character.species, age: character.age, pronouns: character.pronouns, appearanceBible: bible, appearanceLocked: character.appearance_locked !== false }),
+        locked_description: buildSnapshotCharacterDescription(character),
         appearance_locked: character.appearance_locked !== false, source_bible_version: character.bible_version || 1,
       };
     }
