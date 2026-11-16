@@ -49,8 +49,8 @@ export async function resolveStoryCharacters(story) {
 
 export const generateStoryContent = (input) => aiService.generateStory(input);
 
-export async function generatePageImage({ storyId, pageNumber, text }) {
-  const result = await aiService.generatePageImage({ storyId, pageNumber, text });
+export async function generatePageImage({ storyId, pageNumber }) {
+  const result = await aiService.generatePageImage({ storyId, pageNumber });
   return result.image_path;
 }
 

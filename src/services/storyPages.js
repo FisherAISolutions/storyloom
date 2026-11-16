@@ -10,10 +10,13 @@ import {
 } from '@/services/errors';
 
 export const STORY_PAGE_COLUMNS = [
-  'id', 'user_id', 'story_id', 'page_number', 'text', 'image_path', 'created_at', 'updated_at',
+  'id', 'user_id', 'story_id', 'page_number', 'text', 'illustration_scene',
+  'illustration_instructions', 'image_path', 'created_at', 'updated_at',
 ].join(',');
 
-export const STORY_PAGE_WRITE_FIELDS = ['story_id', 'page_number', 'text', 'image_path'];
+export const STORY_PAGE_WRITE_FIELDS = [
+  'story_id', 'page_number', 'text', 'illustration_scene', 'illustration_instructions', 'image_path',
+];
 
 function pagePayload(input) {
   requireObject(input, 'Story page input');

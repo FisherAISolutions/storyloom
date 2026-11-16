@@ -26,6 +26,7 @@ export default function StoryEditor() {
   const [coverActive, setCoverActive] = useState(true);
   const [direction, setDirection] = useState('');
   const [draft, setDraft] = useState('');
+  const [illustrationDraft, setIllustrationDraft] = useState('');
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
@@ -46,7 +47,10 @@ export default function StoryEditor() {
         setStory(loadedStory);
         const loadedPages = await storyPagesService.listByStory(id);
         setPages(loadedPages);
-        if (loadedPages[0]) setDraft(loadedPages[0].text);
+        if (loadedPages[0]) {
+          setDraft(loadedPages[0].text);
+          setIllustrationDraft(loadedPages[0].illustration_instructions || '');
+        }
         communityService.getOwnerState(id).then(setCommunityState).catch(() => {});
       } catch (loadError) {
         setError(loadError?.message || 'This story could not be loaded.');
@@ -67,6 +71,7 @@ export default function StoryEditor() {
     setCoverActive(false);
     setCurrent(index);
     setDraft(pages[index].text || '');
+    setIllustrationDraft(pages[index].illustration_instructions || '');
     setEditing(false);
   }, [pages]);
 
@@ -137,8 +142,9 @@ export default function StoryEditor() {
     setRegenerating(true);
     setError('');
     try {
-      const imagePath = await generatePageImage({ storyId: story.id, pageNumber: page.page_number, text: draft || page.text });
-      const updated = await storyPagesService.update(page.id, { image_path: imagePath, text: draft || page.text });
+      await storyPagesService.update(page.id, { illustration_instructions: illustrationDraft.trim() });
+      const imagePath = await generatePageImage({ storyId: story.id, pageNumber: page.page_number });
+      const updated = await storyPagesService.update(page.id, { image_path: imagePath });
       const copy = [...pages];
       copy[current] = updated;
       setPages(copy);
@@ -176,6 +182,7 @@ export default function StoryEditor() {
     setCoverActive(false);
     setCurrent(firstNewPage);
     setDraft(newPages[0]?.text || '');
+    setIllustrationDraft(newPages[0]?.illustration_instructions || '');
     setEditing(false);
   }
 
@@ -217,7 +224,7 @@ export default function StoryEditor() {
             <Button onClick={next} className="rounded-full bg-[#087f7c] hover:bg-[#066c69]">Open book</Button>
           </div>
         ) : (
-          <div className="grid gap-6 lg:grid-cols-[1.35fr_0.65fr]">
+          <div className="grid gap-6 lg:grid-cols-2">
             <div>
               <div className="flex items-center justify-between gap-3">
                 <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ed6a5e]">Selected page {current + 1}</p><h2 id="page-editor-heading" className="mt-1 flex items-center gap-2 font-display text-xl font-semibold text-[#12304b]"><Pencil className="h-4 w-4" /> Edit Text</h2></div>
@@ -228,12 +235,15 @@ export default function StoryEditor() {
               ) : <p className="mt-4 min-h-24 rounded-2xl bg-stone-50 p-4 font-display text-base leading-relaxed text-stone-700">{displayTextFor(current)}</p>}
               <div className="mt-4 flex flex-wrap gap-2">
                 <Button onClick={saveText} disabled={saving || language !== 'en'} className="rounded-full bg-[#087f7c] hover:bg-[#066c69]">{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Save</Button>
-                <Button onClick={regenerateImage} disabled={regenerating || language !== 'en'} variant="outline" className="rounded-full">{regenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />} Repaint to Match</Button>
               </div>
             </div>
-            <aside className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 text-sm leading-6 text-stone-600">
-              <Info className="mb-2 h-5 w-5 text-amber-700" /><strong className="block text-stone-800">You’re in control</strong>Edit the page text or repaint its illustration. A successful repaint uses one image credit and keeps you on this spread.
-            </aside>
+            <div className="rounded-2xl border border-stone-200 bg-stone-50/70 p-4">
+              <h3 className="flex items-center gap-2 font-display text-lg font-semibold text-[#12304b]"><Palette className="h-4 w-4" /> Illustration Instructions</h3>
+              <p className="mt-1 text-sm leading-5 text-stone-500">Describe visual changes only. These instructions are never added to the story text.</p>
+              <Textarea value={illustrationDraft} onChange={(event) => setIllustrationDraft(event.target.value)} rows={5} maxLength={4000} className="mt-4 resize-none text-sm leading-relaxed" placeholder="Example: Keep the yellow flowered dress and show the scene inside the glowing underwater city." aria-label={`Illustration instructions for page ${current + 1}`} />
+              <Button onClick={regenerateImage} disabled={regenerating || language !== 'en'} className="mt-4 rounded-full bg-[#087f7c] hover:bg-[#066c69]">{regenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />} Save Instructions & Repaint</Button>
+              <p className="mt-3 flex gap-2 text-xs leading-5 text-stone-500"><Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />A repaint uses one image credit. Your reader-visible story prose stays unchanged.</p>
+            </div>
           </div>
         )}
       </section>

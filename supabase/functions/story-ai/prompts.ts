@@ -22,12 +22,13 @@ Write a gentle, imaginative picture book with exactly ${pageCount} pages.
 Each page should have 1-2 short, vivid sentences of story text (read-aloud friendly).
 Return a JSON object with a title, a one-sentence summary, and the pages array.`;
 };
-export const pageImagePrompt = (scene: string, theme: string, characters: Character[], style: string) => {
+export const pageImagePrompt = (scene: string, theme: string, characters: Character[], style: string, illustrationInstructions = '') => {
   const block = buildCharactersPrompt(characters);
   return `A children's picture book illustration.
 Scene: ${scene}
 Mood/theme: ${theme}.
 ${block ? `Include the character(s) matching:\n${block}` : ''}
+${illustrationInstructions ? `Additional visual-only instructions: ${illustrationInstructions}` : ''}
 Style: ${ART_STYLE_PROMPTS[style]}. No words or text in the image.`;
 };
 export const continuationSuggestionPrompt = (title: string, summary: string, lastPages: string[]) => `You are helping continue a children's picture book.

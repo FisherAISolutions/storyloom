@@ -136,8 +136,9 @@ Deno.serve(async (request) => {
     const story = await ownedStory(client, storyId);
     if (action === 'generate-page-image') {
       const rawPageNumber = body.pageNumber; if (!Number.isInteger(rawPageNumber) || (rawPageNumber as number) < 1 || (rawPageNumber as number) > 30) throw new AppError('VALIDATION', 'Page number is invalid.'); const pageNumber = rawPageNumber as number;
-      const existingPage = await client.from('story_pages').select('image_path').eq('story_id', storyId).eq('page_number', pageNumber).maybeSingle();
+      const existingPage = await client.from('story_pages').select('text,illustration_scene,illustration_instructions,image_path').eq('story_id', storyId).eq('page_number', pageNumber).maybeSingle();
       if (existingPage.error) throw new AppError('DATABASE', 'The page could not be checked.', 500);
+      if (!existingPage.data) throw new AppError('PERMISSION_DENIED', 'The page is unavailable.', 403);
       const meteredOperation = existingPage.data?.image_path ? 'generate-page-image-repaint' : 'generate-page-image-initial';
       if (meteredOperation === 'generate-page-image-repaint') generationKind = 'repaint';
       else {
@@ -147,7 +148,9 @@ Deno.serve(async (request) => {
       }
       pageCountMetadata = pageNumber;
       reservation = await assertAiEntitlement({ service, userId, requestId: correlationId, operation: meteredOperation, storyId, requestedPageCount: pageNumber, requestedImageCount: 1 });
-      const scene = text(body.text, 'Page text', LIMITS.TEXT); const characters = await storyCharacters(client, story); const result = await generateImage(pageImagePrompt(scene, story.theme || '', characters, story.art_style)); const path = `${userId}/${storyId}/pages/${String(pageNumber).padStart(3, '0')}.png`;
+      const scene = text(existingPage.data.illustration_scene || existingPage.data.text, 'Illustration scene', LIMITS.PROMPT);
+      const illustrationInstructions = typeof existingPage.data.illustration_instructions === 'string' ? existingPage.data.illustration_instructions.trim().slice(0, LIMITS.PROMPT) : '';
+      const characters = await storyCharacters(client, story); const result = await generateImage(pageImagePrompt(scene, story.theme || '', characters, story.art_style, illustrationInstructions)); const path = `${userId}/${storyId}/pages/${String(pageNumber).padStart(3, '0')}.png`;
       await uploadImage(client, 'story-images', path, result.blob); await usage({ userId, requestId: correlationId, operation: meteredOperation, storyId, model: result.model, success: true, reservation, providerUsage: result.usage, imageCount: 1, generationKind, pageCount: pageNumber, parentRequestId, imageSize: '1024x1024', imageQuality: 'medium' }); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { image_path: path } }, 200, headers);
     }
     if (action === 'suggest-continuation') {

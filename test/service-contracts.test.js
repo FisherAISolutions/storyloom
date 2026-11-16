@@ -150,6 +150,21 @@ test('editing invalidates only the corresponding translated page', () => {
   assert.deepEqual(original.es, ['uno', 'dos', 'tres']);
 });
 
+test('repainting keeps story prose separate from illustration instructions', () => {
+  const editor = read('src/pages/StoryEditor.jsx');
+  const studio = read('src/lib/storyStudio.js');
+  const edge = read('supabase/functions/story-ai/index.ts');
+  const pages = read('src/services/storyPages.js');
+  assert.match(pages, /illustration_scene/);
+  assert.match(pages, /illustration_instructions/);
+  assert.match(editor, /illustration_instructions: illustrationDraft\.trim\(\)/);
+  assert.match(editor, /storyPagesService\.update\(page\.id, \{ image_path: imagePath \}\)/);
+  assert.doesNotMatch(editor, /image_path: imagePath, text:/);
+  assert.doesNotMatch(studio, /generatePageImage\(\{ storyId, pageNumber, text \}\)/);
+  assert.match(edge, /existingPage\.data\.illustration_scene \|\| existingPage\.data\.text/);
+  assert.doesNotMatch(edge, /text\(body\.text, 'Page text'/);
+});
+
 test('only repainting page one synchronizes the cover', () => {
   assert.equal(shouldSyncCoverForPage(0), true);
   assert.equal(shouldSyncCoverForPage(1), false);

@@ -10,6 +10,7 @@ const migration = read('supabase/migrations/20260807000000_storyloom_foundation.
 const hardening = read('supabase/migrations/20260808000000_harden_private_paths.sql');
 const edge = read('supabase/functions/story-ai/index.ts');
 const billing = read('supabase/migrations/20260809000000_stripe_billing_entitlements.sql');
+const illustrationFields = read('supabase/migrations/20260814000000_story_page_illustration_fields.sql');
 
 test('every application table enables RLS and client privileges are explicit', () => {
   for (const table of ['profiles', 'child_characters', 'stories', 'story_pages', 'ai_usage']) {
@@ -60,6 +61,12 @@ test('database paths cannot persist signed or external URLs', () => {
     'story_pages_image_path_canonical_check',
   ]) assert.match(hardening, new RegExp(constraint));
   assert.match(hardening, /validate constraint stories_cover_path_canonical_check/);
+});
+
+test('reader prose and visual-only illustration direction are stored separately', () => {
+  assert.match(illustrationFields, /add column illustration_scene text/);
+  assert.match(illustrationFields, /add column illustration_instructions text not null default ''/);
+  assert.match(illustrationFields, /Image generation must never rewrite this field/);
 });
 
 test('signed URL and query caches are cleared before a new user resolves', () => {
