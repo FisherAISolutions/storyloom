@@ -29,6 +29,7 @@ test('Starter is paid while unpaid fallback has zero generation quotas', () => {
   assert.match(starter, /display_name='MyStorybook AI Starter'/);
   assert.match(starter, /monthly_price_cents=100/);
   assert.match(starter, /values \('unpaid', 'No active plan', '\$0', 0, null, 0, 0, 6/);
+  assert.match(starter, /story_units_limit=0, image_units_limit=0, max_story_pages=6/);
   assert.match(starter, /status in \('active','trialing'\)/);
   assert.match(starter, /plan_key='unpaid'/);
   assert.match(starter, /plan_key<>'unpaid'/);
