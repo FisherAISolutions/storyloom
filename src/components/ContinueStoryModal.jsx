@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { CONTINUATION_LENGTHS } from '@/lib/storyLengths';
 import * as storiesService from '@/services/stories';
 import * as storyPagesService from '@/services/storyPages';
+import * as storyWorldsService from '@/services/storyWorlds';
 
 export default function ContinueStoryModal({ story, pages, onClose, onDone }) {
   const [suggestion, setSuggestion] = useState('');
@@ -50,21 +51,34 @@ export default function ContinueStoryModal({ story, pages, onClose, onDone }) {
 
       const startNumber = pages.length;
       const newRecords = [];
+      const existingLocations = await storyWorldsService.listLocations(story.id);
+      const existingKeys = new Set(existingLocations.map((location) => location.location_key));
+      const savedLocations = await Promise.all((content.locations || []).filter((location) => !existingKeys.has(location.location_key)).map((location) => storyWorldsService.upsertLocation({ story_id: story.id, ...location })));
+      const locationMap = new Map([...existingLocations, ...savedLocations].map((location) => [location.location_key, location]));
       for (let i = 0; i < content.pages.length; i++) {
         setProgress(`Painting page ${i + 1} of ${content.pages.length}…`);
         const pageNumber = startNumber + i + 1;
-        const imagePath = await generatePageImage({
-          storyId: story.id,
-          pageNumber,
-          text: content.pages[i].text,
-        });
+        const pageContent = content.pages[i];
         const rec = await storyPagesService.create({
           story_id: story.id,
           page_number: pageNumber,
-          text: content.pages[i].text,
-          image_path: imagePath,
+          text: pageContent.text,
+          illustration_scene: pageContent.illustration_scene,
         });
-        newRecords.push(rec);
+        const location = locationMap.get(pageContent.location_key);
+        if (!location) throw new Error('A continuation page referenced an unavailable story location.');
+        await storyWorldsService.createScene({
+          story_page_id: rec.id, story_id: story.id, location_id: location.id,
+          scene_description: pageContent.illustration_scene, environment_state: pageContent.environment_state,
+          continuity_notes: pageContent.continuity_notes, transition_kind: pageContent.transition_kind,
+          transition_description: pageContent.transition_description, characters_present: pageContent.characters_present,
+          character_actions: pageContent.character_actions,
+        });
+        const imagePath = await generatePageImage({
+          storyId: story.id,
+          pageNumber,
+        });
+        newRecords.push(await storyPagesService.update(rec.id, { image_path: imagePath }));
       }
       await storiesService.update(story.id, { page_count: startNumber + content.pages.length });
       onDone(newRecords);

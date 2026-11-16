@@ -1,12 +1,13 @@
 import { ART_STYLE_PROMPTS, LANGUAGE_NAMES } from './config.ts';
 
-type Character = { name?: string; description?: string };
+type Character = { key?: string; name?: string; description?: string };
 export function buildCharactersPrompt(characters: Character[] = []) {
   return characters.filter(Boolean).map((c, i) => {
     const name = c.name?.trim(); const desc = c.description?.trim();
-    if (name && desc) return `Character ${i + 1}: ${name}. ${desc}`;
-    if (name) return `Character ${i + 1}: ${name}.`;
-    if (desc) return `Character ${i + 1}: ${desc} (invent a fitting, consistent appearance)`;
+    const key = c.key ? ` [key: ${c.key}]` : '';
+    if (name && desc) return `Character ${i + 1}${key}: ${name}. ${desc}`;
+    if (name) return `Character ${i + 1}${key}: ${name}.`;
+    if (desc) return `Character ${i + 1}${key}: ${desc} (invent a fitting, consistent appearance)`;
     return '';
   }).filter(Boolean).join('\n');
 }
@@ -19,15 +20,18 @@ Premise: ${premise}
 ${block ? `Characters to include (keep them consistent across every page):\n${block}` : 'Invent a charming main character.'}
 
 Write a gentle, imaginative picture book with exactly ${pageCount} pages.
-Each page should have 1-2 short, vivid sentences of story text (read-aloud friendly).
-Return a JSON object with a title, a one-sentence summary, and the pages array.`;
+Each page should have 1-2 short, vivid sentences of reader-visible story text (read-aloud friendly).
+
+Also design a Story World Bible and a small set of reusable named locations. For every page, separately provide the visual scene, active location key, environment state, previous-page continuity notes, explicit location transition, character keys present, and their actions. Keep every page in its established environment until an explicit transition changes locations. Do not repeat visual instructions inside reader-visible text. Return the complete structured story package requested by the schema.`;
 };
-export const pageImagePrompt = (scene: string, theme: string, characters: Character[], style: string, illustrationInstructions = '') => {
+export const pageImagePrompt = (scene: string, theme: string, characters: Character[], style: string, illustrationInstructions = '', worldBlock = '', characterActions = '') => {
   const block = buildCharactersPrompt(characters);
   return `A children's picture book illustration.
 Scene: ${scene}
 Mood/theme: ${theme}.
+${worldBlock}
 ${block ? `Include the character(s) matching:\n${block}` : ''}
+${characterActions ? `Character actions and composition: ${characterActions}` : ''}
 ${illustrationInstructions ? `Additional visual-only instructions: ${illustrationInstructions}` : ''}
 Style: ${ART_STYLE_PROMPTS[style]}. No words or text in the image.`;
 };
@@ -38,14 +42,15 @@ Last pages:
 ${lastPages.map((value) => `— ${value}`).join('\n') || '(no pages yet)'}
 
 Suggest ONE continuation premise (1-2 sentences) for what could happen next, keeping the same gentle tone. Return JSON.`;
-export const continuationPrompt = (title: string, summary: string, characters: Character[], count: number, premise: string) => {
+export const continuationPrompt = (title: string, summary: string, characters: Character[], count: number, premise: string, worldContext = '') => {
   const block = buildCharactersPrompt(characters);
   return `Continue the children's picture book "${title}".
 Summary so far: ${summary || ''}
 Continuation premise: ${premise}
 ${block ? `Characters (keep them consistent):\n${block}` : ''}
+${worldContext}
 
-Write exactly ${count} NEW pages continuing the story naturally. Each page 1-2 short vivid sentences (read-aloud friendly). Return JSON with a pages array.`;
+Write exactly ${count} NEW pages continuing the story naturally. Each page needs separate reader-visible text and visual scene metadata. Preserve the last known location, environment, and continuity unless the story explicitly travels; every changed location requires a transition. Return any newly introduced or reused location definitions plus the structured pages requested by the schema.`;
 };
 export const translationPrompt = (texts: string[], language: string) => `Translate the following children's storybook page texts into ${LANGUAGE_NAMES[language]}.
 Keep the gentle, read-aloud-friendly tone. Translate each page independently.

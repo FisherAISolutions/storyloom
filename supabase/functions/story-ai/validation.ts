@@ -30,9 +30,10 @@ export function characterInputs(value: unknown) {
   if (!Array.isArray(value) || value.length > LIMITS.CHARACTERS) throw new AppError('VALIDATION', 'Characters are invalid.');
   return value.map((item) => {
     const row = object(item);
+    const key = typeof row.key === 'string' && /^[a-zA-Z0-9:_-]{1,100}$/.test(row.key) ? row.key : `character-${crypto.randomUUID().slice(0, 8)}`;
     const name = typeof row.name === 'string' ? row.name.trim().slice(0, 120) : '';
     const description = typeof row.description === 'string' ? row.description.trim().slice(0, 1_500) : '';
     if (!name && !description) throw new AppError('VALIDATION', 'Character details are invalid.');
-    return { name, description };
+    return { key, name, description };
   });
 }

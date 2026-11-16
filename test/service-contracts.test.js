@@ -201,11 +201,12 @@ test('Edge Function authenticates, validates actions and ownership, and gates pr
 test('AI contracts bound counts, styles, languages, and validate structured output', () => {
   const config = read('supabase/functions/story-ai/config.ts');
   const edge = read('supabase/functions/story-ai/index.ts');
+  const worldBible = read('supabase/functions/story-ai/worldBible.ts');
   assert.match(config, /STORY_PAGE_COUNTS = new Set\(\[6, 10, 15, 24, 30\]\)/);
   assert.match(config, /CONTINUATION_PAGE_COUNTS = new Set\(\[3, 5, 10\]\)/);
   for (const style of ['watercolor', 'cartoon', 'crayon', 'pencil', 'claymation', 'collage']) assert.match(config, new RegExp(`${style}:`));
   for (const language of ['es', 'fr', 'de', 'pt', 'ja', 'zh']) assert.match(config, new RegExp(`${language}:`));
-  assert.match(edge, /value\.pages\.length !== count/);
+  assert.match(worldBible, /value\.pages\.length !== count/);
   assert.match(edge, /value\.translations\.length !== texts\.length/);
   assert.match(edge, /AI_RESPONSE_INVALID/);
 });

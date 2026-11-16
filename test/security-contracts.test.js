@@ -12,6 +12,7 @@ const edge = read('supabase/functions/story-ai/index.ts');
 const billing = read('supabase/migrations/20260809000000_stripe_billing_entitlements.sql');
 const illustrationFields = read('supabase/migrations/20260814000000_story_page_illustration_fields.sql');
 const characterBibles = read('supabase/migrations/20260815000000_character_bibles.sql');
+const storyWorlds = read('supabase/migrations/20260816000000_story_world_bibles.sql');
 
 test('every application table enables RLS and client privileges are explicit', () => {
   for (const table of ['profiles', 'child_characters', 'stories', 'story_pages', 'ai_usage']) {
@@ -77,6 +78,16 @@ test('Character Bibles are structured, bounded, versioned, and owner-scoped thro
   assert.match(characterBibles, /new\.bible_version := 1/);
   assert.match(characterBibles, /child_characters_bump_bible_version/);
   assert.match(migration, /alter table public\.child_characters enable row level security/);
+});
+
+test('Story World Bible tables use same-owner foreign keys and RLS', () => {
+  for (const table of ['story_worlds', 'story_locations', 'story_page_scenes']) {
+    assert.match(storyWorlds, new RegExp(`alter table public\\.${table} enable row level security`, 'i'));
+    assert.match(storyWorlds, new RegExp(`Owners manage their ${table === 'story_worlds' ? 'story worlds' : table === 'story_locations' ? 'story locations' : 'page scenes'}`));
+  }
+  assert.match(storyWorlds, /story_worlds_story_same_owner_fk/);
+  assert.match(storyWorlds, /story_page_scenes_location_same_story_fk/);
+  assert.match(storyWorlds, /characters_present jsonb/);
 });
 
 test('signed URL and query caches are cleared before a new user resolves', () => {

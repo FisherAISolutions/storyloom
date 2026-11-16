@@ -14,17 +14,18 @@ import { INITIAL_STORY_LENGTHS } from '@/lib/storyLengths';
 import * as storiesService from '@/services/stories';
 import * as storyPagesService from '@/services/storyPages';
 import * as charactersService from '@/services/characters';
+import * as storyWorldsService from '@/services/storyWorlds';
 
 /** Convert UI slots into the characters array used by the AI. */
 function slotsToCharacters(slots, savedCharacters) {
   return slots
     .filter(Boolean)
-    .map((s) => {
+    .map((s, index) => {
       if (s.type === 'saved') {
         const c = savedCharacters.find((x) => x.id === s.character_id);
-        return c ? { name: c.name, description: c.description } : null;
+        return c ? { key: `saved:${c.id}`, name: c.name, description: c.description } : null;
       }
-      return { name: '', description: s.quick_description };
+      return { key: `quick:${index + 1}`, name: '', description: s.quick_description };
     })
     .filter(Boolean);
 }
@@ -98,21 +99,34 @@ export default function CreateStory() {
         page_count: content.pages.length,
       });
       try { await storiesService.linkGeneration(story.id, content.analytics_request_id); } catch { console.error('Story analytics link failed'); }
+      await storyWorldsService.createWorld({ story_id: story.id, ...content.world });
+      const locations = await Promise.all(content.locations.map((location) => storyWorldsService.upsertLocation({ story_id: story.id, ...location })));
+      const locationMap = new Map(locations.map((location) => [location.location_key, location]));
       let coverPath = null;
       for (let i = 0; i < content.pages.length; i++) {
         setProgress(`Painting page ${i + 1} of ${content.pages.length}…`);
+        const pageContent = content.pages[i];
+        const page = await storyPagesService.create({
+          story_id: story.id,
+          page_number: i + 1,
+          text: pageContent.text,
+          illustration_scene: pageContent.illustration_scene,
+        });
+        const location = locationMap.get(pageContent.location_key);
+        if (!location) throw new Error('A generated page referenced an unavailable story location.');
+        await storyWorldsService.createScene({
+          story_page_id: page.id, story_id: story.id, location_id: location.id,
+          scene_description: pageContent.illustration_scene, environment_state: pageContent.environment_state,
+          continuity_notes: pageContent.continuity_notes, transition_kind: pageContent.transition_kind,
+          transition_description: pageContent.transition_description, characters_present: pageContent.characters_present,
+          character_actions: pageContent.character_actions,
+        });
         const imagePath = await generatePageImage({
           storyId: story.id,
           pageNumber: i + 1,
-          text: content.pages[i].text,
         });
         if (i === 0) coverPath = imagePath;
-        await storyPagesService.create({
-          story_id: story.id,
-          page_number: i + 1,
-          text: content.pages[i].text,
-          image_path: imagePath,
-        });
+        await storyPagesService.update(page.id, { image_path: imagePath });
       }
       await storiesService.update(story.id, { status: 'ready', cover_image_path: coverPath });
       navigate(`/story/${story.id}`);

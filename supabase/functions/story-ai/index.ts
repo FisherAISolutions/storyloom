@@ -6,6 +6,7 @@ import { characterAnalysisPrompt, characterImagePrompt, continuationPrompt, cont
 import { artStyle, characterInputs, integerIn, object, text, uuid } from './validation.ts';
 import { assertAiEntitlement, finalizeAiEntitlement, releaseAiEntitlement, type EntitlementReservation } from './entitlements.ts';
 import { characterBibleDescription } from './characterBible.ts';
+import { continuationPackageSchema, normalizeStoryPackage, storyPackageSchema, worldIllustrationBlock } from './worldBible.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
@@ -52,10 +53,10 @@ async function ownedCharacter(client: SupabaseClient, id: string) {
   return data;
 }
 async function storyCharacters(client: SupabaseClient, story: Record<string, any>) {
-  const result: Array<{ name: string; description: string }> = []; const seen = new Set<string>();
+  const result: Array<{ key: string; name: string; description: string }> = []; const seen = new Set<string>();
   const ids = [story.child_character_id, ...(Array.isArray(story.secondary_characters) ? story.secondary_characters.map((item: any) => item?.character_id) : [])].filter(Boolean);
-  for (const id of ids) if (!seen.has(id)) { const character = await ownedCharacter(client, id); result.push({ name: character.name || '', description: characterBibleDescription(character) }); seen.add(id); }
-  for (const item of Array.isArray(story.secondary_characters) ? story.secondary_characters : []) if (item?.quick_description) result.push({ name: '', description: String(item.quick_description).slice(0, 1_500) });
+  for (const id of ids) if (!seen.has(id)) { const character = await ownedCharacter(client, id); result.push({ key: `saved:${id}`, name: character.name || '', description: characterBibleDescription(character) }); seen.add(id); }
+  for (const [index, item] of (Array.isArray(story.secondary_characters) ? story.secondary_characters : []).entries()) if (item?.quick_description) result.push({ key: `quick:${index + 1}`, name: '', description: String(item.quick_description).slice(0, 1_500) });
   if (result.length > LIMITS.CHARACTERS) throw new AppError('VALIDATION', 'The story has too many characters.');
   return result;
 }
@@ -63,6 +64,26 @@ async function storyPages(client: SupabaseClient, storyId: string) {
   const { data, error } = await client.from('story_pages').select('page_number,text').eq('story_id', storyId).order('page_number', { ascending: true });
   if (error) throw new AppError('DATABASE', 'Story pages could not be loaded.', 500);
   return data || [];
+}
+async function worldContext(client: SupabaseClient, storyId: string, pageNumber?: number) {
+  const worldResult = await client.from('story_worlds').select('*').eq('story_id', storyId).maybeSingle();
+  if (worldResult.error) throw new AppError('DATABASE', 'The Story World Bible could not be loaded.', 500);
+  const locationsResult = await client.from('story_locations').select('*').eq('story_id', storyId).order('created_at', { ascending: true });
+  if (locationsResult.error) throw new AppError('DATABASE', 'Story locations could not be loaded.', 500);
+  let scene = null; let location = null; let lastLocationKey = '';
+  const pageQuery = client.from('story_pages').select('id,page_number').eq('story_id', storyId).order('page_number', { ascending: false });
+  const pageResult = pageNumber ? await pageQuery.eq('page_number', pageNumber).maybeSingle() : await pageQuery.limit(1).maybeSingle();
+  if (pageResult.error) throw new AppError('DATABASE', 'Story page continuity could not be loaded.', 500);
+  if (pageResult.data) {
+    const sceneResult = await client.from('story_page_scenes').select('*').eq('story_page_id', pageResult.data.id).maybeSingle();
+    if (sceneResult.error) throw new AppError('DATABASE', 'The page scene could not be loaded.', 500);
+    scene = sceneResult.data;
+    if (scene?.location_id) {
+      location = (locationsResult.data || []).find((item: any) => item.id === scene.location_id) || null;
+      lastLocationKey = location?.location_key || '';
+    }
+  }
+  return { world: worldResult.data, locations: locationsResult.data || [], scene, location, lastLocationKey };
 }
 async function privatePhoto(client: SupabaseClient, userId: string, character: Record<string, any>) {
   if (typeof character.photo_path !== 'string' || !character.photo_path.startsWith(`${userId}/${character.id}/`)) throw new AppError('PERMISSION_DENIED', 'The character photo is unavailable.', 403);
@@ -94,12 +115,6 @@ function failureStage(code: string) {
   return 'unknown';
 }
 
-const pageSchema = (count: number) => ({ type: 'object', properties: { pages: { type: 'array', minItems: count, maxItems: count, items: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'], additionalProperties: false } } }, required: ['pages'], additionalProperties: false });
-function validatePages(value: any, count: number) {
-  if (!value || !Array.isArray(value.pages) || value.pages.length !== count || value.pages.some((page: any) => typeof page?.text !== 'string' || !page.text.trim() || page.text.length > LIMITS.TEXT)) throw new AppError('AI_RESPONSE_INVALID', 'The AI response did not contain the requested pages.', 502);
-  return value;
-}
-
 Deno.serve(async (request) => {
   let headers: HeadersInit = {}; let userId = ''; let action = ''; let storyId: string | null = null; let correlationId = ''; let generationKind: string | null = null; let pageCountMetadata: number | null = null; let resourceId: string | null = null; let parentRequestId: string | null = null; let reservation: EntitlementReservation | null = null;
   try {
@@ -115,9 +130,7 @@ Deno.serve(async (request) => {
       const pageCount = integerIn(body.pageCount, STORY_PAGE_COUNTS, 'Page count'); const premise = text(body.prompt, 'Story premise', LIMITS.PROMPT); const theme = text(body.theme, 'Theme', 200); const characters = characterInputs(body.characters || []);
       generationKind = 'initial_story'; pageCountMetadata = pageCount;
       reservation = await assertAiEntitlement({ service, userId, requestId: correlationId, operation: action, requestedPageCount: pageCount });
-      const schema = { type: 'object', properties: { title: { type: 'string' }, summary: { type: 'string' }, ...pageSchema(pageCount).properties }, required: ['title', 'summary', 'pages'], additionalProperties: false };
-      const result = await structured(storyPrompt(premise, theme, characters, pageCount), 'story', schema); const value: any = validatePages(result.value, pageCount);
-      if (typeof value.title !== 'string' || !value.title.trim() || typeof value.summary !== 'string') throw new AppError('AI_RESPONSE_INVALID', 'The generated story is invalid.', 502);
+      const result = await structured(storyPrompt(premise, theme, characters, pageCount), 'story', storyPackageSchema(pageCount)); const value: any = normalizeStoryPackage(result.value, pageCount, characters.map((character) => character.key));
       await usage({ userId, requestId: correlationId, operation: action, storyId: null, model: result.model, success: true, reservation, providerUsage: result.usage, generationKind, pageCount }); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { ...value, analytics_request_id: correlationId } }, 200, headers);
     }
     storyId = typeof body.storyId === 'string' ? uuid(body.storyId, 'Story ID') : null;
@@ -153,7 +166,10 @@ Deno.serve(async (request) => {
       reservation = await assertAiEntitlement({ service, userId, requestId: correlationId, operation: meteredOperation, storyId, requestedPageCount: pageNumber, requestedImageCount: 1 });
       const scene = text(existingPage.data.illustration_scene || existingPage.data.text, 'Illustration scene', LIMITS.PROMPT);
       const illustrationInstructions = typeof existingPage.data.illustration_instructions === 'string' ? existingPage.data.illustration_instructions.trim().slice(0, LIMITS.PROMPT) : '';
-      const characters = await storyCharacters(client, story); const result = await generateImage(pageImagePrompt(scene, story.theme || '', characters, story.art_style, illustrationInstructions)); const path = `${userId}/${storyId}/pages/${String(pageNumber).padStart(3, '0')}.png`;
+      const context = await worldContext(client, storyId, pageNumber); const allCharacters = await storyCharacters(client, story);
+      const presentKeys = new Set(Array.isArray(context.scene?.characters_present) ? context.scene.characters_present.filter((value: unknown) => typeof value === 'string') : []);
+      const characters = presentKeys.size ? allCharacters.filter((character) => presentKeys.has(character.key)) : allCharacters;
+      const result = await generateImage(pageImagePrompt(scene, story.theme || '', characters, story.art_style, illustrationInstructions, worldIllustrationBlock(context), context.scene?.character_actions || '')); const path = `${userId}/${storyId}/pages/${String(pageNumber).padStart(3, '0')}.png`;
       await uploadImage(client, 'story-images', path, result.blob); await usage({ userId, requestId: correlationId, operation: meteredOperation, storyId, model: result.model, success: true, reservation, providerUsage: result.usage, imageCount: 1, generationKind, pageCount: pageNumber, parentRequestId, imageSize: '1024x1024', imageQuality: 'medium' }); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { image_path: path } }, 200, headers);
     }
     if (action === 'suggest-continuation') {
@@ -164,9 +180,12 @@ Deno.serve(async (request) => {
       await usage({ userId, requestId: correlationId, operation: action, storyId, model: result.model, success: true, reservation, providerUsage: result.usage, generationKind }); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { suggestion: value.suggestion.trim() } }, 200, headers);
     }
     if (action === 'continue-story') {
-      const count = integerIn(body.pageCount, CONTINUATION_PAGE_COUNTS, 'Continuation page count'); const premise = text(body.continuationPrompt, 'Continuation premise', LIMITS.PROMPT); const characters = await storyCharacters(client, story);
+      const count = integerIn(body.pageCount, CONTINUATION_PAGE_COUNTS, 'Continuation page count'); const premise = text(body.continuationPrompt, 'Continuation premise', LIMITS.PROMPT); const characters = await storyCharacters(client, story); const context = await worldContext(client, storyId);
       generationKind = 'continuation'; pageCountMetadata = count; reservation = await assertAiEntitlement({ service, userId, requestId: correlationId, operation: action, storyId, requestedPageCount: count });
-      const result = await structured(continuationPrompt(story.title, story.summary || '', characters, count, premise), 'continuation', pageSchema(count)); const value = validatePages(result.value, count);
+      const locationSummary = context.locations.length ? `${context.world ? `Story World Bible: ${worldIllustrationBlock(context)}\n` : ''}Available locations:\n${context.locations.map((location: any) => `${location.location_key}: ${location.name} — ${location.visual_description}`).join('\n')}\nLast active location key: ${context.lastLocationKey || 'unknown'}.` : 'This legacy story has no stored World Bible; infer continuity from the summary and recent pages.';
+      const result = await structured(continuationPrompt(story.title, story.summary || '', characters, count, premise, locationSummary), 'continuation', continuationPackageSchema(count));
+      const existingKeys = context.locations.map((location: any) => location.location_key).filter((key: string) => key !== context.lastLocationKey); if (context.lastLocationKey) existingKeys.push(context.lastLocationKey);
+      const value = normalizeStoryPackage(result.value, count, characters.map((character) => character.key), existingKeys, false);
       const segment = await service.from('story_generation_segments').insert({ request_id: correlationId, user_id: userId, story_id: storyId, generation_kind: 'continuation', page_count: count, start_page: story.page_count + 1, end_page: story.page_count + count });
       if (segment.error) console.error('continuation analytics segment insert failed');
       await usage({ userId, requestId: correlationId, operation: action, storyId, model: result.model, success: true, reservation, providerUsage: result.usage, generationKind, pageCount: count }); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { ...value, analytics_request_id: correlationId } }, 200, headers);
