@@ -248,6 +248,17 @@ test('generated images are decoded and uploaded server-side to deterministic pat
   assert.doesNotMatch(edge, /providerUrl|signedUrl/);
 });
 
+test('structured Character Bibles support photo-free characters and server rendering', () => {
+  const characters = read('src/pages/Characters.jsx');
+  const service = read('src/services/characters.js');
+  const edge = read('supabase/functions/story-ai/index.ts');
+  assert.match(characters, /Reference photo \(optional\)/);
+  assert.doesNotMatch(characters, /!name\.trim\(\) \|\| !photo/);
+  for (const field of ['character_kind', 'species', 'appearance_bible', 'appearance_locked', 'bible_version']) assert.match(service, new RegExp(field));
+  assert.match(edge, /characterBibleDescription\(character\)/);
+  assert.doesNotMatch(edge, /text\(body\.description, 'Character description'/);
+});
+
 test('AI usage logging and transactional server-side entitlement gate exist', () => {
   const edge = read('supabase/functions/story-ai/index.ts');
   const entitlement = read('supabase/functions/story-ai/entitlements.ts');

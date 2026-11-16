@@ -11,6 +11,7 @@ const hardening = read('supabase/migrations/20260808000000_harden_private_paths.
 const edge = read('supabase/functions/story-ai/index.ts');
 const billing = read('supabase/migrations/20260809000000_stripe_billing_entitlements.sql');
 const illustrationFields = read('supabase/migrations/20260814000000_story_page_illustration_fields.sql');
+const characterBibles = read('supabase/migrations/20260815000000_character_bibles.sql');
 
 test('every application table enables RLS and client privileges are explicit', () => {
   for (const table of ['profiles', 'child_characters', 'stories', 'story_pages', 'ai_usage']) {
@@ -67,6 +68,15 @@ test('reader prose and visual-only illustration direction are stored separately'
   assert.match(illustrationFields, /add column illustration_scene text/);
   assert.match(illustrationFields, /add column illustration_instructions text not null default ''/);
   assert.match(illustrationFields, /Image generation must never rewrite this field/);
+});
+
+test('Character Bibles are structured, bounded, versioned, and owner-scoped through existing RLS', () => {
+  assert.match(characterBibles, /character_kind in \('human', 'animal', 'mythical'\)/);
+  assert.match(characterBibles, /appearance_bible jsonb not null/);
+  assert.match(characterBibles, /octet_length\(value::text\) <= 8000/);
+  assert.match(characterBibles, /new\.bible_version := 1/);
+  assert.match(characterBibles, /child_characters_bump_bible_version/);
+  assert.match(migration, /alter table public\.child_characters enable row level security/);
 });
 
 test('signed URL and query caches are cleared before a new user resolves', () => {

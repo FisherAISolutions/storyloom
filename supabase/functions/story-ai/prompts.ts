@@ -53,7 +53,8 @@ Return a JSON object with a "translations" array of translated strings in the SA
 
 Texts:
 ${texts.map((value, index) => `${index + 1}. ${value}`).join('\n')}`;
-export const characterAnalysisPrompt = "Look at this child's photo and describe their appearance for a children's book illustrator: hair color and style, eye color, skin tone, and any distinctive features. Keep it warm, concise, and friendly (2-3 sentences).";
-export const characterImagePrompt = (description: string) => `A warm, friendly watercolor portrait of a child character for a children's book.
+export const characterAnalysisPrompt = (kind: string, species: string) => `Analyze this photo as visual reference for a ${kind} children's book character${species ? ` described as ${species}` : ''}.
+Return concise, literal visual traits for hair, eyes, skin/fur/scales/surface, body features, and distinguishing features. Use an empty string when a trait is not visible. Do not invent clothing, accessories, species anatomy, or colors that are not visible.`;
+export const characterImagePrompt = (description: string, kind = 'character') => `A warm, friendly watercolor portrait of a ${kind} character for a children's book.
 ${description}
 Style: soft hand-painted watercolor, whimsical, gentle pastel colors, storybook illustration. No text.`;

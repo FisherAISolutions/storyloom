@@ -11,11 +11,13 @@ import {
 
 export const CHARACTER_COLUMNS = [
   'id', 'user_id', 'name', 'age', 'description', 'photo_path',
-  'character_image_path', 'created_at', 'updated_at',
+  'character_image_path', 'character_kind', 'species', 'pronouns', 'appearance_bible',
+  'appearance_locked', 'bible_version', 'created_at', 'updated_at',
 ].join(',');
 
 export const CHARACTER_WRITE_FIELDS = [
   'name', 'age', 'description', 'photo_path', 'character_image_path',
+  'character_kind', 'species', 'pronouns', 'appearance_bible', 'appearance_locked',
 ];
 
 function characterPayload(input) {

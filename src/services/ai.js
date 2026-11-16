@@ -17,7 +17,7 @@ async function invokeAi(action, payload = {}) {
 
 export const generateStory = (input) => invokeAi('generate-story', input);
 export const analyzeCharacter = (characterId) => invokeAi('analyze-character', { characterId });
-export const generateCharacterImage = (characterId, description) => invokeAi('generate-character-image', { characterId, description });
+export const generateCharacterImage = (characterId) => invokeAi('generate-character-image', { characterId });
 export const generatePageImage = (input) => invokeAi('generate-page-image', input);
 export const suggestContinuation = (storyId) => invokeAi('suggest-continuation', { storyId });
 export const continueStory = (storyId, pageCount, continuationPrompt) => invokeAi('continue-story', { storyId, pageCount, continuationPrompt });

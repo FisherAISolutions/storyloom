@@ -69,10 +69,10 @@ export async function translateStory({ storyId, language }) {
 
 export async function analyzeChildCharacter(characterId) {
   const result = await aiService.analyzeCharacter(characterId);
-  return result.description;
+  return result.appearance_bible;
 }
 
-export async function generateCharacterImage(characterId, description) {
-  const result = await aiService.generateCharacterImage(characterId, description);
+export async function generateCharacterImage(characterId) {
+  const result = await aiService.generateCharacterImage(characterId);
   return result.character_image_path;
 }

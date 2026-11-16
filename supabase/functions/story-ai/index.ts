@@ -5,6 +5,7 @@ import { generateImage, structured } from './openai.ts';
 import { characterAnalysisPrompt, characterImagePrompt, continuationPrompt, continuationSuggestionPrompt, pageImagePrompt, storyPrompt, translationPrompt } from './prompts.ts';
 import { artStyle, characterInputs, integerIn, object, text, uuid } from './validation.ts';
 import { assertAiEntitlement, finalizeAiEntitlement, releaseAiEntitlement, type EntitlementReservation } from './entitlements.ts';
+import { characterBibleDescription } from './characterBible.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
@@ -45,7 +46,7 @@ async function ownedStory(client: SupabaseClient, id: string) {
   return data;
 }
 async function ownedCharacter(client: SupabaseClient, id: string) {
-  const { data, error } = await client.from('child_characters').select('id,name,description,photo_path,character_image_path').eq('id', id).maybeSingle();
+  const { data, error } = await client.from('child_characters').select('id,name,age,description,photo_path,character_image_path,character_kind,species,pronouns,appearance_bible,appearance_locked,bible_version').eq('id', id).maybeSingle();
   if (error) throw new AppError('DATABASE', 'The character could not be loaded.', 500);
   if (!data) throw new AppError('PERMISSION_DENIED', 'The character is unavailable.', 403);
   return data;
@@ -53,7 +54,7 @@ async function ownedCharacter(client: SupabaseClient, id: string) {
 async function storyCharacters(client: SupabaseClient, story: Record<string, any>) {
   const result: Array<{ name: string; description: string }> = []; const seen = new Set<string>();
   const ids = [story.child_character_id, ...(Array.isArray(story.secondary_characters) ? story.secondary_characters.map((item: any) => item?.character_id) : [])].filter(Boolean);
-  for (const id of ids) if (!seen.has(id)) { const character = await ownedCharacter(client, id); result.push({ name: character.name || '', description: character.description || '' }); seen.add(id); }
+  for (const id of ids) if (!seen.has(id)) { const character = await ownedCharacter(client, id); result.push({ name: character.name || '', description: characterBibleDescription(character) }); seen.add(id); }
   for (const item of Array.isArray(story.secondary_characters) ? story.secondary_characters : []) if (item?.quick_description) result.push({ name: '', description: String(item.quick_description).slice(0, 1_500) });
   if (result.length > LIMITS.CHARACTERS) throw new AppError('VALIDATION', 'The story has too many characters.');
   return result;
@@ -124,12 +125,14 @@ Deno.serve(async (request) => {
       const characterId = uuid(body.characterId, 'Character ID'); resourceId = characterId; generationKind = action === 'analyze-character' ? 'character_analysis' : 'character_portrait'; const character = await ownedCharacter(client, characterId); const photo = await privatePhoto(client, userId, character);
       reservation = await assertAiEntitlement({ service, userId, requestId: correlationId, operation: action, requestedImageCount: action === 'generate-character-image' ? 1 : undefined });
       if (action === 'analyze-character') {
-        const schema = { type: 'object', properties: { description: { type: 'string' } }, required: ['description'], additionalProperties: false };
-        const result = await structured(characterAnalysisPrompt, 'character_description', schema, photo); const value: any = result.value;
-        if (typeof value.description !== 'string' || !value.description.trim() || value.description.length > 2_000) throw new AppError('AI_RESPONSE_INVALID', 'The character description is invalid.', 502);
-        await usage({ userId, requestId: correlationId, operation: action, storyId: null, model: result.model, success: true, reservation, providerUsage: result.usage, generationKind, resourceId }); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { description: value.description.trim() } }, 200, headers);
+        const fields = ['hair', 'eyes', 'skin_or_surface', 'body_features', 'distinguishing_features'];
+        const schema = { type: 'object', properties: Object.fromEntries(fields.map((field) => [field, { type: 'string' }])), required: fields, additionalProperties: false };
+        const result = await structured(characterAnalysisPrompt(character.character_kind || 'human', character.species || ''), 'character_appearance', schema, photo); const value: any = result.value;
+        const appearanceBible = Object.fromEntries(fields.map((field) => [field, typeof value?.[field] === 'string' ? value[field].trim().slice(0, 500) : '']));
+        if (!Object.values(appearanceBible).some(Boolean)) throw new AppError('AI_RESPONSE_INVALID', 'The character appearance could not be analyzed.', 502);
+        await usage({ userId, requestId: correlationId, operation: action, storyId: null, model: result.model, success: true, reservation, providerUsage: result.usage, generationKind, resourceId }); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { appearance_bible: appearanceBible } }, 200, headers);
       }
-      const description = text(body.description, 'Character description', 2_000); const result = await generateImage(characterImagePrompt(description), photo); const path = `${userId}/${characterId}/portrait.png`;
+      const description = characterBibleDescription(character); const result = await generateImage(characterImagePrompt(description, character.character_kind || 'character'), photo); const path = `${userId}/${characterId}/portrait.png`;
       await uploadImage(client, 'character-images', path, result.blob); await usage({ userId, requestId: correlationId, operation: action, storyId: null, model: result.model, success: true, reservation, providerUsage: result.usage, imageCount: 1, generationKind, resourceId, imageSize: '1024x1024', imageQuality: 'medium' }); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { character_image_path: path } }, 200, headers);
     }
     if (!storyId) throw new AppError('VALIDATION', 'Story ID is required.');
