@@ -18,13 +18,14 @@ export const storyPrompt = (premise: string, theme: string, characters: Characte
 Theme: ${theme}
 Premise: ${premise}
 ${block ? `Characters to include (keep them consistent across every page):\n${block}` : 'Invent a charming main character.'}
+Return generated_characters only for recurring visual characters that were not supplied above, using stable keys such as generated:1 and a complete locked appearance bible. Keep the total recurring cast to no more than three characters. If every recurring character was supplied, return an empty generated_characters array.
 
 Write a gentle, imaginative picture book with exactly ${pageCount} pages.
 Each page should have 1-2 short, vivid sentences of reader-visible story text (read-aloud friendly).
 
-Also design a Story World Bible and a small set of reusable named locations. For every page, separately provide the visual scene, active location key, environment state, previous-page continuity notes, explicit location transition, character keys present, and their actions. Keep every page in its established environment until an explicit transition changes locations. Do not repeat visual instructions inside reader-visible text. Return the complete structured story package requested by the schema.`;
+Also design a Story World Bible and a small set of reusable named locations. For every page, separately provide the visual scene, active location key, environment state, previous-page continuity notes, explicit location transition, character keys present, and their actions. Keep every page in its established environment until an explicit transition changes locations. Return character_changes only when the prose intentionally introduces a lasting outfit change, transformation, or return to the baseline appearance; otherwise return an empty array. Do not repeat visual instructions inside reader-visible text. Return the complete structured story package requested by the schema.`;
 };
-export const pageImagePrompt = (scene: string, theme: string, characters: Character[], style: string, illustrationInstructions = '', worldBlock = '', characterActions = '') => {
+export const pageImagePrompt = (scene: string, theme: string, characters: Character[], style: string, illustrationInstructions = '', worldBlock = '', characterActions = '', styleSnapshot = '') => {
   const block = buildCharactersPrompt(characters);
   return `A children's picture book illustration.
 Scene: ${scene}
@@ -33,7 +34,7 @@ ${worldBlock}
 ${block ? `Include the character(s) matching:\n${block}` : ''}
 ${characterActions ? `Character actions and composition: ${characterActions}` : ''}
 ${illustrationInstructions ? `Additional visual-only instructions: ${illustrationInstructions}` : ''}
-Style: ${ART_STYLE_PROMPTS[style]}. No words or text in the image.`;
+Style: ${styleSnapshot || ART_STYLE_PROMPTS[style]}. No words or text in the image.`;
 };
 export const continuationSuggestionPrompt = (title: string, summary: string, lastPages: string[]) => `You are helping continue a children's picture book.
 Title: ${title}
@@ -50,7 +51,7 @@ Continuation premise: ${premise}
 ${block ? `Characters (keep them consistent):\n${block}` : ''}
 ${worldContext}
 
-Write exactly ${count} NEW pages continuing the story naturally. Each page needs separate reader-visible text and visual scene metadata. Preserve the last known location, environment, and continuity unless the story explicitly travels; every changed location requires a transition. Return any newly introduced or reused location definitions plus the structured pages requested by the schema.`;
+Write exactly ${count} NEW pages continuing the story naturally. Each page needs separate reader-visible text and visual scene metadata. Preserve the last known location, environment, and continuity unless the story explicitly travels; every changed location requires a transition. Return character_changes only when the prose intentionally introduces a lasting outfit change, transformation, or return to the baseline appearance; otherwise return an empty array. Return any newly introduced or reused location definitions plus the structured pages requested by the schema.`;
 };
 export const translationPrompt = (texts: string[], language: string) => `Translate the following children's storybook page texts into ${LANGUAGE_NAMES[language]}.
 Keep the gentle, read-aloud-friendly tone. Translate each page independently.

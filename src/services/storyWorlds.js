@@ -2,7 +2,7 @@ import { getSupabaseClient } from '@/lib/supabase';
 import { requireAuthenticatedUser } from '@/services/auth';
 import { rejectOwnershipOverride, requireId, requireObject, toServiceError } from '@/services/errors';
 
-const WORLD_FIELDS = ['story_id', 'main_setting', 'environment_type', 'architecture_landmarks', 'lighting_atmosphere', 'visual_palette', 'environmental_rules', 'negative_constraints'];
+const WORLD_FIELDS = ['story_id', 'main_setting', 'environment_type', 'architecture_landmarks', 'lighting_atmosphere', 'visual_palette', 'environmental_rules', 'negative_constraints', 'illustration_style_key', 'illustration_style_prompt'];
 const LOCATION_FIELDS = ['story_id', 'location_key', 'name', 'environment_type', 'visual_description', 'environmental_rules', 'lighting_atmosphere', 'visual_palette', 'negative_constraints', 'is_main'];
 const SCENE_FIELDS = ['story_page_id', 'story_id', 'location_id', 'scene_description', 'environment_state', 'continuity_notes', 'transition_kind', 'transition_description', 'characters_present', 'character_actions'];
 

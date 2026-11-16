@@ -2,6 +2,40 @@ import { AppError } from './errors.ts';
 import { LIMITS } from './config.ts';
 
 const stringField = { type: 'string' };
+const outfitChangeSchema = {
+  type: 'object',
+  properties: { clothing: stringField, clothing_colors: stringField, shoes: stringField, accessories: stringField },
+  required: ['clothing', 'clothing_colors', 'shoes', 'accessories'], additionalProperties: false,
+};
+const appearanceChangeSchema = {
+  type: 'object',
+  properties: { hair: stringField, eyes: stringField, skin_or_surface: stringField, body_features: stringField, wings: stringField, horns: stringField, tail: stringField, distinguishing_features: stringField, palette: stringField },
+  required: ['hair', 'eyes', 'skin_or_surface', 'body_features', 'wings', 'horns', 'tail', 'distinguishing_features', 'palette'], additionalProperties: false,
+};
+const fullBibleSchema = {
+  type: 'object',
+  properties: { ...appearanceChangeSchema.properties, ...outfitChangeSchema.properties, negative_constraints: stringField },
+  required: [...appearanceChangeSchema.required, ...outfitChangeSchema.required, 'negative_constraints'], additionalProperties: false,
+};
+const generatedCharacterSchema = {
+  type: 'object',
+  properties: {
+    character_key: stringField, name: stringField,
+    character_kind: { type: 'string', enum: ['human', 'animal', 'mythical'] },
+    species: stringField, pronouns: stringField, appearance_bible: fullBibleSchema,
+  },
+  required: ['character_key', 'name', 'character_kind', 'species', 'pronouns', 'appearance_bible'], additionalProperties: false,
+};
+const characterChangeSchema = {
+  type: 'object',
+  properties: {
+    character_key: stringField,
+    change_kind: { type: 'string', enum: ['outfit_change', 'transformation', 'return_to_baseline'] },
+    outfit_snapshot: outfitChangeSchema, appearance_override: appearanceChangeSchema, change_description: stringField,
+  },
+  required: ['character_key', 'change_kind', 'outfit_snapshot', 'appearance_override', 'change_description'],
+  additionalProperties: false,
+};
 const locationSchema = {
   type: 'object',
   properties: {
@@ -22,8 +56,9 @@ const pageSceneSchema = {
     transition_description: stringField,
     characters_present: { type: 'array', maxItems: 3, items: stringField },
     character_actions: stringField,
+    character_changes: { type: 'array', maxItems: 3, items: characterChangeSchema },
   },
-  required: ['text', 'illustration_scene', 'location_key', 'environment_state', 'continuity_notes', 'transition_kind', 'transition_description', 'characters_present', 'character_actions'],
+  required: ['text', 'illustration_scene', 'location_key', 'environment_state', 'continuity_notes', 'transition_kind', 'transition_description', 'characters_present', 'character_actions', 'character_changes'],
   additionalProperties: false,
 };
 
@@ -42,9 +77,10 @@ export const storyPackageSchema = (count: number) => ({
       additionalProperties: false,
     },
     locations: { type: 'array', minItems: 1, maxItems: 12, items: locationSchema },
+    generated_characters: { type: 'array', maxItems: 3, items: generatedCharacterSchema },
     pages: { type: 'array', minItems: count, maxItems: count, items: pageSceneSchema },
   },
-  required: ['title', 'summary', 'world', 'locations', 'pages'],
+  required: ['title', 'summary', 'world', 'locations', 'generated_characters', 'pages'],
   additionalProperties: false,
 });
 
@@ -83,7 +119,20 @@ export function normalizeStoryPackage(value: any, count: number, characterKeys: 
     if (locationKeys.has(location.location_key) && !existingLocationKeys.includes(location.location_key)) throw new AppError('AI_RESPONSE_INVALID', 'The AI response repeated a location key.', 502);
     locationKeys.add(location.location_key);
   }
-  const allowedCharacters = new Set(characterKeys);
+  const generatedCharacters = requireWorld && Array.isArray(value.generated_characters) ? value.generated_characters.slice(0, 3).map((character: any, index: number) => {
+    const characterKey = clean(character?.character_key, 74, true).toLowerCase();
+    if (!/^generated:[a-z0-9_-]{1,64}$/.test(characterKey)) throw new AppError('AI_RESPONSE_INVALID', 'A generated character key is invalid.', 502);
+    const kind = ['human', 'animal', 'mythical'].includes(character?.character_kind) ? character.character_kind : 'mythical';
+    const fields = ['hair', 'eyes', 'skin_or_surface', 'body_features', 'clothing', 'clothing_colors', 'shoes', 'accessories', 'wings', 'horns', 'tail', 'distinguishing_features', 'palette', 'negative_constraints'];
+    return {
+      character_key: characterKey || `generated:${index + 1}`, name: clean(character.name, 160), character_kind: kind,
+      species: clean(character.species, 120, true), pronouns: clean(character.pronouns, 80),
+      appearance_bible: Object.fromEntries(fields.map((field) => [field, clean(character.appearance_bible?.[field], 500)]).filter(([, detail]) => detail)),
+    };
+  }) : [];
+  if (characterKeys.length + generatedCharacters.length > LIMITS.CHARACTERS) throw new AppError('AI_RESPONSE_INVALID', 'The story contains too many recurring characters.', 502);
+  const allowedCharacters = new Set([...characterKeys, ...generatedCharacters.map((character: any) => character.character_key)]);
+  if (allowedCharacters.size !== characterKeys.length + generatedCharacters.length) throw new AppError('AI_RESPONSE_INVALID', 'The story contains duplicate character keys.', 502);
   let previousLocation = existingLocationKeys.at(-1) || '';
   const pages = value.pages.map((page: any) => {
     const locationKey = clean(page?.location_key, 64, true).toLowerCase();
@@ -94,11 +143,24 @@ export function normalizeStoryPackage(value: any, count: number, characterKeys: 
     else if (previousLocation === locationKey && ['enter', 'exit', 'travel'].includes(transitionKind)) transitionKind = 'stay';
     previousLocation = locationKey;
     const present = Array.isArray(page.characters_present) ? page.characters_present.filter((key: unknown) => typeof key === 'string' && allowedCharacters.has(key)).slice(0, 3) : [];
+    const changedCharacters = new Set<string>();
+    const characterChanges = Array.isArray(page.character_changes) ? page.character_changes
+      .filter((change: any) => {
+        if (!allowedCharacters.has(change?.character_key) || changedCharacters.has(change.character_key) || !['outfit_change', 'transformation', 'return_to_baseline'].includes(change?.change_kind)) return false;
+        changedCharacters.add(change.character_key); return true;
+      })
+      .slice(0, 3).map((change: any) => ({
+        character_key: change.character_key,
+        change_kind: change.change_kind,
+        outfit_snapshot: Object.fromEntries(['clothing', 'clothing_colors', 'shoes', 'accessories'].map((field) => [field, clean(change.outfit_snapshot?.[field], 500)]).filter(([, detail]) => detail)),
+        appearance_override: Object.fromEntries(['hair', 'eyes', 'skin_or_surface', 'body_features', 'wings', 'horns', 'tail', 'distinguishing_features', 'palette'].map((field) => [field, clean(change.appearance_override?.[field], 500)]).filter(([, detail]) => detail)),
+        change_description: clean(change.change_description, 1_000, true),
+      })) : [];
     return {
       text: clean(page.text, LIMITS.TEXT, true), illustration_scene: clean(page.illustration_scene, LIMITS.PROMPT, true), location_key: locationKey,
       environment_state: clean(page.environment_state, 1_500), continuity_notes: clean(page.continuity_notes, 1_500),
       transition_kind: transitionKind, transition_description: clean(page.transition_description, 1_000),
-      characters_present: present, character_actions: clean(page.character_actions, 1_500),
+      characters_present: present, character_actions: clean(page.character_actions, 1_500), character_changes: characterChanges,
     };
   });
   if (!requireWorld) return { locations, pages };
@@ -113,7 +175,7 @@ export function normalizeStoryPackage(value: any, count: number, characterKeys: 
       architecture_landmarks: clean(world.architecture_landmarks, 2_000), lighting_atmosphere: clean(world.lighting_atmosphere, 1_000),
       visual_palette: clean(world.visual_palette, 500), environmental_rules: clean(world.environmental_rules, 2_000), negative_constraints: clean(world.negative_constraints, 1_000),
     },
-    locations: locations.map((location) => ({ ...location, is_main: location.location_key === mainLocationKey })), pages,
+    locations: locations.map((location) => ({ ...location, is_main: location.location_key === mainLocationKey })), generated_characters: generatedCharacters, pages,
   };
 }
 

@@ -8,6 +8,7 @@ import { CONTINUATION_LENGTHS } from '@/lib/storyLengths';
 import * as storiesService from '@/services/stories';
 import * as storyPagesService from '@/services/storyPages';
 import * as storyWorldsService from '@/services/storyWorlds';
+import * as storyCharactersService from '@/services/storyCharacters';
 
 export default function ContinueStoryModal({ story, pages, onClose, onDone }) {
   const [suggestion, setSuggestion] = useState('');
@@ -55,6 +56,8 @@ export default function ContinueStoryModal({ story, pages, onClose, onDone }) {
       const existingKeys = new Set(existingLocations.map((location) => location.location_key));
       const savedLocations = await Promise.all((content.locations || []).filter((location) => !existingKeys.has(location.location_key)).map((location) => storyWorldsService.upsertLocation({ story_id: story.id, ...location })));
       const locationMap = new Map([...existingLocations, ...savedLocations].map((location) => [location.location_key, location]));
+      const snapshots = await storyCharactersService.listSnapshots(story.id);
+      const snapshotMap = new Map(snapshots.map((snapshot) => [snapshot.character_key, snapshot]));
       for (let i = 0; i < content.pages.length; i++) {
         setProgress(`Painting page ${i + 1} of ${content.pages.length}…`);
         const pageNumber = startNumber + i + 1;
@@ -74,6 +77,15 @@ export default function ContinueStoryModal({ story, pages, onClose, onDone }) {
           transition_description: pageContent.transition_description, characters_present: pageContent.characters_present,
           character_actions: pageContent.character_actions,
         });
+        for (const change of pageContent.character_changes || []) {
+          const snapshot = snapshotMap.get(change.character_key);
+          if (!snapshot) continue;
+          await storyCharactersService.createState({
+            story_id: story.id, story_character_id: snapshot.id, effective_page_number: pageNumber,
+            change_kind: change.change_kind, outfit_snapshot: change.outfit_snapshot,
+            appearance_override: change.appearance_override, change_description: change.change_description,
+          });
+        }
         const imagePath = await generatePageImage({
           storyId: story.id,
           pageNumber,

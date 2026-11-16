@@ -7,6 +7,7 @@ import { artStyle, characterInputs, integerIn, object, text, uuid } from './vali
 import { assertAiEntitlement, finalizeAiEntitlement, releaseAiEntitlement, type EntitlementReservation } from './entitlements.ts';
 import { characterBibleDescription } from './characterBible.ts';
 import { continuationPackageSchema, normalizeStoryPackage, storyPackageSchema, worldIllustrationBlock } from './worldBible.ts';
+import { snapshotStoryCharacters } from './storyCharacters.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
@@ -52,7 +53,9 @@ async function ownedCharacter(client: SupabaseClient, id: string) {
   if (!data) throw new AppError('PERMISSION_DENIED', 'The character is unavailable.', 403);
   return data;
 }
-async function storyCharacters(client: SupabaseClient, story: Record<string, any>) {
+async function storyCharacters(client: SupabaseClient, story: Record<string, any>, pageNumber?: number) {
+  const snapshots = await snapshotStoryCharacters(client, story.id, pageNumber);
+  if (snapshots.length) return snapshots;
   const result: Array<{ key: string; name: string; description: string }> = []; const seen = new Set<string>();
   const ids = [story.child_character_id, ...(Array.isArray(story.secondary_characters) ? story.secondary_characters.map((item: any) => item?.character_id) : [])].filter(Boolean);
   for (const id of ids) if (!seen.has(id)) { const character = await ownedCharacter(client, id); result.push({ key: `saved:${id}`, name: character.name || '', description: characterBibleDescription(character) }); seen.add(id); }
@@ -166,10 +169,10 @@ Deno.serve(async (request) => {
       reservation = await assertAiEntitlement({ service, userId, requestId: correlationId, operation: meteredOperation, storyId, requestedPageCount: pageNumber, requestedImageCount: 1 });
       const scene = text(existingPage.data.illustration_scene || existingPage.data.text, 'Illustration scene', LIMITS.PROMPT);
       const illustrationInstructions = typeof existingPage.data.illustration_instructions === 'string' ? existingPage.data.illustration_instructions.trim().slice(0, LIMITS.PROMPT) : '';
-      const context = await worldContext(client, storyId, pageNumber); const allCharacters = await storyCharacters(client, story);
+      const context = await worldContext(client, storyId, pageNumber); const allCharacters = await storyCharacters(client, story, pageNumber);
       const presentKeys = new Set(Array.isArray(context.scene?.characters_present) ? context.scene.characters_present.filter((value: unknown) => typeof value === 'string') : []);
       const characters = presentKeys.size ? allCharacters.filter((character) => presentKeys.has(character.key)) : allCharacters;
-      const result = await generateImage(pageImagePrompt(scene, story.theme || '', characters, story.art_style, illustrationInstructions, worldIllustrationBlock(context), context.scene?.character_actions || '')); const path = `${userId}/${storyId}/pages/${String(pageNumber).padStart(3, '0')}.png`;
+      const result = await generateImage(pageImagePrompt(scene, story.theme || '', characters, story.art_style, illustrationInstructions, worldIllustrationBlock(context), context.scene?.character_actions || '', context.world?.illustration_style_prompt || '')); const path = `${userId}/${storyId}/pages/${String(pageNumber).padStart(3, '0')}.png`;
       await uploadImage(client, 'story-images', path, result.blob); await usage({ userId, requestId: correlationId, operation: meteredOperation, storyId, model: result.model, success: true, reservation, providerUsage: result.usage, imageCount: 1, generationKind, pageCount: pageNumber, parentRequestId, imageSize: '1024x1024', imageQuality: 'medium' }); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { image_path: path } }, 200, headers);
     }
     if (action === 'suggest-continuation') {
@@ -199,7 +202,10 @@ Deno.serve(async (request) => {
       await usage({ userId, requestId: correlationId, operation: action, storyId, model: result.model, success: true, reservation, providerUsage: result.usage, generationKind, pageCount: texts.length }); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { translations: value.translations } }, 200, headers);
     }
     if (action === 'generate-cover') {
-      generationKind = 'custom_cover'; const prompt = text(body.prompt, 'Cover prompt', LIMITS.PROMPT); if (!ART_STYLE_PROMPTS[story.art_style]) throw new AppError('VALIDATION', 'Art style is not supported.'); reservation = await assertAiEntitlement({ service, userId, requestId: correlationId, operation: action, storyId, requestedImageCount: 1 }); const result = await generateImage(prompt); const path = `${userId}/${storyId}/cover.png`;
+      generationKind = 'custom_cover'; const prompt = text(body.prompt, 'Cover prompt', LIMITS.PROMPT); if (!ART_STYLE_PROMPTS[story.art_style]) throw new AppError('VALIDATION', 'Art style is not supported.'); reservation = await assertAiEntitlement({ service, userId, requestId: correlationId, operation: action, storyId, requestedImageCount: 1 });
+      const context = await worldContext(client, storyId, 1); const characters = await storyCharacters(client, story, 1);
+      const continuityPrompt = `${prompt}\n${worldIllustrationBlock(context)}\n${characters.length ? `Use these locked character identities:\n${characters.map((character, index) => `Character ${index + 1}: ${character.name ? `${character.name}. ` : ''}${character.description}`).join('\n')}` : ''}\nStyle: ${context.world?.illustration_style_prompt || ART_STYLE_PROMPTS[story.art_style]}. No words or text in the image.`;
+      const result = await generateImage(continuityPrompt); const path = `${userId}/${storyId}/cover.png`;
       await uploadImage(client, 'story-images', path, result.blob); await usage({ userId, requestId: correlationId, operation: action, storyId, model: result.model, success: true, reservation, providerUsage: result.usage, imageCount: 1, generationKind, imageSize: '1024x1024', imageQuality: 'medium' }); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { cover_image_path: path } }, 200, headers);
     }
     throw new AppError('VALIDATION', 'Action is not supported.');
