@@ -26,7 +26,7 @@ create table public.community_stories (
   updated_at timestamptz not null default now(),
   featured boolean not null default false,
   display_author_name text,
-  public_slug text not null unique default encode(gen_random_bytes(12), 'hex'),
+  public_slug text not null unique default encode(extensions.gen_random_bytes(12), 'hex'),
   created_at timestamptz not null default now(),
   constraint community_story_owner_fk foreign key (story_id, user_id)
     references public.stories (id, user_id) on delete cascade,

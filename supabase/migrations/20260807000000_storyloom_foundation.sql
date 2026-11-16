@@ -330,6 +330,7 @@ using (
     select 1 from public.stories s
     where s.id = story_id and s.user_id = (select auth.uid())
   )
+)
 with check (
   (select auth.uid()) = user_id
   and exists (
