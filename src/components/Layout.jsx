@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
-import { Home, Sparkles, Users, BookMarked, BookOpen, LogOut, CreditCard, Globe2, ChartNoAxesCombined, ShieldCheck } from 'lucide-react';
+import { Home, Sparkles, Users, BookMarked, BookOpen, LogOut, CreditCard, Globe2, ChartNoAxesCombined, ShieldCheck, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -16,9 +16,11 @@ const authenticatedNav = [
 export default function Layout() {
   const location = useLocation();
   const { logout, user } = useAuth();
-  const visibleNav = user
-    ? (user.role === 'admin' ? [...authenticatedNav, { to: '/admin/ai-economics', label: 'AI economics', icon: ChartNoAxesCombined }, { to: '/admin/community', label: 'Moderate', icon: ShieldCheck }] : authenticatedNav)
-    : [];
+  const visibleNav = user ? [
+    ...authenticatedNav,
+    ...(['owner', 'admin'].includes(user.role) ? [{ to: '/admin', label: 'Admin', icon: Settings }, { to: '/admin/ai-economics', label: 'AI economics', icon: ChartNoAxesCombined }] : []),
+    ...(['owner', 'admin', 'moderator'].includes(user.role) ? [{ to: '/admin/community', label: 'Moderate', icon: ShieldCheck }] : []),
+  ] : [];
   const [logoutError, setLogoutError] = useState('');
 
   const handleLogout = async () => {

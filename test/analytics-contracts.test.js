@@ -17,7 +17,7 @@ test('admin analytics is enforced by the authoritative profile role', () => {
   assert.match(migration, /raise exception 'ADMIN_REQUIRED'/);
   assert.match(migration, /grant execute on function public\.get_admin_ai_economics\(text\) to authenticated/);
   assert.match(service, /get_admin_ai_economics/);
-  assert.match(read('src/components/ProtectedRoute.jsx'), /user\?\.role !== 'admin'/);
+  assert.match(read('src/components/ProtectedRoute.jsx'), /\['owner', 'admin'\]\.includes\(user\?\.role\)/);
 });
 
 test('normal clients cannot read raw pricing, segments, usage, or estimates', () => {

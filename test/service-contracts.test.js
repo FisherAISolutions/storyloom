@@ -86,6 +86,9 @@ test('auth state starts private and maps only the application user shape', () =>
     id: 'u1', email: 'kid@example.com', role: 'user',
   });
   assert.equal(toAppUser({ id: 'u1', email: 'a@b.co' }, 'admin').role, 'admin');
+  assert.equal(toAppUser({ id: 'u1', email: 'a@b.co' }, 'owner').role, 'owner');
+  assert.equal(toAppUser({ id: 'u1', email: 'a@b.co' }, 'tester').role, 'tester');
+  assert.equal(toAppUser({ id: 'u1', email: 'a@b.co' }, 'made-up').role, 'user');
   assert.equal(toAppUser(null), null);
 });
 

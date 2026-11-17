@@ -30,6 +30,14 @@ export function AdminRoute() {
   const { user, isAuthenticated, isLoadingAuth, authChecked } = useAuth();
   if (isLoadingAuth || !authChecked) return <AuthLoading />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (user?.role !== 'admin') return <Navigate to="/" replace />;
+  if (!['owner', 'admin'].includes(user?.role)) return <Navigate to="/" replace />;
+  return <Outlet />;
+}
+
+export function ModerationRoute() {
+  const { user, isAuthenticated, isLoadingAuth, authChecked } = useAuth();
+  if (isLoadingAuth || !authChecked) return <AuthLoading />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!['owner', 'admin', 'moderator'].includes(user?.role)) return <Navigate to="/" replace />;
   return <Outlet />;
 }

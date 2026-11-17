@@ -7,10 +7,11 @@ export const INITIAL_AUTH_STATE = {
 
 export function toAppUser(authUser, role = 'user') {
   if (!authUser) return null;
+  const allowedRoles = new Set(['owner', 'admin', 'moderator', 'support', 'tester', 'user']);
   return {
     id: authUser.id,
     email: authUser.email || null,
-    role: role === 'admin' ? 'admin' : 'user',
+    role: allowedRoles.has(role) ? role : 'user',
   };
 }
 

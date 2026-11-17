@@ -16,7 +16,7 @@ export default function PageNotFound() {
             The page <span className="font-medium text-slate-700">&quot;{pageName}&quot;</span> could not be found.
           </p>
         </div>
-        {user?.role === 'admin' && (
+        {['owner', 'admin'].includes(user?.role) && (
           <div className="rounded-lg border border-slate-200 bg-slate-100 p-4 text-left text-sm text-slate-600">
             <p className="font-medium text-slate-700">Admin note</p>
             <p className="mt-1">This route is not implemented in the current application.</p>
