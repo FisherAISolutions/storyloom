@@ -8,8 +8,12 @@ async function invokeAi(action, payload = {}) {
   if (error) {
     let details;
     try { details = await error.context?.json(); } catch {}
-    const code = ERROR_CODES.has(details?.error?.code) ? details.error.code : 'AI_PROVIDER';
-    throw new ServiceError(code, details?.error?.message || 'The AI request could not be completed.');
+    const edgeCode = details?.error?.code;
+    const gatewayCode = typeof details?.code === 'string' ? details.code : '';
+    const gatewayAuthFailure = gatewayCode.startsWith('UNAUTHORIZED_') || details?.message === 'Invalid JWT' || details?.msg === 'Invalid JWT';
+    const code = ERROR_CODES.has(edgeCode) ? edgeCode : gatewayAuthFailure ? 'AUTH_REQUIRED' : 'AI_PROVIDER';
+    const message = details?.error?.message || (gatewayAuthFailure ? 'Your session could not be verified. Please sign in again.' : 'The AI request could not be completed.');
+    throw new ServiceError(code, message);
   }
   if (!data?.data) throw new ServiceError('AI_RESPONSE_INVALID', 'The AI service returned an invalid response.');
   return data.data;

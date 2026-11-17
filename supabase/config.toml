@@ -34,7 +34,7 @@ enabled = true
 file_size_limit = "20MiB"
 
 [functions.story-ai]
-verify_jwt = true
+verify_jwt = false
 
 [functions.billing-checkout]
 verify_jwt = true

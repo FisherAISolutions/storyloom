@@ -110,6 +110,13 @@ test('Edge Function authenticates and authorizes before every provider boundary'
   assert.ok(edge.indexOf("operation: meteredOperation") < edge.indexOf('generateImage(pageImagePrompt'));
 });
 
+test('story-ai authenticates in-function when gateway JWT verification is disabled', () => {
+  const config = read('supabase/config.toml');
+  assert.match(config, /\[functions\.story-ai\]\s+verify_jwt = false/);
+  assert.match(edge, /client\.auth\.getUser\(token\)/);
+  assert.ok(edge.indexOf('await authenticate(request)') < edge.indexOf("if (action === 'generate-page-image')"));
+});
+
 test('service role and OpenAI secrets remain outside browser source', () => {
   const sourceFiles = readdirSync(resolve(root, 'src'), { recursive: true, withFileTypes: true })
     .filter((entry) => entry.isFile() && /\.[jt]sx?$/.test(entry.name));

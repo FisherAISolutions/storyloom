@@ -196,6 +196,13 @@ test('frontend AI uses one authenticated Supabase Edge Function boundary', () =>
   assert.doesNotMatch(frontend, /api\.openai\.com|OPENAI_API_KEY|VITE_OPENAI_API_KEY|base44/);
 });
 
+test('frontend AI maps gateway JWT rejection to an authentication error', () => {
+  const ai = read('src/services/ai.js');
+  assert.match(ai, /gatewayCode\.startsWith\('UNAUTHORIZED_'\)/);
+  assert.match(ai, /gatewayAuthFailure \? 'AUTH_REQUIRED'/);
+  assert.match(ai, /Your session could not be verified\. Please sign in again\./);
+});
+
 test('Edge Function authenticates, validates actions and ownership, and gates provider calls', () => {
   const edge = read('supabase/functions/story-ai/index.ts');
   assert.match(edge, /auth\.getUser\(token\)/);
