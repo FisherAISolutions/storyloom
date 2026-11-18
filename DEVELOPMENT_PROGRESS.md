@@ -4,11 +4,12 @@
 
 ## Current milestone
 
-Phase 1 — Secure Admin Control Center and staff AI testing access. Production database migrations and initial Owner activation are complete; the verified frontend release is ready to deploy.
+Phase 1 — Secure Admin Control Center and staff AI testing access is deployed. The production Owner dashboard and regular-user denial were verified without paid AI calls or credit mutations.
 
 ## Git state
 
-- Branch: `codex/admin-control-center`
+- Production branch: `main`
+- Deployed Admin release commit: `1efb31b`
 - Admin implementation commit: `5afb4c2 feat: add secure admin control center`
 - Documentation initialization commit: `1b49a23 docs: add project progress and feature roadmap`
 - Baseline on `main`: `cac2571 fix: resolve Supabase JWT gateway blocking AI requests`
@@ -38,16 +39,20 @@ Phase 1 — Secure Admin Control Center and staff AI testing access. Production 
 - The user activated the intended existing account through `assign_initial_owner()` and verified `public.profiles.role = 'owner'`.
 - Frontend release verification passed 67 focused admin, authentication, billing, RLS, Storage, story-generation, and Repaint contract tests.
 - Production Vite build passed with the Admin Control Center bundle included.
+- Fast-forwarded the verified release to `main` and pushed commit `1efb31b`; GitHub reported the Vercel production deployment successful.
+- Verified `https://www.mystorybookai.online/admin` loads for the authenticated Owner with admin navigation, operational metrics, user management, staff testing controls, subscription visibility, and the initial Owner audit entry.
+- Verified an existing regular-user identity receives `ADMIN_REQUIRED` from the production Admin Control Center RPC inside a read-only rolled-back transaction.
+- No migration was reapplied, no Edge Function was redeployed, and no credits, roles, paid AI calls, Stripe actions, stories, or customer records were changed during smoke testing.
 
 ## Work in progress
 
 - Migrations `20260818000000` and `20260818010000` are applied and verified in staging and production.
-- The Admin Control Center frontend is verified locally but not yet deployed.
+- The Admin Control Center frontend is deployed on production `main`.
 
 ## Known bugs and blockers
 
 - No remaining database blocker was found in focused staging validation.
-- Frontend deployment and production UI smoke testing remain outstanding.
+- No outstanding Admin Control Center deployment blocker is known.
 - This release proceeded under an explicit no-backup risk waiver; recoverable logical backup capability remains an operational gap to address before higher-risk or customer-data migrations.
 - Stripe account mode and recent webhook delivery success still require confirmation in the Stripe Dashboard.
 - The Starter plan does not currently have a checkout price mapping.
@@ -64,13 +69,12 @@ Phase 1 — Secure Admin Control Center and staff AI testing access. Production 
 
 ## Required configuration and deployment steps
 
-1. Push the approved branch and allow Vercel to deploy the frontend. The currently deployed `story-ai` already uses the entitlement RPC, so no Edge Function change is required.
-2. Verify `/admin`, Owner access, regular-user route denial, and core public/authenticated routes without invoking paid AI generation.
-3. Add a verified backup/recovery mechanism before future higher-risk migrations.
-4. Confirm Stripe mode, price mappings, and webhook deliveries separately before billing changes.
+1. Add a verified backup/recovery mechanism before future higher-risk migrations.
+2. Confirm Stripe mode, price mappings, and webhook deliveries separately before billing changes.
+3. Before granting staff roles or promotional credits, use the deployed audited controls and preserve least privilege.
 
 Rollback plan: take a fresh logical production backup before migrations; keep the new frontend undeployed until database checks pass; use a reviewed forward corrective migration for database defects rather than destructive rollback; if the frontend release fails, redeploy the preceding Vercel commit. Do not bootstrap an Owner until the database checks pass.
 
 ## Next recommended task
 
-Deploy the approved frontend and complete focused production smoke testing. Do not begin later roadmap phases first.
+Review the Phase 2 shared-platform architecture milestone before implementing affiliate or marketplace features. Keep the live Admin Control Center stable.

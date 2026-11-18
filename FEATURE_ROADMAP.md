@@ -22,16 +22,16 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 ## B. Admin Control Center
 
 - [x] Secure Owner bootstrap — Initial Owner activated and profile role verified in production.
-- [ ] Staff roles and permissions — Database authorization is deployed and verified; frontend deployment pending.
-- [ ] Protected admin dashboard — Implemented locally; not deployed.
-- [ ] User search by email — Implemented locally; not deployed.
+- [x] Staff roles and permissions — Production authorization and regular-user denial verified.
+- [x] Protected admin dashboard — Live Owner access verified in production.
+- [ ] User search by email — Deployed; focused live search action still needs verification.
 - [ ] Role management — Database RPCs are deployed and verified; frontend deployment pending.
 - [ ] Complimentary credit grants — Database operations are deployed and verified; frontend deployment pending.
 - [ ] Owner/Admin AI testing access — Production entitlement function and Owner role are active; non-paid smoke testing pending.
 - [ ] Tester allowances — Production database support is deployed; live role assignment and smoke testing pending.
 - [ ] AI usage and spending limits — Production function and service-role access verified; live smoke testing pending.
-- [ ] Admin activity logs — Production RLS and direct-write denial verified; live administrative action verification pending.
-- [ ] Subscription and billing visibility — Basic local visibility implemented; live verification pending.
+- [x] Admin activity logs — Initial Owner audit entry displayed live; RLS and direct-write denial verified.
+- [x] Subscription and billing visibility — Account plan and subscription state displayed live.
 - [ ] Future marketplace and affiliate management — Planned.
 
 ## C. Subscriptions and Payments
@@ -153,7 +153,7 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 - [ ] Mobile testing.
 - [ ] Accessibility.
 - [ ] Marketplace content moderation.
-- [ ] Production deployment checks — Admin database and Owner activation passed; frontend deployment remains.
+- [ ] Production deployment checks — Admin release passed production deployment and authorization smoke tests; repeat for every release.
 - [ ] Backup and recovery planning — This additive release used an explicit no-backup waiver; verified recovery tooling remains required for future higher-risk migrations.
 - [ ] End-to-end purchase testing — Needs verification for the current Stripe configuration.
 - [ ] Launch readiness.
