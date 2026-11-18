@@ -7,6 +7,11 @@ const migration=read('supabase/migrations/20260821000000_community_marketplace.s
 const publicFn=read('supabase/functions/community-public/index.ts');
 const checkout=read('supabase/functions/marketplace-checkout/index.ts');
 const webhook=read('supabase/functions/stripe-webhook/index.ts');
+const communityPage=read('src/pages/Community.jsx');
+const carousel=read('src/components/FeaturedBooksCarousel.jsx');
+const publicStoryPage=read('src/pages/PublicStory.jsx');
+const authorStorefront=read('src/pages/AuthorStorefront.jsx');
+const styles=read('src/index.css');
 
 test('marketplace extends Community Shelf without replacing free publishing',()=>{
   assert.match(migration,/alter table public\.community_stories/);
@@ -67,4 +72,31 @@ test('only Owners can change the prospective author earnings default',()=>{
   assert.match(migration,/p\.role='owner'/);
   assert.match(migration,/get_marketplace_settings/);
   assert.match(migration,/update_marketplace_settings/);
+});
+
+test('marketplace discovery uses real publication metadata without fabricated popularity',()=>{
+  assert.match(publicFn,/stories!inner\(title,theme,art_style/);
+  assert.match(communityPage,/story\.featured/);
+  assert.match(communityPage,/story\.art_style/);
+  assert.match(communityPage,/story\.is_paid/);
+  assert.doesNotMatch(communityPage,/popular|view_count|fake/i);
+});
+
+test('featured carousel supports keyboard, swipe, navigation, and reduced motion',()=>{
+  assert.match(carousel,/ArrowLeft/);
+  assert.match(carousel,/ArrowRight/);
+  assert.match(carousel,/onTouchStart/);
+  assert.match(carousel,/Previous featured book/);
+  assert.match(carousel,/aria-roledescription="carousel"/);
+  assert.match(styles,/prefers-reduced-motion: reduce/);
+  assert.match(styles,/featured-book--1/);
+});
+
+test('book and author experiences preserve access-aware actions and future options',()=>{
+  assert.match(publicStoryPage,/story\.has_full_access/);
+  assert.match(publicStoryPage,/story\.available_for_purchase/);
+  assert.match(publicStoryPage,/Personalize this adventure/);
+  assert.match(publicStoryPage,/Order a printed copy/);
+  assert.match(authorStorefront,/author\.books/);
+  assert.match(authorStorefront,/FeaturedBooksCarousel/);
 });

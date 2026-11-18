@@ -67,9 +67,9 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 ## E. Digital Book Marketplace
 
 - [x] Existing Community Shelf and safe public publishing — Opt-in sharing, ownership checks, moderation, private Storage, and public viewing are deployed and verified.
-- [ ] Marketplace browsing — Existing Community Shelf is reused; paid badges and prices are implemented locally, deployment pending.
-- [ ] Search and categories.
-- [ ] Individual book product pages — Existing public book pages now support local paid-listing details and purchase actions; deployment pending.
+- [ ] Marketplace browsing — Existing Community Shelf is reused; curved featured/new-book discovery, paid badges, prices, and responsive book grids are implemented locally, deployment pending.
+- [ ] Search and categories — Local title/author/theme/style search plus access and art-style filters are implemented; dedicated category taxonomy is not stored yet.
+- [ ] Individual book product pages — Redesigned cover, description, author, theme, access state, protected preview, purchase/read actions, and future-option placeholders are implemented locally; deployment pending.
 - [x] Stable shareable book URLs — Existing Community Shelf public slugs are reused.
 - [ ] Book descriptions and metadata — Paid descriptions and price metadata are implemented locally; deployment pending.
 - [ ] Preview pages — Preview-only delivery for unpaid viewers is implemented locally; deployment pending.
@@ -83,12 +83,12 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 
 ## F. Author Storefronts
 
-- [ ] Public author profiles — Implemented locally; deployment pending.
+- [ ] Public author profiles — Polished profile hero and catalog presentation are implemented locally; deployment pending.
 - [ ] Unique storefront URLs — Implemented locally under `/authors/:slug`; deployment pending.
 - [ ] Author logos and banners.
 - [ ] Author biographies — Implemented locally; deployment pending.
 - [ ] Social media links.
-- [ ] Published book catalogs — Implemented locally by reusing published Community stories; deployment pending.
+- [ ] Published book catalogs — Responsive storefront grids and real featured-book presentation are implemented locally by reusing published Community stories; deployment pending.
 - [ ] Featured books.
 - [ ] Collections and categories.
 - [ ] Author management dashboard — Profile, listing, sales, and pending-earnings controls implemented locally; deployment pending.

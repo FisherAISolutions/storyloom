@@ -46,6 +46,7 @@ The affiliate/referral program is deployed and verified in production at commit 
 
 ## Work in progress
 
+- Completed the local marketplace visual-experience milestone: curved featured/new-book carousel with keyboard, swipe, responsive and reduced-motion support; searchable/filterable Community Shelf; redesigned access-aware book detail/preview experience; and polished author storefront catalogs. Existing entitlement, purchase, affiliate, earnings, and moderation paths are unchanged. Focused marketplace/community tests, lint, and the production build passed; deployment remains pending.
 - Added a local forward-only Community Shelf marketplace migration with paid listings defaulting off, author profiles, checkout claims, buyer purchases, and author earnings kept separate from affiliate commissions.
 - Added local preview-only public delivery for paid books, active-purchase full access, author storefronts/dashboard, and server-priced one-time Stripe Checkout.
 - Added a Buyer Library backed by durable database purchase entitlements, plus retained buyer access when a seller unlists a book. Moderation, refunds, and chargebacks still revoke access.
