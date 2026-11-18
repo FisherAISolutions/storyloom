@@ -4,7 +4,7 @@
 
 ## Current milestone
 
-The Community Shelf marketplace MVP is release-ready locally on `codex/community-marketplace` and validated on optional staging. It extends the existing shelf rather than creating a second publishing system. Affiliate and marketplace production releases are both awaiting explicit approval; no production migration, function, frontend, or payment change was made.
+The affiliate/referral program is deployed and verified in production at commit `46ee725`. The Community Shelf marketplace MVP is release-ready locally on `codex/community-marketplace`, validated on optional staging, and awaiting separate production approval.
 
 ## Git state
 
@@ -51,10 +51,11 @@ The Community Shelf marketplace MVP is release-ready locally on `codex/community
 - Added a Buyer Library backed by durable database purchase entitlements, plus retained buyer access when a seller unlists a book. Moderation, refunds, and chargebacks still revoke access.
 - Added Owner-only Admin controls for the prospective default author earnings amount. Existing listing snapshots and recorded earnings are not changed retroactively.
 - Extended the verified Stripe webhook path to grant purchases idempotently and revoke access/author earnings on refunds or chargebacks. Actual author payouts remain disabled.
-- Production read-only verification confirmed affiliate migration `20260820000000` is not applied, `affiliate-public` is not deployed, and `AFFILIATE_CLICK_SALT` is not configured.
 - Applied affiliate migration `20260820000000`, marketplace migration `20260821000000`, and corrective migration `20260821010000` to staging only. Remote PostgreSQL lint reports no schema errors.
 - Focused Community, marketplace, billing, affiliate, Admin, and security validation passed: 52 tests. Changed frontend files passed focused lint with no errors, and the production build passed.
-- The affiliate/referral MVP remains isolated on `codex/affiliate-referrals` and is not deployed. Its branch has been merged with the current production `main`, preserving both affiliate management and image-provider administration in the shared Admin Control Center.
+- Applied production migration `20260820000000_affiliate_referral_program.sql`, configured a private `AFFILIATE_CLICK_SALT`, and deployed `affiliate-public`, `billing-checkout`, and `stripe-webhook`. Automated affiliate payouts remain disabled.
+- Affiliate release validation passed 31 focused affiliate, billing, and security tests. The migration contains no destructive data operations and production dry-run selected only version `20260820000000`.
+- Pushed affiliate production commit `46ee725`; Vercel succeeded, production schema lint passed, live affiliate/Admin bundles loaded, billing remained authentication-protected, and unsigned webhooks remained rejected.
 - Migrations `20260818000000` and `20260818010000` are applied and verified in staging and production.
 - The Admin Control Center frontend is deployed on production `main`.
 - Added a local OpenAI/Cloudflare image-provider architecture, capability-aware routing, UTC daily request/neuron/spend caps, provider health/quota events, server-only configuration, and request idempotency.
@@ -105,4 +106,4 @@ Rollback plan: take a fresh logical production backup before migrations; keep th
 
 ## Next recommended task
 
-Obtain final approval for the affiliate production release first. After affiliate verification, obtain separate marketplace approval, confirm Stripe webhook subscriptions include Checkout completion, refunds, and disputes, then apply the two marketplace migrations and deploy only the required functions/frontend. Stripe Connect and automatic payouts remain disabled.
+Obtain separate marketplace production approval, confirm Stripe webhook subscriptions include Checkout completion, refunds, and disputes, then apply the two marketplace migrations and deploy only the required functions/frontend. Stripe Connect and automatic payouts remain disabled.
