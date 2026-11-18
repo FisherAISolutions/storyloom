@@ -153,8 +153,8 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 - [ ] Mobile testing.
 - [ ] Accessibility.
 - [ ] Marketplace content moderation.
-- [ ] Production deployment checks — Must be repeated for each approved release.
-- [ ] Backup and recovery planning — Logical backups have been used; full recovery procedure needs verification.
+- [ ] Production deployment checks — Admin rollout preflight passed; deployment is paused at the backup gate.
+- [ ] Backup and recovery planning — Current production dump attempt failed because Docker/Podman is unavailable; a verified recovery point is required before migration.
 - [ ] End-to-end purchase testing — Needs verification for the current Stripe configuration.
 - [ ] Launch readiness.
 

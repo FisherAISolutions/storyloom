@@ -4,7 +4,7 @@
 
 ## Current milestone
 
-Phase 1 — Secure Admin Control Center and staff AI testing access. The corrective migration and focused staging validation have passed; production rollout awaits explicit approval.
+Phase 1 — Secure Admin Control Center and staff AI testing access. Staging passed and production preflight passed, but production rollout is paused because a verified backup could not be created in the current environment.
 
 ## Git state
 
@@ -29,6 +29,8 @@ Phase 1 — Secure Admin Control Center and staff AI testing access. The correct
 - Focused staging tests passed for Owner dashboard access, role escalation denial, audit-table write denial, complimentary-credit idempotency, Tester isolation, staff allowance consumption, monthly spending limits, last-Owner protection, and existing Family customer entitlements.
 - A real two-session concurrency test passed: one 25-cent reservation succeeded and the simultaneous competing reservation was rejected with `ENTITLEMENT_LIMIT`.
 - Verified all synthetic staging users, grants, and test-usage rows were removed or transactionally rolled back.
+- Production preflight confirmed target `lhpegfrbevtoppdlgrfa`, prerequisite schema compatibility, no conflicting admin tables, no incompatible profile roles, and exactly migrations `20260818000000` and `20260818010000` pending.
+- Production backup attempt stopped safely before migrations: Supabase CLI `db dump` requires Docker or Podman, and neither is installed or available on PATH. The resulting `schema.sql` is empty and is not a valid backup.
 
 ## Work in progress
 
@@ -38,7 +40,8 @@ Phase 1 — Secure Admin Control Center and staff AI testing access. The correct
 ## Known bugs and blockers
 
 - No remaining database blocker was found in focused staging validation.
-- Production approval, backup, migration application, Owner activation, frontend deployment, and production smoke testing remain outstanding.
+- **Production rollout blocker:** create and verify a fresh recoverable production backup using an environment with Docker/Podman-supported Supabase CLI dumps, or confirm an equivalent recoverable managed backup before retrying.
+- Production migration application, Owner activation, frontend deployment, and production smoke testing remain outstanding. No production migration was applied during the blocked backup attempt.
 - Stripe account mode and recent webhook delivery success still require confirmation in the Stripe Dashboard.
 - The Starter plan does not currently have a checkout price mapping.
 - Later roadmap features remain unimplemented unless explicitly marked complete in `FEATURE_ROADMAP.md`.
@@ -54,7 +57,7 @@ Phase 1 — Secure Admin Control Center and staff AI testing access. The correct
 
 ## Required configuration and deployment steps
 
-1. Create a fresh logical production backup and verify production target `lhpegfrbevtoppdlgrfa`.
+1. Install/enable Docker or Podman and create fresh nonempty schema, data, and role dumps for production, or verify an equivalent managed recovery point. Do not use the empty failed `schema.sql` file.
 2. Dry-run and confirm that exactly `20260818000000` followed by `20260818010000` are pending.
 3. Apply those migrations in order and verify history, tables, RLS, grants, and the corrected function definition before continuing.
 4. Identify the intended Supabase Auth user UUID and run the one-time `assign_initial_owner(uuid)` bootstrap only after separate explicit approval.
