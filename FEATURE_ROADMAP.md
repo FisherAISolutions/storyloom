@@ -18,6 +18,8 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 - [x] PDF export.
 - [ ] Character consistency testing — Automated contract coverage exists; end-to-end visual consistency needs verification.
 - [ ] Mobile responsiveness — Needs verification across supported devices.
+- [ ] Multi-provider image generation — Implemented locally with OpenAI and Cloudflare adapters; staging migration and integration verification pending.
+- [ ] Provider quota, health, and idempotency controls — Implemented locally with mocked/contract coverage; staging concurrency verification pending.
 
 ## B. Admin Control Center
 
@@ -33,6 +35,7 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 - [x] Admin activity logs — Initial Owner audit entry displayed live; RLS and direct-write denial verified.
 - [x] Subscription and billing visibility — Account plan and subscription state displayed live.
 - [ ] Future marketplace and affiliate management — Planned.
+- [ ] Image provider administration — Implemented locally; staging migration, Owner UI verification, and production deployment pending.
 
 ## C. Subscriptions and Payments
 

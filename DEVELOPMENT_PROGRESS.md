@@ -4,7 +4,7 @@
 
 ## Current milestone
 
-Phase 1 — Secure Admin Control Center and staff AI testing access is deployed. The production Owner dashboard and regular-user denial were verified without paid AI calls or credit mutations.
+Multi-provider image generation is implemented locally on `codex/multi-provider-images` and awaits migration staging plus credential-free/mocked validation before any deployment. The live Admin Control Center release remains unchanged.
 
 ## Git state
 
@@ -48,6 +48,9 @@ Phase 1 — Secure Admin Control Center and staff AI testing access is deployed.
 
 - Migrations `20260818000000` and `20260818010000` are applied and verified in staging and production.
 - The Admin Control Center frontend is deployed on production `main`.
+- Added a local OpenAI/Cloudflare image-provider architecture, capability-aware routing, UTC daily request/neuron/spend caps, provider health/quota events, server-only configuration, and request idempotency.
+- Added local Owner controls for OpenAI Only, Free First, and Manual Provider modes. Defaults remain OpenAI Only; Cloudflare is disabled and paid fallback is disabled.
+- Official Cloudflare pricing indicates a 10,000-neuron free daily allocation resetting at 00:00 UTC. Estimated 1024px capacity is about 173 FLUX.1 Schnell (4-step), 95 FLUX.2 Klein 4B, 7 Klein 9B, or 3 Leonardo 20-step images per day.
 
 ## Known bugs and blockers
 
@@ -57,6 +60,9 @@ Phase 1 — Secure Admin Control Center and staff AI testing access is deployed.
 - Stripe account mode and recent webhook delivery success still require confirmation in the Stripe Dashboard.
 - The Starter plan does not currently have a checkout price mapping.
 - Later roadmap features remain unimplemented unless explicitly marked complete in `FEATURE_ROADMAP.md`.
+- Migration `20260819000000_multi_provider_image_generation.sql` has not been applied to staging or production.
+- Cloudflare integration requires `CLOUDFLARE_ACCOUNT_ID` and a least-privilege `CLOUDFLARE_API_TOKEN` in Supabase Edge Function secrets; no credentials were configured and no provider call was made.
+- Cloudflare FLUX commercial output use is supported by BFL developer terms, subject to input consent/usage restrictions. Leonardo commercial terms still need legal/contract verification before enabling its models.
 
 ## Architectural decisions
 
@@ -77,4 +83,4 @@ Rollback plan: take a fresh logical production backup before migrations; keep th
 
 ## Next recommended task
 
-Review the Phase 2 shared-platform architecture milestone before implementing affiliate or marketplace features. Keep the live Admin Control Center stable.
+Review the local provider changes, then apply migration `20260819000000` to staging, deploy `story-ai` to staging with Cloudflare credentials, and perform an explicitly authorized low-cost integration check before production approval. Keep production OpenAI Only until that validation passes.

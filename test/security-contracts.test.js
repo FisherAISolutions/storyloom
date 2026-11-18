@@ -107,7 +107,7 @@ test('Edge Function authenticates and authorizes before every provider boundary'
   assert.ok(edge.indexOf('const character = await ownedCharacter(client, characterId)') < edge.indexOf('structured(characterAnalysisPrompt'));
   assert.ok(edge.indexOf('const story = await ownedStory(client, storyId)') < edge.indexOf("if (action === 'generate-page-image')"));
   assert.ok(edge.indexOf('reservation = await assertAiEntitlement') < edge.indexOf("structured(storyPrompt"));
-  assert.ok(edge.indexOf("operation: meteredOperation") < edge.indexOf('generateImage(pageImagePrompt'));
+  assert.ok(edge.indexOf("operation: meteredOperation") < edge.indexOf('generateConfiguredImage({ service, prompt: pageImagePrompt'));
 });
 
 test('story-ai authenticates in-function when gateway JWT verification is disabled', () => {
