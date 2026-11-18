@@ -4,7 +4,7 @@
 
 ## Current milestone
 
-Phase 1 — Secure Admin Control Center and staff AI testing access. Production database migrations are applied and verified; Owner activation and frontend deployment await separate approval.
+Phase 1 — Secure Admin Control Center and staff AI testing access. Production database migrations and initial Owner activation are complete; the verified frontend release is ready to deploy.
 
 ## Git state
 
@@ -35,16 +35,19 @@ Phase 1 — Secure Admin Control Center and staff AI testing access. Production 
 - Applied production migrations `20260818000000_admin_control_center.sql` and `20260818010000_fix_admin_entitlement_period_qualification.sql` in order.
 - Production read-only verification passed for migration history, five RLS-enabled admin tables, browser write denial, admin RPC grants, service-role AI entitlement execution, Owner-bootstrap restrictions, customer-entitlement delegation, qualified period references, last-Owner protection, internal-plan filtering, and intact stories/pages/characters tables.
 - Confirmed no Owner account has been activated and no frontend or Edge Function deployment occurred.
+- The user activated the intended existing account through `assign_initial_owner()` and verified `public.profiles.role = 'owner'`.
+- Frontend release verification passed 67 focused admin, authentication, billing, RLS, Storage, story-generation, and Repaint contract tests.
+- Production Vite build passed with the Admin Control Center bundle included.
 
 ## Work in progress
 
 - Migrations `20260818000000` and `20260818010000` are applied and verified in staging and production.
-- The Admin Control Center frontend and staff testing access are not deployed.
+- The Admin Control Center frontend is verified locally but not yet deployed.
 
 ## Known bugs and blockers
 
 - No remaining database blocker was found in focused staging validation.
-- Owner activation, frontend deployment, and production UI smoke testing remain outstanding.
+- Frontend deployment and production UI smoke testing remain outstanding.
 - This release proceeded under an explicit no-backup risk waiver; recoverable logical backup capability remains an operational gap to address before higher-risk or customer-data migrations.
 - Stripe account mode and recent webhook delivery success still require confirmation in the Stripe Dashboard.
 - The Starter plan does not currently have a checkout price mapping.
@@ -61,15 +64,13 @@ Phase 1 — Secure Admin Control Center and staff AI testing access. Production 
 
 ## Required configuration and deployment steps
 
-1. Identify and independently verify the intended Supabase Auth user UUID.
-2. After explicit approval, run the one-time `assign_initial_owner(uuid)` bootstrap and verify its audit entry and Owner role.
-3. Push the approved branch and allow Vercel to deploy the frontend. The currently deployed `story-ai` already uses the entitlement RPC, so no Edge Function change is required.
-4. Verify `/admin`, role boundaries, ordinary customer entitlements, and staff limits in production without invoking paid AI generation.
-5. Add a verified backup/recovery mechanism before future higher-risk migrations.
-6. Confirm Stripe mode, price mappings, and webhook deliveries separately before billing changes.
+1. Push the approved branch and allow Vercel to deploy the frontend. The currently deployed `story-ai` already uses the entitlement RPC, so no Edge Function change is required.
+2. Verify `/admin`, Owner access, regular-user route denial, and core public/authenticated routes without invoking paid AI generation.
+3. Add a verified backup/recovery mechanism before future higher-risk migrations.
+4. Confirm Stripe mode, price mappings, and webhook deliveries separately before billing changes.
 
 Rollback plan: take a fresh logical production backup before migrations; keep the new frontend undeployed until database checks pass; use a reviewed forward corrective migration for database defects rather than destructive rollback; if the frontend release fails, redeploy the preceding Vercel commit. Do not bootstrap an Owner until the database checks pass.
 
 ## Next recommended task
 
-Await explicit approval for Owner activation, then frontend push/deployment and focused production smoke testing. Do not begin later roadmap phases first.
+Deploy the approved frontend and complete focused production smoke testing. Do not begin later roadmap phases first.
