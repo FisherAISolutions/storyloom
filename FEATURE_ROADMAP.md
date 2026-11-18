@@ -21,16 +21,16 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 
 ## B. Admin Control Center
 
-- [ ] Secure Owner bootstrap — Schema and execution grants verified in staging; production activation pending.
-- [ ] Staff roles and permissions — Focused staging authorization tests passed; production deployment pending.
+- [ ] Secure Owner bootstrap — Function and grants are verified in production; Owner activation pending.
+- [ ] Staff roles and permissions — Database authorization is deployed and verified; frontend deployment pending.
 - [ ] Protected admin dashboard — Implemented locally; not deployed.
 - [ ] User search by email — Implemented locally; not deployed.
-- [ ] Role management — Focused staging privilege-escalation tests passed; production deployment pending.
-- [ ] Complimentary credit grants — Idempotency and authorization passed in staging; production deployment pending.
-- [ ] Owner/Admin AI testing access — Staff entitlement flow passed in staging; production deployment pending.
-- [ ] Tester allowances — Allowance consumption and monthly-limit enforcement passed in staging; production deployment pending.
-- [ ] AI usage and spending limits — Runtime limit and simultaneous-reservation tests passed in staging; production deployment pending.
-- [ ] Admin activity logs — RLS, direct-write denial, and administrative action logging passed in staging; production deployment pending.
+- [ ] Role management — Database RPCs are deployed and verified; frontend deployment pending.
+- [ ] Complimentary credit grants — Database operations are deployed and verified; frontend deployment pending.
+- [ ] Owner/Admin AI testing access — Production entitlement function is deployed; Owner activation and smoke testing pending.
+- [ ] Tester allowances — Production database support is deployed; live role assignment and smoke testing pending.
+- [ ] AI usage and spending limits — Production function and service-role access verified; live smoke testing pending.
+- [ ] Admin activity logs — Production RLS and direct-write denial verified; live administrative action verification pending.
 - [ ] Subscription and billing visibility — Basic local visibility implemented; live verification pending.
 - [ ] Future marketplace and affiliate management — Planned.
 
@@ -153,8 +153,8 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 - [ ] Mobile testing.
 - [ ] Accessibility.
 - [ ] Marketplace content moderation.
-- [ ] Production deployment checks — Admin rollout preflight passed; deployment is paused at the backup gate.
-- [ ] Backup and recovery planning — Current production dump attempt failed because Docker/Podman is unavailable; a verified recovery point is required before migration.
+- [ ] Production deployment checks — Admin database stage passed; Owner activation and frontend deployment remain.
+- [ ] Backup and recovery planning — This additive release used an explicit no-backup waiver; verified recovery tooling remains required for future higher-risk migrations.
 - [ ] End-to-end purchase testing — Needs verification for the current Stripe configuration.
 - [ ] Launch readiness.
 

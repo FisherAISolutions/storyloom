@@ -4,7 +4,7 @@
 
 ## Current milestone
 
-Phase 1 — Secure Admin Control Center and staff AI testing access. Staging passed and production preflight passed, but production rollout is paused because a verified backup could not be created in the current environment.
+Phase 1 — Secure Admin Control Center and staff AI testing access. Production database migrations are applied and verified; Owner activation and frontend deployment await separate approval.
 
 ## Git state
 
@@ -31,17 +31,21 @@ Phase 1 — Secure Admin Control Center and staff AI testing access. Staging pas
 - Verified all synthetic staging users, grants, and test-usage rows were removed or transactionally rolled back.
 - Production preflight confirmed target `lhpegfrbevtoppdlgrfa`, prerequisite schema compatibility, no conflicting admin tables, no incompatible profile roles, and exactly migrations `20260818000000` and `20260818010000` pending.
 - Production backup attempt stopped safely before migrations: Supabase CLI `db dump` requires Docker or Podman, and neither is installed or available on PATH. The resulting `schema.sql` is empty and is not a valid backup.
+- The user explicitly accepted the no-backup risk for this additive release. Production target `lhpegfrbevtoppdlgrfa` was reconfirmed, both migration files matched their staging-tested SQL after line-ending normalization, and destructive-statement checks found no table/data deletion or content/Storage mutations.
+- Applied production migrations `20260818000000_admin_control_center.sql` and `20260818010000_fix_admin_entitlement_period_qualification.sql` in order.
+- Production read-only verification passed for migration history, five RLS-enabled admin tables, browser write denial, admin RPC grants, service-role AI entitlement execution, Owner-bootstrap restrictions, customer-entitlement delegation, qualified period references, last-Owner protection, internal-plan filtering, and intact stories/pages/characters tables.
+- Confirmed no Owner account has been activated and no frontend or Edge Function deployment occurred.
 
 ## Work in progress
 
-- Migrations `20260818000000` and `20260818010000` are applied to staging but not production.
+- Migrations `20260818000000` and `20260818010000` are applied and verified in staging and production.
 - The Admin Control Center frontend and staff testing access are not deployed.
 
 ## Known bugs and blockers
 
 - No remaining database blocker was found in focused staging validation.
-- **Production rollout blocker:** create and verify a fresh recoverable production backup using an environment with Docker/Podman-supported Supabase CLI dumps, or confirm an equivalent recoverable managed backup before retrying.
-- Production migration application, Owner activation, frontend deployment, and production smoke testing remain outstanding. No production migration was applied during the blocked backup attempt.
+- Owner activation, frontend deployment, and production UI smoke testing remain outstanding.
+- This release proceeded under an explicit no-backup risk waiver; recoverable logical backup capability remains an operational gap to address before higher-risk or customer-data migrations.
 - Stripe account mode and recent webhook delivery success still require confirmation in the Stripe Dashboard.
 - The Starter plan does not currently have a checkout price mapping.
 - Later roadmap features remain unimplemented unless explicitly marked complete in `FEATURE_ROADMAP.md`.
@@ -57,16 +61,15 @@ Phase 1 — Secure Admin Control Center and staff AI testing access. Staging pas
 
 ## Required configuration and deployment steps
 
-1. Install/enable Docker or Podman and create fresh nonempty schema, data, and role dumps for production, or verify an equivalent managed recovery point. Do not use the empty failed `schema.sql` file.
-2. Dry-run and confirm that exactly `20260818000000` followed by `20260818010000` are pending.
-3. Apply those migrations in order and verify history, tables, RLS, grants, and the corrected function definition before continuing.
-4. Identify the intended Supabase Auth user UUID and run the one-time `assign_initial_owner(uuid)` bootstrap only after separate explicit approval.
-5. Push the approved branch and allow Vercel to deploy the frontend. The currently deployed `story-ai` already uses the entitlement RPC, so no Edge Function change is required.
-6. Verify `/admin`, role boundaries, ordinary customer entitlements, and staff limits in production without invoking paid AI generation.
-7. Confirm Stripe mode, price mappings, and webhook deliveries separately before billing changes.
+1. Identify and independently verify the intended Supabase Auth user UUID.
+2. After explicit approval, run the one-time `assign_initial_owner(uuid)` bootstrap and verify its audit entry and Owner role.
+3. Push the approved branch and allow Vercel to deploy the frontend. The currently deployed `story-ai` already uses the entitlement RPC, so no Edge Function change is required.
+4. Verify `/admin`, role boundaries, ordinary customer entitlements, and staff limits in production without invoking paid AI generation.
+5. Add a verified backup/recovery mechanism before future higher-risk migrations.
+6. Confirm Stripe mode, price mappings, and webhook deliveries separately before billing changes.
 
 Rollback plan: take a fresh logical production backup before migrations; keep the new frontend undeployed until database checks pass; use a reviewed forward corrective migration for database defects rather than destructive rollback; if the frontend release fails, redeploy the preceding Vercel commit. Do not bootstrap an Owner until the database checks pass.
 
 ## Next recommended task
 
-Await explicit approval for the incremental production rollout of the two Admin Control Center migrations and frontend. Do not begin later roadmap phases first.
+Await explicit approval for Owner activation, then frontend push/deployment and focused production smoke testing. Do not begin later roadmap phases first.
