@@ -4,7 +4,7 @@
 
 ## Current milestone
 
-Multi-provider image generation is implemented locally on `codex/multi-provider-images` and awaits migration staging plus credential-free/mocked validation before any deployment. The live Admin Control Center release remains unchanged.
+Multi-provider image generation is implemented locally on `codex/multi-provider-images`; its additive database migration is applied and verified on staging only. Edge Function and frontend staging deployment await Cloudflare credentials. The live production release remains unchanged.
 
 ## Git state
 
@@ -51,6 +51,9 @@ Multi-provider image generation is implemented locally on `codex/multi-provider-
 - Added a local OpenAI/Cloudflare image-provider architecture, capability-aware routing, UTC daily request/neuron/spend caps, provider health/quota events, server-only configuration, and request idempotency.
 - Added local Owner controls for OpenAI Only, Free First, and Manual Provider modes. Defaults remain OpenAI Only; Cloudflare is disabled and paid fallback is disabled.
 - Official Cloudflare pricing indicates a 10,000-neuron free daily allocation resetting at 00:00 UTC. Estimated 1024px capacity is about 173 FLUX.1 Schnell (4-step), 95 FLUX.2 Klein 4B, 7 Klein 9B, or 3 Leonardo 20-step images per day.
+- Applied migration `20260819000000_multi_provider_image_generation.sql` only to `storyloom-staging` (`wbrjyytwpnpxcwrvtnhv`) after an exact-hash comparison and one-migration dry run.
+- Verified staging migration history, all four provider tables with RLS, zero authenticated table-write grants, anonymous RPC denial, authenticated admin RPC grants, service-role-only event recording, Owner/model guards, three existing public plans, and the existing `reserve_ai_entitlement` function.
+- Verified safe defaults in staging: OpenAI Only, Cloudflare disabled, paid fallback disabled, and a 10,000-neuron Cloudflare ceiling. No image provider was called.
 
 ## Known bugs and blockers
 
@@ -60,9 +63,10 @@ Multi-provider image generation is implemented locally on `codex/multi-provider-
 - Stripe account mode and recent webhook delivery success still require confirmation in the Stripe Dashboard.
 - The Starter plan does not currently have a checkout price mapping.
 - Later roadmap features remain unimplemented unless explicitly marked complete in `FEATURE_ROADMAP.md`.
-- Migration `20260819000000_multi_provider_image_generation.sql` has not been applied to staging or production.
+- Migration `20260819000000_multi_provider_image_generation.sql` is applied to staging but not production.
 - Cloudflare integration requires `CLOUDFLARE_ACCOUNT_ID` and a least-privilege `CLOUDFLARE_API_TOKEN` in Supabase Edge Function secrets; no credentials were configured and no provider call was made.
 - Cloudflare FLUX commercial output use is supported by BFL developer terms, subject to input consent/usage restrictions. Leonardo commercial terms still need legal/contract verification before enabling its models.
+- Staging has no Owner profile, so Owner UI behavior cannot be smoke-tested until an intended staging account is explicitly assigned; database guards and grants are verified.
 
 ## Architectural decisions
 
@@ -83,4 +87,4 @@ Rollback plan: take a fresh logical production backup before migrations; keep th
 
 ## Next recommended task
 
-Review the local provider changes, then apply migration `20260819000000` to staging, deploy `story-ai` to staging with Cloudflare credentials, and perform an explicitly authorized low-cost integration check before production approval. Keep production OpenAI Only until that validation passes.
+Configure staging-only Cloudflare secrets, deploy `story-ai` and a frontend preview against staging, then verify Owner controls without generation. Perform a real low-cost request only after explicit approval. Keep production OpenAI Only until validation passes.
