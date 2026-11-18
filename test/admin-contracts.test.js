@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '..');
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 const migration = read('supabase/migrations/20260818000000_admin_control_center.sql');
+const entitlementCorrection = read('supabase/migrations/20260818010000_fix_admin_entitlement_period_qualification.sql');
 
 test('staff roles are authoritative and browser users cannot write admin tables', () => {
   assert.match(migration, /role in \('owner', 'admin', 'moderator', 'support', 'tester', 'user'\)/);
@@ -44,6 +45,14 @@ test('staff AI testing is authenticated, audited, cost-capped, and concurrency-s
   assert.match(migration, /source in \('free', 'subscription', 'override', 'staff_test', 'promotion'\)/);
   assert.match(read('supabase/functions/story-ai/index.ts'), /const story = await ownedStory\(client, storyId\)/);
   assert.match(read('supabase/functions/story-ai/entitlements.ts'), /reserve_ai_entitlement/);
+});
+
+test('staff allowance totals explicitly qualify period output-column names', () => {
+  assert.match(entitlementCorrection, /from public\.admin_ai_test_usage t/);
+  assert.match(entitlementCorrection, /t\.period_start = v_start/);
+  assert.match(entitlementCorrection, /t\.period_end = v_end/);
+  assert.doesNotMatch(entitlementCorrection, /\band period_start = v_start/);
+  assert.doesNotMatch(entitlementCorrection, /\band period_end = v_end/);
 });
 
 test('complimentary credits are audited and released after provider failure', () => {

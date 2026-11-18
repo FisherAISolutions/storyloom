@@ -22,15 +22,15 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 ## B. Admin Control Center
 
 - [ ] Secure Owner bootstrap — Schema and execution grants verified in staging; production activation pending.
-- [ ] Staff roles and permissions — Schema permissions verified in staging; behavioral suite blocked by the entitlement SQL defect.
+- [ ] Staff roles and permissions — Focused staging authorization tests passed; production deployment pending.
 - [ ] Protected admin dashboard — Implemented locally; not deployed.
 - [ ] User search by email — Implemented locally; not deployed.
-- [ ] Role management — Implemented locally; focused staging transaction must be rerun after the entitlement fix.
-- [ ] Complimentary credit grants — Grant/revoke and idempotency implemented locally; full staging transaction must be rerun.
-- [ ] Owner/Admin AI testing access — Blocked by ambiguous column references in `reserve_ai_entitlement`.
-- [ ] Tester allowances — Blocked by the same staff-entitlement SQL defect.
-- [ ] AI usage and spending limits — Schema verified; functional and concurrency verification blocked pending correction.
-- [ ] Admin activity logs — RLS and direct-write denial verified in staging; end-to-end audit behavior remains pending.
+- [ ] Role management — Focused staging privilege-escalation tests passed; production deployment pending.
+- [ ] Complimentary credit grants — Idempotency and authorization passed in staging; production deployment pending.
+- [ ] Owner/Admin AI testing access — Staff entitlement flow passed in staging; production deployment pending.
+- [ ] Tester allowances — Allowance consumption and monthly-limit enforcement passed in staging; production deployment pending.
+- [ ] AI usage and spending limits — Runtime limit and simultaneous-reservation tests passed in staging; production deployment pending.
+- [ ] Admin activity logs — RLS, direct-write denial, and administrative action logging passed in staging; production deployment pending.
 - [ ] Subscription and billing visibility — Basic local visibility implemented; live verification pending.
 - [ ] Future marketplace and affiliate management — Planned.
 
