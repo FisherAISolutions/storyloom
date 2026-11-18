@@ -51,16 +51,16 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 
 ## D. Affiliate Program
 
-- [ ] Affiliate enrollment — Implemented locally; production deployment pending.
-- [ ] Affiliate approval — Implemented locally with Owner-only review; production deployment pending.
-- [ ] Referral links — Implemented locally; production deployment pending.
-- [ ] Referral tracking — Implemented locally with salted click deduplication; production deployment pending.
-- [ ] Conversion attribution — Implemented locally through authenticated signup attribution and Stripe invoices; production deployment pending.
-- [ ] Affiliate dashboard — Implemented locally; production deployment pending.
-- [ ] Commission calculation — Implemented locally with rate snapshots and idempotent invoice keys; production deployment pending.
-- [ ] Refund and chargeback adjustments — Implemented locally; production deployment pending.
+- [x] Affiliate enrollment — Production backend and frontend released with authenticated enrollment.
+- [x] Affiliate approval — Owner-only production review controls released.
+- [x] Referral links.
+- [x] Referral tracking — Salted click deduplication and first-touch attribution released.
+- [x] Conversion attribution — Verified Stripe invoice webhook path released.
+- [x] Affiliate dashboard.
+- [x] Commission calculation — Rate snapshots and idempotent invoice keys released.
+- [x] Refund and chargeback adjustments — Idempotent reversal handling released.
 - [ ] Anti-fraud protections — Self-referral, first-touch, approval, attribution-window, and click-deduplication controls implemented locally; broader operational fraud review remains.
-- [ ] Admin affiliate management — Implemented locally in the Admin Control Center; production deployment pending.
+- [x] Admin affiliate management — Owner controls released in the Admin Control Center.
 - [ ] Manual payout tracking — Not implemented; commissions are recorded but no payout ledger exists.
 - [ ] Future automated payouts.
 

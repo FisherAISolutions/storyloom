@@ -4,7 +4,7 @@
 
 ## Current milestone
 
-Multi-provider image generation is deployed to production in a safe disabled state. Production remains in OpenAI Only mode, Cloudflare is disabled, and paid fallback is disabled. The next milestone is preparing the separate affiliate/referral release without deploying it.
+The affiliate/referral program production rollout is in progress on `codex/affiliate-referrals`. Its additive migration, server secret, and three required Edge Functions are deployed; the isolated frontend release is ready to push. Marketplace work remains excluded.
 
 ## Git state
 
@@ -46,7 +46,8 @@ Multi-provider image generation is deployed to production in a safe disabled sta
 
 ## Work in progress
 
-- The affiliate/referral MVP remains isolated on `codex/affiliate-referrals` and is not deployed. Its branch has been merged with the current production `main`, preserving both affiliate management and image-provider administration in the shared Admin Control Center.
+- Applied production migration `20260820000000_affiliate_referral_program.sql`, configured a private `AFFILIATE_CLICK_SALT`, and deployed `affiliate-public`, `billing-checkout`, and `stripe-webhook`. Automated affiliate payouts remain disabled.
+- Affiliate release validation passed 31 focused affiliate, billing, and security tests. The migration contains no destructive data operations and production dry-run selected only version `20260820000000`.
 - Migrations `20260818000000` and `20260818010000` are applied and verified in staging and production.
 - The Admin Control Center frontend is deployed on production `main`.
 - Added a local OpenAI/Cloudflare image-provider architecture, capability-aware routing, UTC daily request/neuron/spend caps, provider health/quota events, server-only configuration, and request idempotency.
@@ -97,4 +98,4 @@ Rollback plan: take a fresh logical production backup before migrations; keep th
 
 ## Next recommended task
 
-Rebase or merge the separate affiliate/referral branch onto the deployed production `main`, resolve only shared Admin/documentation integration points, run focused affiliate/security tests and one production build, then present the exact migration, secrets, Edge Function, frontend, and rollback plan for approval. Do not deploy affiliate functionality yet.
+Complete the Vercel affiliate frontend verification and then return to `codex/community-marketplace` for its separately approved production rollout. Do not deploy marketplace functionality without explicit approval.
