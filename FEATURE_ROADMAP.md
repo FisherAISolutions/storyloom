@@ -18,8 +18,8 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 - [x] PDF export.
 - [ ] Character consistency testing — Automated contract coverage exists; end-to-end visual consistency needs verification.
 - [ ] Mobile responsiveness — Needs verification across supported devices.
-- [ ] Multi-provider image generation — Staging migration and Edge Function deployment verified; frontend preview and real provider integration verification pending.
-- [ ] Provider quota, health, and idempotency controls — Implemented locally with mocked/contract coverage and staging schema verification; runtime concurrency verification pending.
+- [ ] Multi-provider image generation — Production schema, Edge Function, frontend, and safe disabled defaults are deployed; real Cloudflare provider integration verification remains pending.
+- [ ] Provider quota, health, and idempotency controls — Production controls are deployed with mocked/contract coverage; real-provider quota and runtime concurrency verification remain pending.
 
 ## B. Admin Control Center
 
@@ -35,7 +35,7 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 - [x] Admin activity logs — Initial Owner audit entry displayed live; RLS and direct-write denial verified.
 - [x] Subscription and billing visibility — Account plan and subscription state displayed live.
 - [ ] Future marketplace and affiliate management — Planned.
-- [ ] Image provider administration — Staging database controls verified; staging Owner UI and production deployment pending.
+- [ ] Image provider administration — Production UI and Owner-only database controls are deployed; live Owner interaction and real-provider verification remain pending.
 
 ## C. Subscriptions and Payments
 
@@ -156,7 +156,7 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 - [ ] Mobile testing.
 - [ ] Accessibility.
 - [ ] Marketplace content moderation.
-- [ ] Production deployment checks — Admin release passed production deployment and authorization smoke tests; repeat for every release.
+- [ ] Production deployment checks — Admin and multi-provider releases passed deployment, route, authorization, and safe-default smoke checks; repeat for every release.
 - [ ] Backup and recovery planning — This additive release used an explicit no-backup waiver; verified recovery tooling remains required for future higher-risk migrations.
 - [ ] End-to-end purchase testing — Needs verification for the current Stripe configuration.
 - [ ] Launch readiness.
