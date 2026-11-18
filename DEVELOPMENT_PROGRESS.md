@@ -79,12 +79,14 @@ Multi-provider image generation is implemented locally on `codex/multi-provider-
 - Promotional credits are server-authoritative, audited, idempotent, and separate from paid subscription state.
 - OpenAI calls remain in the authenticated `story-ai` Edge Function.
 - Stripe billing remains based on hosted Checkout/Portal, verified webhooks, and server-authoritative entitlement synchronization.
+- Staging is an optional risk-reduction tool rather than a mandatory development gate. Releases use focused safety checks, tests proportional to the change, and explicit approval before production migrations, pushes, or deployments.
 
 ## Required configuration and deployment steps
 
 1. Add a verified backup/recovery mechanism before future higher-risk migrations.
 2. Confirm Stripe mode, price mappings, and webhook deliveries separately before billing changes.
 3. Before granting staff roles or promotional credits, use the deployed audited controls and preserve least privilege.
+4. Do not repeat the completed multi-provider staging rollout unless new evidence requires it; production rollout starts disabled in OpenAI Only mode.
 
 Rollback plan: take a fresh logical production backup before migrations; keep the new frontend undeployed until database checks pass; use a reviewed forward corrective migration for database defects rather than destructive rollback; if the frontend release fails, redeploy the preceding Vercel commit. Do not bootstrap an Owner until the database checks pass.
 

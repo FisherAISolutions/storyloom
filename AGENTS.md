@@ -45,6 +45,8 @@ At the beginning of future development sessions, also read `DEVELOPMENT_PROGRESS
 - Never deploy, push, modify production, run production migrations, or change secrets without explicit permission.
 - Keep responses and milestone progress reports concise.
 - Stop at approval boundaries defined by the current master development instructions.
+- Staging is optional, not a mandatory release gate. Use it when risk or uncertainty justifies it; do not repeat completed staging work without new evidence.
+- Before any production migration, push, or deployment, present the exact planned changes and obtain explicit approval.
 - Do not repeat completed work unless a verified problem requires it.
 - Keep `.supabase-staging-validation/` ignored, untracked, and out of commits.
 - Update `FEATURE_ROADMAP.md` and `DEVELOPMENT_PROGRESS.md` at milestone boundaries, not after every small change.
