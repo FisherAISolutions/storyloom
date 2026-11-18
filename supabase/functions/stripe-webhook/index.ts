@@ -48,6 +48,27 @@ async function reverseCommission(charge: any, reason: string, fullReversal: bool
   if (reversed.error) throw new BillingError('DATABASE', 'Affiliate commission reversal failed.', 500);
 }
 
+async function recordMarketplacePurchase(session: any) {
+  const metadata = session?.metadata || {};
+  if (metadata.purchase_type !== 'marketplace_book') return false;
+  const buyerId = metadata.buyer_user_id || session.client_reference_id;
+  const listingId = metadata.community_story_id;
+  const paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id || null;
+  if (!session.id || session.payment_status !== 'paid' || !buyerId || !listingId || !Number.isInteger(session.amount_total) || session.amount_total <= 0 || typeof session.currency !== 'string') throw new BillingError('STRIPE_EVENT_INVALID', 'Marketplace checkout payload is invalid.', 409);
+  const recorded = await service.rpc('record_marketplace_purchase', { p_checkout_session_id: session.id, p_payment_intent_id: paymentIntentId, p_charge_id: null, p_buyer_user_id: buyerId, p_listing_id: listingId, p_amount_cents: session.amount_total, p_currency: session.currency });
+  if (recorded.error) throw new BillingError('DATABASE', 'Marketplace purchase could not be recorded.', 500);
+  if (metadata.checkout_claim_id) await service.rpc('complete_marketplace_checkout_request', { p_id: metadata.checkout_claim_id, p_session_id: session.id, p_success: true });
+  return true;
+}
+
+async function reverseMarketplacePurchase(charge: any, reason: string) {
+  const chargeId = typeof charge?.id === 'string' ? charge.id : null;
+  const paymentIntentId = typeof charge?.payment_intent === 'string' ? charge.payment_intent : charge?.payment_intent?.id || null;
+  if (!chargeId && !paymentIntentId) return;
+  const reversed = await service.rpc('reverse_marketplace_purchase', { p_payment_intent_id: paymentIntentId, p_charge_id: chargeId, p_reason: reason });
+  if (reversed.error) throw new BillingError('DATABASE', 'Marketplace purchase reversal failed.', 500);
+}
+
 Deno.serve(async (request) => {
   if (request.method !== 'POST') return response({ error: { code: 'VALIDATION', message: 'Only POST requests are supported.' } }, 405);
   const raw = await request.text();
@@ -60,11 +81,12 @@ Deno.serve(async (request) => {
     if (event.type === 'checkout.session.completed') {
       const session = event.data?.object; const userId = session?.client_reference_id || session?.metadata?.supabase_user_id; const customerId = typeof session?.customer === 'string' ? session.customer : session?.customer?.id;
       if (userId && customerId) { const saved = await service.from('stripe_customers').upsert({ user_id: userId, stripe_customer_id: customerId }, { onConflict: 'user_id' }); if (saved.error) throw new BillingError('DATABASE', 'Customer mapping failed.', 500); }
-      // Checkout completion is reconciliation only. Entitlement comes from a valid subscription event.
+      await recordMarketplacePurchase(session);
+      // Checkout completion is reconciliation only for subscriptions. Subscription entitlement still comes only from a valid subscription event.
     } else if (subscriptionEvents.has(event.type)) await syncSubscription(event.data?.object);
     else if (event.type === 'invoice.paid') await recordPaidInvoice(event.data?.object);
-    else if (event.type === 'charge.refunded') await reverseCommission(event.data?.object, 'refund', false);
-    else if (event.type === 'charge.dispute.created') { const dispute = event.data?.object; await reverseCommission({ id: typeof dispute?.charge === 'string' ? dispute.charge : dispute?.charge?.id }, 'chargeback', true); }
+    else if (event.type === 'charge.refunded') { await reverseCommission(event.data?.object, 'refund', false); await reverseMarketplacePurchase(event.data?.object, 'refund'); }
+    else if (event.type === 'charge.dispute.created') { const dispute = event.data?.object; const charge = typeof dispute?.charge === 'string' ? { id: dispute.charge, payment_intent: dispute.payment_intent } : dispute?.charge; await reverseCommission(charge, 'chargeback', true); await reverseMarketplacePurchase(charge, 'chargeback'); }
     await service.rpc('complete_stripe_webhook_event', { p_event_id: event.id, p_success: true, p_error: null });
     return response({ received: true }, 200);
   } catch (caught) {

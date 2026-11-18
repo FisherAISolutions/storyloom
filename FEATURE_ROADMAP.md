@@ -66,34 +66,34 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 
 ## E. Digital Book Marketplace
 
-- [ ] Safe public publishing — Community sharing exists, but a commercial marketplace publishing workflow does not.
-- [ ] Marketplace browsing.
+- [x] Existing Community Shelf and safe public publishing — Opt-in sharing, ownership checks, moderation, private Storage, and public viewing are deployed and verified.
+- [ ] Marketplace browsing — Existing Community Shelf is reused; paid badges and prices are implemented locally, deployment pending.
 - [ ] Search and categories.
-- [ ] Individual book product pages.
-- [ ] Stable shareable book URLs.
-- [ ] Book descriptions and metadata.
-- [ ] Preview pages.
-- [ ] Digital checkout.
-- [ ] Buyer library.
-- [ ] Seller earnings.
-- [ ] Moderation and reporting — Community moderation exists; marketplace moderation is not implemented.
+- [ ] Individual book product pages — Existing public book pages now support local paid-listing details and purchase actions; deployment pending.
+- [x] Stable shareable book URLs — Existing Community Shelf public slugs are reused.
+- [ ] Book descriptions and metadata — Paid descriptions and price metadata are implemented locally; deployment pending.
+- [ ] Preview pages — Preview-only delivery for unpaid viewers is implemented locally; deployment pending.
+- [ ] Digital checkout — Authenticated server-priced Stripe Checkout is implemented locally; live configuration and verification pending.
+- [ ] Buyer library — Purchase access is implemented locally; a dedicated buyer-library UI remains.
+- [ ] Seller earnings — Separate author earnings ledger and summary are implemented locally; deployment pending and payouts disabled.
+- [ ] Moderation and reporting — Existing Community moderation applies to listings; marketplace-specific reports remain.
 - [ ] SEO and social sharing.
 - [ ] Related books.
 - [ ] Future verified buyer reviews.
 
 ## F. Author Storefronts
 
-- [ ] Public author profiles.
-- [ ] Unique storefront URLs.
+- [ ] Public author profiles — Implemented locally; deployment pending.
+- [ ] Unique storefront URLs — Implemented locally under `/authors/:slug`; deployment pending.
 - [ ] Author logos and banners.
-- [ ] Author biographies.
+- [ ] Author biographies — Implemented locally; deployment pending.
 - [ ] Social media links.
-- [ ] Published book catalogs.
+- [ ] Published book catalogs — Implemented locally by reusing published Community stories; deployment pending.
 - [ ] Featured books.
 - [ ] Collections and categories.
-- [ ] Author management dashboard.
-- [ ] Sales and earnings analytics.
-- [ ] Shareable storefronts.
+- [ ] Author management dashboard — Profile, listing, sales, and pending-earnings controls implemented locally; deployment pending.
+- [ ] Sales and earnings analytics — Initial totals implemented locally; detailed analytics remain.
+- [ ] Shareable storefronts — Implemented locally; deployment pending.
 - [ ] Future author followers.
 - [ ] Future new-book notifications.
 - [ ] Premium storefront customization.

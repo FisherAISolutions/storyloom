@@ -42,10 +42,10 @@ export async function authenticate(request: Request) {
   return data.user;
 }
 
-export async function stripe(path: string, fields: Record<string, string>) {
+export async function stripe(path: string, fields: Record<string, string>, idempotencyKey?: string) {
   if (!STRIPE_KEY.startsWith('sk_test_') && Deno.env.get('STRIPE_LIVE_MODE') !== 'enabled') throw new BillingError('BILLING_CONFIG', 'Stripe test mode is not configured.', 503);
   const body = new URLSearchParams(); Object.entries(fields).forEach(([key, value]) => body.set(key, value));
-  const result = await fetch(`https://api.stripe.com/v1/${path}`, { method: 'POST', headers: { Authorization: `Bearer ${STRIPE_KEY}`, 'Content-Type': 'application/x-www-form-urlencoded' }, body });
+  const result = await fetch(`https://api.stripe.com/v1/${path}`, { method: 'POST', headers: { Authorization: `Bearer ${STRIPE_KEY}`, 'Content-Type': 'application/x-www-form-urlencoded', ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}) }, body });
   const payload = await result.json();
   if (!result.ok) { console.error('Stripe API request failed', path, payload?.error?.type); throw new BillingError('STRIPE_API', 'The billing request could not be completed.', 502); }
   return payload;

@@ -4,7 +4,7 @@
 
 ## Current milestone
 
-Multi-provider image generation is deployed to production in a safe disabled state. Production remains in OpenAI Only mode, Cloudflare is disabled, and paid fallback is disabled. The next milestone is preparing the separate affiliate/referral release without deploying it.
+The first Community Shelf marketplace milestone is implemented locally on `codex/community-marketplace`. It extends the existing shelf rather than creating a second publishing system. No marketplace migration, function, frontend, Stripe payment, or production change has been deployed.
 
 ## Git state
 
@@ -46,6 +46,10 @@ Multi-provider image generation is deployed to production in a safe disabled sta
 
 ## Work in progress
 
+- Added a local forward-only Community Shelf marketplace migration with paid listings defaulting off, author profiles, checkout claims, buyer purchases, and author earnings kept separate from affiliate commissions.
+- Added local preview-only public delivery for paid books, active-purchase full access, author storefronts/dashboard, and server-priced one-time Stripe Checkout.
+- Extended the verified Stripe webhook path to grant purchases idempotently and revoke access/author earnings on refunds or chargebacks. Actual author payouts remain disabled.
+- Focused Community, marketplace, billing, affiliate, and security validation passed: 42 tests. Changed frontend files passed focused lint with no errors, and the production build passed.
 - The affiliate/referral MVP remains isolated on `codex/affiliate-referrals` and is not deployed. Its branch has been merged with the current production `main`, preserving both affiliate management and image-provider administration in the shared Admin Control Center.
 - Migrations `20260818000000` and `20260818010000` are applied and verified in staging and production.
 - The Admin Control Center frontend is deployed on production `main`.
@@ -97,4 +101,4 @@ Rollback plan: take a fresh logical production backup before migrations; keep th
 
 ## Next recommended task
 
-Rebase or merge the separate affiliate/referral branch onto the deployed production `main`, resolve only shared Admin/documentation integration points, run focused affiliate/security tests and one production build, then present the exact migration, secrets, Edge Function, frontend, and rollback plan for approval. Do not deploy affiliate functionality yet.
+Validate the marketplace migration in a disposable or optional staging database if desired, configure the existing Stripe webhook to include one-time Checkout/refund/dispute events, and review the exact deployment order. Add a buyer-library screen before calling the marketplace MVP complete. Do not deploy marketplace or affiliate functionality without explicit approval.

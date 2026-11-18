@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.affiliate-public]
 verify_jwt = false
+
+[functions.marketplace-checkout]
+verify_jwt = false
