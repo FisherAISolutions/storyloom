@@ -84,6 +84,7 @@ export default function Layout() {
           <nav aria-label="Footer" className="flex flex-wrap justify-center gap-x-5 gap-y-2">
             <Link to="/pricing" className="hover:text-stone-900">Pricing</Link>
             <Link to="/community" className="hover:text-stone-900">Community</Link>
+            <Link to="/affiliate" className="hover:text-stone-900">Affiliates</Link>
             <Link to="/privacy" className="hover:text-stone-900">Privacy</Link>
             <Link to="/terms" className="hover:text-stone-900">Terms</Link>
             <Link to="/support" className="hover:text-stone-900">Support</Link>

@@ -48,17 +48,17 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 
 ## D. Affiliate Program
 
-- [ ] Affiliate enrollment.
-- [ ] Affiliate approval.
-- [ ] Referral links.
-- [ ] Referral tracking.
-- [ ] Conversion attribution.
-- [ ] Affiliate dashboard.
-- [ ] Commission calculation.
-- [ ] Refund and chargeback adjustments.
-- [ ] Anti-fraud protections.
-- [ ] Admin affiliate management.
-- [ ] Manual payout tracking.
+- [ ] Affiliate enrollment — Implemented locally; production deployment pending.
+- [ ] Affiliate approval — Implemented locally with Owner-only review; production deployment pending.
+- [ ] Referral links — Implemented locally; production deployment pending.
+- [ ] Referral tracking — Implemented locally with salted click deduplication; production deployment pending.
+- [ ] Conversion attribution — Implemented locally through authenticated signup attribution and Stripe invoices; production deployment pending.
+- [ ] Affiliate dashboard — Implemented locally; production deployment pending.
+- [ ] Commission calculation — Implemented locally with rate snapshots and idempotent invoice keys; production deployment pending.
+- [ ] Refund and chargeback adjustments — Implemented locally; production deployment pending.
+- [ ] Anti-fraud protections — Self-referral, first-touch, approval, attribution-window, and click-deduplication controls implemented locally; broader operational fraud review remains.
+- [ ] Admin affiliate management — Implemented locally in the Admin Control Center; production deployment pending.
+- [ ] Manual payout tracking — Not implemented; commissions are recorded but no payout ledger exists.
 - [ ] Future automated payouts.
 
 ## E. Digital Book Marketplace

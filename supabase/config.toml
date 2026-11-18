@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.community-public]
 verify_jwt = false
+
+[functions.affiliate-public]
+verify_jwt = false

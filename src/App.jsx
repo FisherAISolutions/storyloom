@@ -29,6 +29,8 @@ const Community = lazy(() => import('@/pages/Community'));
 const PublicStory = lazy(() => import('@/pages/PublicStory'));
 const AdminCommunity = lazy(() => import('@/pages/AdminCommunity'));
 const AdminControlCenter = lazy(() => import('@/pages/AdminControlCenter'));
+const AffiliateReferral = lazy(() => import('@/pages/AffiliateReferral'));
+const AffiliateDashboard = lazy(() => import('@/pages/AffiliateDashboard'));
 
 const withPageLoader = (page) => (
   <Suspense fallback={<div className="flex justify-center py-24">Loading…</div>}>
@@ -61,6 +63,7 @@ function AppRoutes() {
       </Route>
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/r/:code" element={withPageLoader(<AffiliateReferral />)} />
       <Route element={<Layout />}>
         <Route path="/" element={withPageLoader(<Home />)} />
         <Route path="/pricing" element={withPageLoader(<Pricing />)} />
@@ -76,6 +79,7 @@ function AppRoutes() {
           <Route path="/story/:id" element={withPageLoader(<StoryEditor />)} />
           <Route path="/billing" element={withPageLoader(<Billing />)} />
           <Route path="/billing/success" element={withPageLoader(<BillingSuccess />)} />
+          <Route path="/affiliate" element={withPageLoader(<AffiliateDashboard />)} />
           <Route element={<AdminRoute />}>
             <Route path="/admin" element={withPageLoader(<AdminControlCenter />)} />
             <Route path="/admin/ai-economics" element={withPageLoader(<AdminAiEconomics />)} />

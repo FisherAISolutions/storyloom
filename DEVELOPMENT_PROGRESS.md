@@ -4,7 +4,7 @@
 
 ## Current milestone
 
-Phase 1 — Secure Admin Control Center and staff AI testing access is deployed. The production Owner dashboard and regular-user denial were verified without paid AI calls or credit mutations.
+Affiliate and referral MVP is implemented locally on `codex/affiliate-referrals`, isolated from the multi-provider image branch. Production remains unchanged pending migration and deployment approval.
 
 ## Git state
 
@@ -48,6 +48,8 @@ Phase 1 — Secure Admin Control Center and staff AI testing access is deployed.
 
 - Migrations `20260818000000` and `20260818010000` are applied and verified in staging and production.
 - The Admin Control Center frontend is deployed on production `main`.
+- Affiliate MVP adds Owner-approved accounts and commission rates, unique referral links, privacy-preserving click tracking, first-touch signup attribution, affiliate/admin dashboards, webhook-idempotent paid-invoice commissions, and refund/chargeback reversals. Payouts remain manual and unimplemented.
+- Affiliate verification passed 93 tests, lint, and the production build. Migration `20260820000000_affiliate_referral_program.sql` and the updated Edge Functions have not been deployed.
 
 ## Known bugs and blockers
 
@@ -57,6 +59,7 @@ Phase 1 — Secure Admin Control Center and staff AI testing access is deployed.
 - Stripe account mode and recent webhook delivery success still require confirmation in the Stripe Dashboard.
 - The Starter plan does not currently have a checkout price mapping.
 - Later roadmap features remain unimplemented unless explicitly marked complete in `FEATURE_ROADMAP.md`.
+- Affiliate production rollout requires an `AFFILIATE_CLICK_SALT` Edge Function secret, the new additive migration, and deployments of `affiliate-public`, `billing-checkout`, and `stripe-webhook` before the frontend.
 
 ## Architectural decisions
 
@@ -79,4 +82,4 @@ Rollback plan: take a fresh logical production backup before migrations; keep th
 
 ## Next recommended task
 
-Review the Phase 2 shared-platform architecture milestone before implementing affiliate or marketplace features. Keep the live Admin Control Center stable.
+Review and approve either the already-validated multi-provider production rollout or the isolated affiliate MVP rollout. Do not combine the two releases.

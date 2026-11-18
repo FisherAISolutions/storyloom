@@ -13,8 +13,11 @@ Deno.serve(async (request) => {
     const active = await service.from('subscriptions').select('id').eq('user_id', user.id).in('status', ['active','trialing']).limit(1);
     if (active.error) throw new BillingError('DATABASE', 'Subscription status could not be loaded.', 500);
     if (active.data?.length) throw new BillingError('USE_PORTAL', 'Manage your existing subscription from Billing.');
+    const attribution = await service.from('affiliate_referrals').select('affiliate_id').eq('referred_user_id', user.id).eq('status', 'signed_up').maybeSingle();
+    if (attribution.error) throw new BillingError('DATABASE', 'Referral attribution could not be loaded.', 500);
     const returnOrigin = appUrl(); const customer = await customerFor(user);
-    const session = await stripe('checkout/sessions', { mode: 'subscription', customer, 'line_items[0][price]': plan.data.stripe_price_id, 'line_items[0][quantity]': '1', client_reference_id: user.id, 'subscription_data[metadata][supabase_user_id]': user.id, 'subscription_data[metadata][plan_key]': plan.data.plan_key, success_url: `${returnOrigin}/billing/success`, cancel_url: `${returnOrigin}/pricing?checkout=cancelled` });
+    const affiliateMetadata = attribution.data ? { 'subscription_data[metadata][affiliate_id]': attribution.data.affiliate_id } : {};
+    const session = await stripe('checkout/sessions', { mode: 'subscription', customer, 'line_items[0][price]': plan.data.stripe_price_id, 'line_items[0][quantity]': '1', client_reference_id: user.id, 'subscription_data[metadata][supabase_user_id]': user.id, 'subscription_data[metadata][plan_key]': plan.data.plan_key, ...affiliateMetadata, success_url: `${returnOrigin}/billing/success`, cancel_url: `${returnOrigin}/pricing?checkout=cancelled` });
     return response({ data: { url: session.url } }, 200, headers);
   } catch (caught) { const error = safeFailure(caught); return response({ error: { code: error.code, message: error.message } }, error.status, headers); }
 });

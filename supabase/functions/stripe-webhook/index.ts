@@ -30,6 +30,24 @@ async function syncSubscription(subscription: any) {
   if (saved.error) throw new BillingError('DATABASE', 'Subscription sync failed.', 500);
 }
 
+async function recordPaidInvoice(invoice: any) {
+  if (!invoice?.id || !Number.isInteger(invoice.amount_paid) || invoice.amount_paid <= 0 || typeof invoice.currency !== 'string') return;
+  const customerId = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id;
+  if (!customerId) throw new BillingError('STRIPE_EVENT_INVALID', 'Invoice customer is missing.');
+  const userId = await userForCustomer(customerId);
+  const chargeId = typeof invoice.charge === 'string' ? invoice.charge : invoice.charge?.id || null;
+  const recorded = await service.rpc('record_affiliate_conversion', { p_user_id: userId, p_stripe_invoice_id: invoice.id, p_stripe_charge_id: chargeId, p_gross_amount_cents: invoice.amount_paid, p_currency: invoice.currency.toLowerCase() });
+  if (recorded.error) throw new BillingError('DATABASE', 'Affiliate commission could not be recorded.', 500);
+}
+
+async function reverseCommission(charge: any, reason: string, fullReversal: boolean) {
+  const chargeId = typeof charge?.id === 'string' ? charge.id : null;
+  const invoiceId = typeof charge?.invoice === 'string' ? charge.invoice : charge?.invoice?.id || null;
+  if (!chargeId && !invoiceId) return;
+  const reversed = await service.rpc('reverse_affiliate_commission', { p_stripe_invoice_id: invoiceId, p_stripe_charge_id: chargeId, p_refunded_amount_cents: Number.isInteger(charge?.amount_refunded) ? charge.amount_refunded : 0, p_reason: reason, p_full_reversal: fullReversal });
+  if (reversed.error) throw new BillingError('DATABASE', 'Affiliate commission reversal failed.', 500);
+}
+
 Deno.serve(async (request) => {
   if (request.method !== 'POST') return response({ error: { code: 'VALIDATION', message: 'Only POST requests are supported.' } }, 405);
   const raw = await request.text();
@@ -44,6 +62,9 @@ Deno.serve(async (request) => {
       if (userId && customerId) { const saved = await service.from('stripe_customers').upsert({ user_id: userId, stripe_customer_id: customerId }, { onConflict: 'user_id' }); if (saved.error) throw new BillingError('DATABASE', 'Customer mapping failed.', 500); }
       // Checkout completion is reconciliation only. Entitlement comes from a valid subscription event.
     } else if (subscriptionEvents.has(event.type)) await syncSubscription(event.data?.object);
+    else if (event.type === 'invoice.paid') await recordPaidInvoice(event.data?.object);
+    else if (event.type === 'charge.refunded') await reverseCommission(event.data?.object, 'refund', false);
+    else if (event.type === 'charge.dispute.created') { const dispute = event.data?.object; await reverseCommission({ id: typeof dispute?.charge === 'string' ? dispute.charge : dispute?.charge?.id }, 'chargeback', true); }
     await service.rpc('complete_stripe_webhook_event', { p_event_id: event.id, p_success: true, p_error: null });
     return response({ received: true }, 200);
   } catch (caught) {

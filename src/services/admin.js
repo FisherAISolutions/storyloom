@@ -15,3 +15,5 @@ export const setUserRole = (userId, role, reason) => rpc('admin_set_user_role', 
 export const grantCredits = (userId, storyUnits, imageUnits, expiresAt, reason) => rpc('admin_grant_complimentary_credits', { p_target_user_id: userId, p_story_units: storyUnits, p_image_units: imageUnits, p_expires_at: expiresAt, p_reason: reason, p_request_id: crypto.randomUUID() });
 export const revokeCredits = (grantId, reason) => rpc('admin_revoke_complimentary_credits', { p_grant_id: grantId, p_reason: reason });
 export const setTestLimit = (userId, enabled, cents, reason) => rpc('admin_set_ai_test_limit', { p_target_user_id: userId, p_enabled: enabled, p_monthly_spend_limit_cents: cents, p_reason: reason });
+export const getAffiliates = () => rpc('admin_get_affiliates');
+export const reviewAffiliate = (affiliateId, status, commissionBps, reason) => rpc('admin_review_affiliate', { p_affiliate_id: affiliateId, p_status: status, p_commission_bps: commissionBps, p_reason: reason });

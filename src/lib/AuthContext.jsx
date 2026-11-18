@@ -3,6 +3,7 @@ import { getSupabaseClient } from '@/lib/supabase';
 import { queryClientInstance } from '@/lib/query-client';
 import { clearSignedUrlCache } from '@/services/storage';
 import { didAuthenticatedUserChange, INITIAL_AUTH_STATE, toAppUser } from '@/lib/authState';
+import { claimPendingReferral } from '@/services/affiliates';
 
 const AuthContext = createContext(null);
 
@@ -79,6 +80,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
       setAuthChecked(true);
+      void claimPendingReferral().catch(() => {});
     } catch {
       if (revision !== revisionRef.current) return;
       clearUserScopedState();
