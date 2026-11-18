@@ -21,16 +21,16 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 
 ## B. Admin Control Center
 
-- [ ] Secure Owner bootstrap — Implemented locally; staging and production activation pending.
-- [ ] Staff roles and permissions — Implemented locally; staging authorization verification pending.
+- [ ] Secure Owner bootstrap — Schema and execution grants verified in staging; production activation pending.
+- [ ] Staff roles and permissions — Schema permissions verified in staging; behavioral suite blocked by the entitlement SQL defect.
 - [ ] Protected admin dashboard — Implemented locally; not deployed.
 - [ ] User search by email — Implemented locally; not deployed.
-- [ ] Role management — Implemented locally; staging privilege-escalation verification pending.
-- [ ] Complimentary credit grants — Grant/revoke and idempotency implemented locally; staging verification pending.
-- [ ] Owner/Admin AI testing access — Implemented locally; staging cost and entitlement verification pending.
-- [ ] Tester allowances — Implemented locally; staging verification pending.
-- [ ] AI usage and spending limits — Implemented locally with server-side reservations; staging concurrency verification pending.
-- [ ] Admin activity logs — Implemented locally; staging immutability verification pending.
+- [ ] Role management — Implemented locally; focused staging transaction must be rerun after the entitlement fix.
+- [ ] Complimentary credit grants — Grant/revoke and idempotency implemented locally; full staging transaction must be rerun.
+- [ ] Owner/Admin AI testing access — Blocked by ambiguous column references in `reserve_ai_entitlement`.
+- [ ] Tester allowances — Blocked by the same staff-entitlement SQL defect.
+- [ ] AI usage and spending limits — Schema verified; functional and concurrency verification blocked pending correction.
+- [ ] Admin activity logs — RLS and direct-write denial verified in staging; end-to-end audit behavior remains pending.
 - [ ] Subscription and billing visibility — Basic local visibility implemented; live verification pending.
 - [ ] Future marketplace and affiliate management — Planned.
 
