@@ -12,6 +12,7 @@ At the beginning of future development sessions, also read `DEVELOPMENT_PROGRESS
 - Supabase Auth is the identity boundary.
 - Supabase PostgreSQL RLS and private Storage policies protect user-owned data. Client-side ownership filters are defense in depth, not authorization.
 - OpenAI calls remain server-side in the `story-ai` Supabase Edge Function.
+- Image providers are selected server-side from an Owner-controlled allowlist. Never accept arbitrary provider/model choices from clients or enable paid fallback without an explicit cap.
 - Never expose or commit OpenAI keys, Supabase service-role credentials, or other server secrets.
 - Store durable private media as Supabase Storage paths, not signed URLs or temporary provider URLs.
 - Do not introduce Base44 packages, APIs, configuration, assets, or deployment dependencies.

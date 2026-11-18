@@ -4,7 +4,7 @@
 
 ## Current milestone
 
-Affiliate and referral MVP is implemented locally on `codex/affiliate-referrals`, isolated from the multi-provider image branch. Production remains unchanged pending migration and deployment approval.
+Multi-provider image generation is deployed to production in a safe disabled state. Production remains in OpenAI Only mode, Cloudflare is disabled, and paid fallback is disabled. The next milestone is preparing the separate affiliate/referral release without deploying it.
 
 ## Git state
 
@@ -46,10 +46,22 @@ Affiliate and referral MVP is implemented locally on `codex/affiliate-referrals`
 
 ## Work in progress
 
+- The affiliate/referral MVP remains isolated on `codex/affiliate-referrals` and is not deployed. Its branch has been merged with the current production `main`, preserving both affiliate management and image-provider administration in the shared Admin Control Center.
 - Migrations `20260818000000` and `20260818010000` are applied and verified in staging and production.
 - The Admin Control Center frontend is deployed on production `main`.
-- Affiliate MVP adds Owner-approved accounts and commission rates, unique referral links, privacy-preserving click tracking, first-touch signup attribution, affiliate/admin dashboards, webhook-idempotent paid-invoice commissions, and refund/chargeback reversals. Payouts remain manual and unimplemented.
-- Affiliate verification passed 93 tests, lint, and the production build. Migration `20260820000000_affiliate_referral_program.sql` and the updated Edge Functions have not been deployed.
+- Added a local OpenAI/Cloudflare image-provider architecture, capability-aware routing, UTC daily request/neuron/spend caps, provider health/quota events, server-only configuration, and request idempotency.
+- Added local Owner controls for OpenAI Only, Free First, and Manual Provider modes. Defaults remain OpenAI Only; Cloudflare is disabled and paid fallback is disabled.
+- Official Cloudflare pricing indicates a 10,000-neuron free daily allocation resetting at 00:00 UTC. Estimated 1024px capacity is about 173 FLUX.1 Schnell (4-step), 95 FLUX.2 Klein 4B, 7 Klein 9B, or 3 Leonardo 20-step images per day.
+- Applied migration `20260819000000_multi_provider_image_generation.sql` only to `storyloom-staging` (`wbrjyytwpnpxcwrvtnhv`) after an exact-hash comparison and one-migration dry run.
+- Verified staging migration history, all four provider tables with RLS, zero authenticated table-write grants, anonymous RPC denial, authenticated admin RPC grants, service-role-only event recording, Owner/model guards, three existing public plans, and the existing `reserve_ai_entitlement` function.
+- Verified safe defaults in staging: OpenAI Only, Cloudflare disabled, paid fallback disabled, and a 10,000-neuron Cloudflare ceiling. No image provider was called.
+- Configured `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` as staging-only Supabase secrets without committing plaintext credentials.
+- Deployed staging `story-ai` version 1 with gateway `verify_jwt=false` while retaining mandatory in-function `auth.getUser(token)` authentication; an unauthenticated smoke request returned `401 AUTH_REQUIRED` before provider access.
+- Applied only `20260819000000_multi_provider_image_generation.sql` to production project `lhpegfrbevtoppdlgrfa` and verified migration history, RLS, browser write denial, Owner-only controls, provider model guards, and service-role event logging.
+- Verified production provider defaults: OpenAI Only, Cloudflare disabled, and paid fallback disabled.
+- Deployed only the updated production `story-ai` Edge Function (version 28). Gateway JWT verification remains disabled by design, while mandatory in-function `auth.getUser(token)` authentication was verified with an unauthenticated `401 AUTH_REQUIRED` response.
+- Fast-forwarded and pushed production `main` through commit `df99544`; GitHub/Vercel reported a successful production deployment.
+- Verified the live home, `/admin`, and `/billing` routes return HTTP 200. The unchanged billing checkout function rejects unauthenticated access with HTTP 401. No image generation or Stripe payment was invoked.
 
 ## Known bugs and blockers
 
@@ -59,7 +71,10 @@ Affiliate and referral MVP is implemented locally on `codex/affiliate-referrals`
 - Stripe account mode and recent webhook delivery success still require confirmation in the Stripe Dashboard.
 - The Starter plan does not currently have a checkout price mapping.
 - Later roadmap features remain unimplemented unless explicitly marked complete in `FEATURE_ROADMAP.md`.
-- Affiliate production rollout requires an `AFFILIATE_CLICK_SALT` Edge Function secret, the new additive migration, and deployments of `affiliate-public`, `billing-checkout`, and `stripe-webhook` before the frontend.
+- Cloudflare credentials are configured only in staging; production Cloudflare remains disabled and no provider call has been made.
+- Cloudflare FLUX commercial output use is supported by BFL developer terms, subject to input consent/usage restrictions. Leonardo commercial terms still need legal/contract verification before enabling its models.
+- Staging has no Owner profile, so Owner UI behavior cannot be smoke-tested until an intended staging account is explicitly assigned; database guards and grants are verified.
+- The repository is not linked to a Vercel preview project and no Vercel CLI is installed; preview environment variables must be configured before a staging frontend can be safely deployed without pointing at production.
 
 ## Architectural decisions
 
@@ -76,10 +91,10 @@ Affiliate and referral MVP is implemented locally on `codex/affiliate-referrals`
 1. Add a verified backup/recovery mechanism before future higher-risk migrations.
 2. Confirm Stripe mode, price mappings, and webhook deliveries separately before billing changes.
 3. Before granting staff roles or promotional credits, use the deployed audited controls and preserve least privilege.
-4. Do not repeat the completed multi-provider staging rollout unless new evidence requires it; production rollout starts disabled in OpenAI Only mode.
+4. Keep production in OpenAI Only mode with Cloudflare and paid fallback disabled until a separately approved provider test and configuration change.
 
 Rollback plan: take a fresh logical production backup before migrations; keep the new frontend undeployed until database checks pass; use a reviewed forward corrective migration for database defects rather than destructive rollback; if the frontend release fails, redeploy the preceding Vercel commit. Do not bootstrap an Owner until the database checks pass.
 
 ## Next recommended task
 
-Review and approve either the already-validated multi-provider production rollout or the isolated affiliate MVP rollout. Do not combine the two releases.
+Rebase or merge the separate affiliate/referral branch onto the deployed production `main`, resolve only shared Admin/documentation integration points, run focused affiliate/security tests and one production build, then present the exact migration, secrets, Edge Function, frontend, and rollback plan for approval. Do not deploy affiliate functionality yet.

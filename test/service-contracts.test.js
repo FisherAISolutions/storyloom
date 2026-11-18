@@ -175,7 +175,7 @@ test('page image generation supports both persisted-page and legacy pre-insert f
   assert.match(edge, /legacyPageRequest && pageNumber > story\.page_count && !segment\.data/);
   assert.match(edge, /legacyPageRequest[\s\S]+\? text\(body\.text, 'Legacy page text'/);
   assert.match(edge, /: text\(existingPage\.data!\.illustration_scene \|\| existingPage\.data!\.text, 'Illustration scene'/);
-  assert.ok(edge.indexOf('reservation = await assertAiEntitlement') < edge.indexOf('generateImage(pageImagePrompt'));
+  assert.ok(edge.indexOf('reservation = await assertAiEntitlement') < edge.indexOf('generateConfiguredImage({ service, prompt: pageImagePrompt'));
 });
 
 test('only repainting page one synchronizes the cover', () => {
@@ -263,9 +263,9 @@ test('generated images are decoded and uploaded server-side to deterministic pat
   const openai = read('supabase/functions/story-ai/openai.ts');
   assert.match(openai, /b64_json/);
   assert.match(openai, /image\/png/);
-  assert.match(edge, /`\$\{userId\}\/\$\{characterId\}\/portrait\.png`/);
-  assert.match(edge, /pages\/\$\{String\(pageNumber\)\.padStart\(3, '0'\)\}\.png/);
-  assert.match(edge, /`\$\{userId\}\/\$\{storyId\}\/cover\.png`/);
+  assert.match(edge, /`\$\{userId\}\/\$\{characterId\}\/portrait\.\$\{result\.extension\}`/);
+  assert.match(edge, /pages\/\$\{String\(pageNumber\)\.padStart\(3, '0'\)\}\.\$\{result\.extension\}/);
+  assert.match(edge, /`\$\{userId\}\/\$\{storyId\}\/cover\.\$\{result\.extension\}`/);
   assert.doesNotMatch(edge, /providerUrl|signedUrl/);
 });
 

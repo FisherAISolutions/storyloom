@@ -59,7 +59,7 @@ export async function generateImage(prompt: string, source?: Blob) {
   if (typeof encoded !== 'string' || !encoded) throw new AppError('AI_RESPONSE_INVALID', 'The AI provider returned no usable image.', 502);
   const bytes = base64ToBytes(encoded);
   if (!bytes.length || bytes.length > LIMITS.IMAGE_BYTES || bytes[0] !== 0x89 || bytes[1] !== 0x50 || bytes[2] !== 0x4e || bytes[3] !== 0x47) throw new AppError('AI_RESPONSE_INVALID', 'The generated image format is invalid.', 502);
-  return { blob: new Blob([bytes], { type: 'image/png' }), model: MODELS.IMAGE, usage: response.usage || {} };
+  return { blob: new Blob([bytes], { type: 'image/png' }), model: MODELS.IMAGE, provider: 'openai', usage: response.usage || {}, extension: 'png' };
 }
 
 function bytesToBase64(bytes: Uint8Array) { let binary = ''; for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000)); return btoa(binary); }

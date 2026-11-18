@@ -1,7 +1,8 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.109.0';
 import { ART_STYLE_PROMPTS, CONTINUATION_PAGE_COUNTS, LANGUAGE_NAMES, LIMITS, MODELS, STORY_PAGE_COUNTS } from './config.ts';
 import { AppError, jsonResponse, safeError } from './errors.ts';
-import { generateImage, structured } from './openai.ts';
+import { structured } from './openai.ts';
+import { generateConfiguredImage } from './imageProviders/index.ts';
 import { characterAnalysisPrompt, characterImagePrompt, continuationPrompt, continuationSuggestionPrompt, pageImagePrompt, storyPrompt, translationPrompt } from './prompts.ts';
 import { artStyle, characterInputs, integerIn, object, text, uuid } from './validation.ts';
 import { assertAiEntitlement, finalizeAiEntitlement, releaseAiEntitlement, type EntitlementReservation } from './entitlements.ts';
@@ -105,6 +106,17 @@ async function uploadImage(client: SupabaseClient, bucket: string, path: string,
   if (error) throw new AppError('STORAGE', 'The generated image could not be stored.', 500);
   return path;
 }
+
+async function claimImageGeneration(userId: string, requestId: string, operation: string) {
+  const { error } = await service.from('image_generation_requests').insert({ request_id: requestId, user_id: userId, operation });
+  if (error?.code === '23505') throw new AppError('RATE_LIMIT', 'This image request is already being processed.', 409);
+  if (error) throw new AppError('DATABASE', 'The image request could not be reserved.', 500);
+}
+
+async function finishImageGeneration(requestId: string, status: 'completed' | 'failed', provider?: string, model?: string) {
+  const { error } = await service.from('image_generation_requests').update({ status, provider_key: provider || null, model_key: model || null, updated_at: new Date().toISOString() }).eq('request_id', requestId);
+  if (error) console.error('image generation request finalization failed', status);
+}
 async function usage(input: { userId: string; requestId: string; operation: string; storyId: string | null; model: string; success: boolean; reservation?: EntitlementReservation | null; providerUsage?: any; imageCount?: number | null; generationKind?: string | null; pageCount?: number | null; resourceId?: string | null; parentRequestId?: string | null; imageSize?: string | null; imageQuality?: string | null; failureStage?: string | null }) {
   const providerUsage = input.providerUsage || {}; const reservation = input.reservation;
   try { await service.from('ai_usage').insert({ user_id: input.userId, request_id: input.requestId, reservation_id: reservation?.reservationId || null, operation: input.operation, story_id: input.storyId, model: input.model, success: input.success, input_tokens: providerUsage.input_tokens ?? null, output_tokens: providerUsage.output_tokens ?? null, image_count: input.imageCount ?? null, generation_kind: input.generationKind || null, page_count: input.pageCount ?? null, resource_id: input.resourceId || null, parent_request_id: input.parentRequestId || null, image_size: input.imageSize || null, image_quality: input.imageQuality || null, entitlement_bucket: reservation?.bucket || null, entitlement_amount: reservation?.amount ?? null, plan_key: reservation?.planKey || null, failure_stage: input.failureStage || null }); } catch { console.error('ai_usage insert failed', input.operation); }
@@ -119,7 +131,7 @@ function failureStage(code: string) {
 }
 
 Deno.serve(async (request) => {
-  let headers: HeadersInit = {}; let userId = ''; let action = ''; let storyId: string | null = null; let correlationId = ''; let generationKind: string | null = null; let pageCountMetadata: number | null = null; let resourceId: string | null = null; let parentRequestId: string | null = null; let reservation: EntitlementReservation | null = null;
+  let headers: HeadersInit = {}; let userId = ''; let action = ''; let storyId: string | null = null; let correlationId = ''; let generationKind: string | null = null; let pageCountMetadata: number | null = null; let resourceId: string | null = null; let parentRequestId: string | null = null; let reservation: EntitlementReservation | null = null; let imageClaimed = false;
   try {
     headers = corsHeaders(request);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
@@ -127,7 +139,7 @@ Deno.serve(async (request) => {
     const auth = await authenticate(request); userId = auth.user.id;
     let requestBody: unknown;
     try { requestBody = await request.json(); } catch { throw new AppError('VALIDATION', 'Request body must be valid JSON.'); }
-    const body = object(requestBody); action = text(body.action, 'Action', 64); correlationId = crypto.randomUUID(); rateLimit(userId, action);
+    const body = object(requestBody); action = text(body.action, 'Action', 64); correlationId = typeof body.requestId === 'string' ? uuid(body.requestId, 'Request ID') : crypto.randomUUID(); rateLimit(userId, action);
     const client = auth.client;
     if (action === 'generate-story') {
       const pageCount = integerIn(body.pageCount, STORY_PAGE_COUNTS, 'Page count'); const premise = text(body.prompt, 'Story premise', LIMITS.PROMPT); const theme = text(body.theme, 'Theme', 200); const characters = characterInputs(body.characters || []);
@@ -148,8 +160,9 @@ Deno.serve(async (request) => {
         if (!Object.values(appearanceBible).some(Boolean)) throw new AppError('AI_RESPONSE_INVALID', 'The character appearance could not be analyzed.', 502);
         await usage({ userId, requestId: correlationId, operation: action, storyId: null, model: result.model, success: true, reservation, providerUsage: result.usage, generationKind, resourceId }); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { appearance_bible: appearanceBible } }, 200, headers);
       }
-      const description = characterBibleDescription(character); const result = await generateImage(characterImagePrompt(description, character.character_kind || 'character'), photo); const path = `${userId}/${characterId}/portrait.png`;
-      await uploadImage(client, 'character-images', path, result.blob); await usage({ userId, requestId: correlationId, operation: action, storyId: null, model: result.model, success: true, reservation, providerUsage: result.usage, imageCount: 1, generationKind, resourceId, imageSize: '1024x1024', imageQuality: 'medium' }); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { character_image_path: path } }, 200, headers);
+      await claimImageGeneration(userId, correlationId, action); imageClaimed = true;
+      const description = characterBibleDescription(character); const result = await generateConfiguredImage({ service, prompt: characterImagePrompt(description, character.character_kind || 'character'), references: [photo], requiredCapabilities: ['text_to_image', 'image_edit', 'single_reference', 'large_reference'], isPayingCustomer: reservation.planKey !== 'staff_test', requestId: correlationId }); const path = `${userId}/${characterId}/portrait.${result.extension}`;
+      await uploadImage(client, 'character-images', path, result.blob); await finishImageGeneration(correlationId, 'completed', result.provider, result.model); imageClaimed = false; await usage({ userId, requestId: correlationId, operation: action, storyId: null, model: result.model, success: true, reservation, providerUsage: result.usage, imageCount: 1, generationKind, resourceId, imageSize: '1024x1024', imageQuality: 'medium' }); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { character_image_path: path } }, 200, headers);
     }
     if (!storyId) throw new AppError('VALIDATION', 'Story ID is required.');
     const story = await ownedStory(client, storyId);
@@ -169,6 +182,7 @@ Deno.serve(async (request) => {
       }
       pageCountMetadata = pageNumber;
       reservation = await assertAiEntitlement({ service, userId, requestId: correlationId, operation: meteredOperation, storyId, requestedPageCount: pageNumber, requestedImageCount: 1 });
+      await claimImageGeneration(userId, correlationId, meteredOperation); imageClaimed = true;
       const scene = legacyPageRequest
         ? text(body.text, 'Legacy page text', LIMITS.PROMPT)
         : text(existingPage.data!.illustration_scene || existingPage.data!.text, 'Illustration scene', LIMITS.PROMPT);
@@ -176,8 +190,8 @@ Deno.serve(async (request) => {
       const context = await worldContext(client, storyId, pageNumber); const allCharacters = await storyCharacters(client, story, pageNumber);
       const presentKeys = new Set(Array.isArray(context.scene?.characters_present) ? context.scene.characters_present.filter((value: unknown) => typeof value === 'string') : []);
       const characters = presentKeys.size ? allCharacters.filter((character) => presentKeys.has(character.key)) : allCharacters;
-      const result = await generateImage(pageImagePrompt(scene, story.theme || '', characters, story.art_style, illustrationInstructions, worldIllustrationBlock(context), context.scene?.character_actions || '', context.world?.illustration_style_prompt || '')); const path = `${userId}/${storyId}/pages/${String(pageNumber).padStart(3, '0')}.png`;
-      await uploadImage(client, 'story-images', path, result.blob); await usage({ userId, requestId: correlationId, operation: meteredOperation, storyId, model: result.model, success: true, reservation, providerUsage: result.usage, imageCount: 1, generationKind, pageCount: pageNumber, parentRequestId, imageSize: '1024x1024', imageQuality: 'medium' }); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { image_path: path } }, 200, headers);
+      const result = await generateConfiguredImage({ service, prompt: pageImagePrompt(scene, story.theme || '', characters, story.art_style, illustrationInstructions, worldIllustrationBlock(context), context.scene?.character_actions || '', context.world?.illustration_style_prompt || ''), requiredCapabilities: ['text_to_image'], isPayingCustomer: reservation.planKey !== 'staff_test', requestId: correlationId }); const path = `${userId}/${storyId}/pages/${String(pageNumber).padStart(3, '0')}.${result.extension}`;
+      await uploadImage(client, 'story-images', path, result.blob); await finishImageGeneration(correlationId, 'completed', result.provider, result.model); imageClaimed = false; await usage({ userId, requestId: correlationId, operation: meteredOperation, storyId, model: result.model, success: true, reservation, providerUsage: result.usage, imageCount: 1, generationKind, pageCount: pageNumber, parentRequestId, imageSize: '1024x1024', imageQuality: 'medium' }); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { image_path: path } }, 200, headers);
     }
     if (action === 'suggest-continuation') {
       generationKind = 'continuation_suggestion'; reservation = await assertAiEntitlement({ service, userId, requestId: correlationId, operation: action, storyId });
@@ -206,15 +220,15 @@ Deno.serve(async (request) => {
       await usage({ userId, requestId: correlationId, operation: action, storyId, model: result.model, success: true, reservation, providerUsage: result.usage, generationKind, pageCount: texts.length }); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { translations: value.translations } }, 200, headers);
     }
     if (action === 'generate-cover') {
-      generationKind = 'custom_cover'; const prompt = text(body.prompt, 'Cover prompt', LIMITS.PROMPT); if (!ART_STYLE_PROMPTS[story.art_style]) throw new AppError('VALIDATION', 'Art style is not supported.'); reservation = await assertAiEntitlement({ service, userId, requestId: correlationId, operation: action, storyId, requestedImageCount: 1 });
+      generationKind = 'custom_cover'; const prompt = text(body.prompt, 'Cover prompt', LIMITS.PROMPT); if (!ART_STYLE_PROMPTS[story.art_style]) throw new AppError('VALIDATION', 'Art style is not supported.'); reservation = await assertAiEntitlement({ service, userId, requestId: correlationId, operation: action, storyId, requestedImageCount: 1 }); await claimImageGeneration(userId, correlationId, action); imageClaimed = true;
       const context = await worldContext(client, storyId, 1); const characters = await storyCharacters(client, story, 1);
       const continuityPrompt = `${prompt}\n${worldIllustrationBlock(context)}\n${characters.length ? `Use these locked character identities:\n${characters.map((character, index) => `Character ${index + 1}: ${character.name ? `${character.name}. ` : ''}${character.description}`).join('\n')}` : ''}\nStyle: ${context.world?.illustration_style_prompt || ART_STYLE_PROMPTS[story.art_style]}. No words or text in the image.`;
-      const result = await generateImage(continuityPrompt); const path = `${userId}/${storyId}/cover.png`;
-      await uploadImage(client, 'story-images', path, result.blob); await usage({ userId, requestId: correlationId, operation: action, storyId, model: result.model, success: true, reservation, providerUsage: result.usage, imageCount: 1, generationKind, imageSize: '1024x1024', imageQuality: 'medium' }); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { cover_image_path: path } }, 200, headers);
+      const result = await generateConfiguredImage({ service, prompt: continuityPrompt, requiredCapabilities: ['text_to_image'], isPayingCustomer: reservation.planKey !== 'staff_test', requestId: correlationId }); const path = `${userId}/${storyId}/cover.${result.extension}`;
+      await uploadImage(client, 'story-images', path, result.blob); await finishImageGeneration(correlationId, 'completed', result.provider, result.model); imageClaimed = false; await usage({ userId, requestId: correlationId, operation: action, storyId, model: result.model, success: true, reservation, providerUsage: result.usage, imageCount: 1, generationKind, imageSize: '1024x1024', imageQuality: 'medium' }); await finalizeAiEntitlement(service, reservation); reservation = null; return jsonResponse({ data: { cover_image_path: path } }, 200, headers);
     }
     throw new AppError('VALIDATION', 'Action is not supported.');
   } catch (caught) {
-    await releaseAiEntitlement(service, reservation); const error = safeError(caught); if (userId && action && correlationId) await usage({ userId, requestId: correlationId, operation: action, storyId, model: action.includes('image') || action === 'generate-cover' ? MODELS.IMAGE : MODELS.TEXT, success: false, reservation, generationKind, pageCount: pageCountMetadata, resourceId, parentRequestId, imageSize: action.includes('image') || action === 'generate-cover' ? '1024x1024' : null, imageQuality: action.includes('image') || action === 'generate-cover' ? 'medium' : null, failureStage: failureStage(error.code) });
+    if (imageClaimed) await finishImageGeneration(correlationId, 'failed'); await releaseAiEntitlement(service, reservation); const error = safeError(caught); if (userId && action && correlationId) await usage({ userId, requestId: correlationId, operation: action, storyId, model: action.includes('image') || action === 'generate-cover' ? MODELS.IMAGE : MODELS.TEXT, success: false, reservation, generationKind, pageCount: pageCountMetadata, resourceId, parentRequestId, imageSize: action.includes('image') || action === 'generate-cover' ? '1024x1024' : null, imageQuality: action.includes('image') || action === 'generate-cover' ? 'medium' : null, failureStage: failureStage(error.code) });
     return jsonResponse({ error: { code: error.code, message: error.message } }, error.status, headers);
   }
 });
