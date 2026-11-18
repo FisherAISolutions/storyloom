@@ -4,7 +4,7 @@
 
 ## Current milestone
 
-Multi-provider image generation is implemented locally on `codex/multi-provider-images`; its additive database migration is applied and verified on staging only. Edge Function and frontend staging deployment await Cloudflare credentials. The live production release remains unchanged.
+Multi-provider image generation is implemented locally on `codex/multi-provider-images`; its database migration and `story-ai` Edge Function are deployed and verified on staging only. A frontend staging preview and Owner UI smoke test remain pending. The live production release remains unchanged.
 
 ## Git state
 
@@ -54,6 +54,8 @@ Multi-provider image generation is implemented locally on `codex/multi-provider-
 - Applied migration `20260819000000_multi_provider_image_generation.sql` only to `storyloom-staging` (`wbrjyytwpnpxcwrvtnhv`) after an exact-hash comparison and one-migration dry run.
 - Verified staging migration history, all four provider tables with RLS, zero authenticated table-write grants, anonymous RPC denial, authenticated admin RPC grants, service-role-only event recording, Owner/model guards, three existing public plans, and the existing `reserve_ai_entitlement` function.
 - Verified safe defaults in staging: OpenAI Only, Cloudflare disabled, paid fallback disabled, and a 10,000-neuron Cloudflare ceiling. No image provider was called.
+- Configured `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` as staging-only Supabase secrets without committing plaintext credentials.
+- Deployed staging `story-ai` version 1 with gateway `verify_jwt=false` while retaining mandatory in-function `auth.getUser(token)` authentication; an unauthenticated smoke request returned `401 AUTH_REQUIRED` before provider access.
 
 ## Known bugs and blockers
 
@@ -64,9 +66,10 @@ Multi-provider image generation is implemented locally on `codex/multi-provider-
 - The Starter plan does not currently have a checkout price mapping.
 - Later roadmap features remain unimplemented unless explicitly marked complete in `FEATURE_ROADMAP.md`.
 - Migration `20260819000000_multi_provider_image_generation.sql` is applied to staging but not production.
-- Cloudflare integration requires `CLOUDFLARE_ACCOUNT_ID` and a least-privilege `CLOUDFLARE_API_TOKEN` in Supabase Edge Function secrets; no credentials were configured and no provider call was made.
+- Cloudflare credentials are configured only in staging; no provider call has been made.
 - Cloudflare FLUX commercial output use is supported by BFL developer terms, subject to input consent/usage restrictions. Leonardo commercial terms still need legal/contract verification before enabling its models.
 - Staging has no Owner profile, so Owner UI behavior cannot be smoke-tested until an intended staging account is explicitly assigned; database guards and grants are verified.
+- The repository is not linked to a Vercel preview project and no Vercel CLI is installed; preview environment variables must be configured before a staging frontend can be safely deployed without pointing at production.
 
 ## Architectural decisions
 
@@ -87,4 +90,4 @@ Rollback plan: take a fresh logical production backup before migrations; keep th
 
 ## Next recommended task
 
-Configure staging-only Cloudflare secrets, deploy `story-ai` and a frontend preview against staging, then verify Owner controls without generation. Perform a real low-cost request only after explicit approval. Keep production OpenAI Only until validation passes.
+Identify and explicitly activate the intended staging Owner account, configure a Vercel preview with staging-only Supabase environment variables, and verify Owner controls without generation. Perform a real low-cost request only after explicit approval. Keep production OpenAI Only until validation passes.

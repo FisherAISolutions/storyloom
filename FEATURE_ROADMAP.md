@@ -18,7 +18,7 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 - [x] PDF export.
 - [ ] Character consistency testing — Automated contract coverage exists; end-to-end visual consistency needs verification.
 - [ ] Mobile responsiveness — Needs verification across supported devices.
-- [ ] Multi-provider image generation — Implemented locally and staging migration verified; Edge/frontend staging deployment and integration verification pending.
+- [ ] Multi-provider image generation — Staging migration and Edge Function deployment verified; frontend preview and real provider integration verification pending.
 - [ ] Provider quota, health, and idempotency controls — Implemented locally with mocked/contract coverage and staging schema verification; runtime concurrency verification pending.
 
 ## B. Admin Control Center
