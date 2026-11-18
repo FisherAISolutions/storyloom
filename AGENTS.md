@@ -5,6 +5,7 @@
 MyStorybook AI (formerly Story Loom Kids) is a user-owned React/Vite application backed by Supabase and OpenAI. Preserve the existing UI, prompts, art styles, workflows, and generated-output behavior unless a task explicitly requests a change.
 
 Start with `README.md` for local setup, environment variables, migrations, and deployment.
+At the beginning of future development sessions, also read `DEVELOPMENT_PROGRESS.md` and `FEATURE_ROADMAP.md` so completed work and approval boundaries are not rediscovered or repeated.
 
 ## Architecture and security
 
@@ -27,9 +28,22 @@ Start with `README.md` for local setup, environment variables, migrations, and d
 
 ## Working guidance
 
+- Check Git status before making changes. Never overwrite, discard, reset, or delete uncommitted work.
 - Keep changes focused on the request and preserve project conventions.
+- Preserve existing working functionality and reuse existing code, services, components, and infrastructure.
+- Prioritize useful implementation over lengthy planning. Work in manageable, verifiable milestones.
+- Avoid repeated searches, repository-wide audits, tests, lint runs, and production builds.
 - Maintain ownership checks in both service intent and authoritative RLS/Storage policies.
 - Keep AI usage and future entitlement decisions server-authoritative.
 - Do not change prompts, models, story lengths, generation sequencing, or image behavior unless explicitly requested.
 - Preserve unrelated user changes in a dirty worktree.
-- Run the relevant scripts from `package.json` before finishing code changes.
+- Run focused tests for changed functionality. Run broader regression and security tests when shared systems are affected.
+- Run lint and a production build once near the end of an implementation milestone when appropriate.
+- Never skip essential authentication, authorization, payment, privacy, database-integrity, or security checks.
+- Never use paid APIs for testing without explicit permission.
+- Never deploy, push, modify production, run production migrations, or change secrets without explicit permission.
+- Keep responses and milestone progress reports concise.
+- Stop at approval boundaries defined by the current master development instructions.
+- Do not repeat completed work unless a verified problem requires it.
+- Keep `.supabase-staging-validation/` ignored, untracked, and out of commits.
+- Update `FEATURE_ROADMAP.md` and `DEVELOPMENT_PROGRESS.md` at milestone boundaries, not after every small change.
