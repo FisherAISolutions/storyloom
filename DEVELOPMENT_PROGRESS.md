@@ -4,7 +4,7 @@
 
 ## Current milestone
 
-The first Community Shelf marketplace milestone is implemented locally on `codex/community-marketplace`. It extends the existing shelf rather than creating a second publishing system. No marketplace migration, function, frontend, Stripe payment, or production change has been deployed.
+The Community Shelf marketplace MVP is release-ready locally on `codex/community-marketplace` and validated on optional staging. It extends the existing shelf rather than creating a second publishing system. Affiliate and marketplace production releases are both awaiting explicit approval; no production migration, function, frontend, or payment change was made.
 
 ## Git state
 
@@ -48,8 +48,12 @@ The first Community Shelf marketplace milestone is implemented locally on `codex
 
 - Added a local forward-only Community Shelf marketplace migration with paid listings defaulting off, author profiles, checkout claims, buyer purchases, and author earnings kept separate from affiliate commissions.
 - Added local preview-only public delivery for paid books, active-purchase full access, author storefronts/dashboard, and server-priced one-time Stripe Checkout.
+- Added a Buyer Library backed by durable database purchase entitlements, plus retained buyer access when a seller unlists a book. Moderation, refunds, and chargebacks still revoke access.
+- Added Owner-only Admin controls for the prospective default author earnings amount. Existing listing snapshots and recorded earnings are not changed retroactively.
 - Extended the verified Stripe webhook path to grant purchases idempotently and revoke access/author earnings on refunds or chargebacks. Actual author payouts remain disabled.
-- Focused Community, marketplace, billing, affiliate, and security validation passed: 42 tests. Changed frontend files passed focused lint with no errors, and the production build passed.
+- Production read-only verification confirmed affiliate migration `20260820000000` is not applied, `affiliate-public` is not deployed, and `AFFILIATE_CLICK_SALT` is not configured.
+- Applied affiliate migration `20260820000000`, marketplace migration `20260821000000`, and corrective migration `20260821010000` to staging only. Remote PostgreSQL lint reports no schema errors.
+- Focused Community, marketplace, billing, affiliate, Admin, and security validation passed: 52 tests. Changed frontend files passed focused lint with no errors, and the production build passed.
 - The affiliate/referral MVP remains isolated on `codex/affiliate-referrals` and is not deployed. Its branch has been merged with the current production `main`, preserving both affiliate management and image-provider administration in the shared Admin Control Center.
 - Migrations `20260818000000` and `20260818010000` are applied and verified in staging and production.
 - The Admin Control Center frontend is deployed on production `main`.
@@ -101,4 +105,4 @@ Rollback plan: take a fresh logical production backup before migrations; keep th
 
 ## Next recommended task
 
-Validate the marketplace migration in a disposable or optional staging database if desired, configure the existing Stripe webhook to include one-time Checkout/refund/dispute events, and review the exact deployment order. Add a buyer-library screen before calling the marketplace MVP complete. Do not deploy marketplace or affiliate functionality without explicit approval.
+Obtain final approval for the affiliate production release first. After affiliate verification, obtain separate marketplace approval, confirm Stripe webhook subscriptions include Checkout completion, refunds, and disputes, then apply the two marketplace migrations and deploy only the required functions/frontend. Stripe Connect and automatic payouts remain disabled.

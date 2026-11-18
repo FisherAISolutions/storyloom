@@ -25,3 +25,5 @@ export const updateImageProvider = (setting, reason) => rpc('admin_update_image_
   p_daily_spend_limit_usd: setting.daily_spend_limit_usd, p_reason: reason,
   p_daily_neuron_limit: setting.daily_neuron_limit,
 });
+export const getMarketplaceSettings = () => rpc('get_marketplace_settings');
+export const updateMarketplaceSettings = (cents) => rpc('update_marketplace_settings', { p_default_author_earnings_cents: cents });

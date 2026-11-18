@@ -11,7 +11,7 @@ const webhook=read('supabase/functions/stripe-webhook/index.ts');
 test('marketplace extends Community Shelf without replacing free publishing',()=>{
   assert.match(migration,/alter table public\.community_stories/);
   assert.match(migration,/marketplace_enabled boolean not null default false/);
-  assert.match(publicFn,/fullAccess=!share\.marketplace_enabled/);
+  assert.match(publicFn,/fullAccess=.*!share\.marketplace_enabled/);
 });
 
 test('paid full-book delivery requires ownership or an active webhook-granted purchase',()=>{
@@ -19,6 +19,7 @@ test('paid full-book delivery requires ownership or an active webhook-granted pu
   assert.match(publicFn,/pageQuery=pageQuery\.limit\(share\.preview_page_count\)/);
   assert.doesNotMatch(publicFn,/from\('marketplace_purchases'\)\.insert/);
   assert.match(webhook,/record_marketplace_purchase/);
+  assert.ok(publicFn.indexOf('pageQuery=pageQuery.limit(share.preview_page_count)') < publicFn.indexOf('image_url: await signed(page.image_path)'));
 });
 
 test('listing configuration is owner-bound and protected from direct field edits',()=>{
@@ -42,6 +43,9 @@ test('author earnings remain separate from affiliate commissions and payouts are
   assert.doesNotMatch(migration,/stripe_connect|transfer_id|payout_id|automatic_payout/i);
   assert.match(webhook,/reverse_marketplace_purchase/);
   assert.match(webhook,/reverseAffiliate|reverseCommission/);
+  assert.match(migration,/default_author_earnings_cents/);
+  assert.match(migration,/insert into public\.marketplace_author_earnings/);
+  assert.doesNotMatch(migration,/update public\.marketplace_author_earnings set amount_cents/);
 });
 
 test('financial writes are service-only and buyer access is revoked on refunds or chargebacks',()=>{
@@ -49,4 +53,18 @@ test('financial writes are service-only and buyer access is revoked on refunds o
   assert.match(migration,/auth\.role\(\)<>'service_role'/);
   assert.match(migration,/status=v_status,revoked_at=now\(\)/);
   assert.match(migration,/status='reversed'/);
+  assert.match(migration,/unique references public\.marketplace_purchases/);
+});
+
+test('buyer entitlements survive seller unlisting but not moderation or reversal',()=>{
+  assert.match(migration,/marketplace_seller_unlisted/);
+  assert.match(publicFn,/retainedBuyerAccess=!publiclyListed&&share\.marketplace_seller_unlisted&&purchased/);
+  assert.match(publicFn,/buyer_user_id.*status','active'/s);
+  assert.match(publicFn,/body\.action==='library'/);
+});
+
+test('only Owners can change the prospective author earnings default',()=>{
+  assert.match(migration,/p\.role='owner'/);
+  assert.match(migration,/get_marketplace_settings/);
+  assert.match(migration,/update_marketplace_settings/);
 });

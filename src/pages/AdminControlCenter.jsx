@@ -14,12 +14,14 @@ export default function AdminControlCenter() {
   const [busy, setBusy] = useState(false);
   const [affiliates, setAffiliates] = useState([]);
   const [providers, setProviders] = useState(null);
+  const [marketplaceSettings, setMarketplaceSettings] = useState(null);
 
   async function load(term = search) {
     setBusy(true); setError('');
     try {
-      const [controlCenter, affiliateRows, imageProviders] = await Promise.all([admin.getControlCenter(term), admin.getAffiliates(), admin.getImageProviders()]);
-      setData(controlCenter); setAffiliates(affiliateRows || []); setProviders(imageProviders);
+      const controlCenter = await admin.getControlCenter(term);
+      const [affiliateRows, imageProviders, marketplace] = await Promise.all([admin.getAffiliates(), admin.getImageProviders(), controlCenter.actor_role === 'owner' ? admin.getMarketplaceSettings() : Promise.resolve(null)]);
+      setData(controlCenter); setAffiliates(affiliateRows || []); setProviders(imageProviders); setMarketplaceSettings(marketplace);
     }
     catch (caught) { setError(caught?.message || 'The Admin Control Center could not be loaded.'); }
     setBusy(false);
@@ -91,6 +93,14 @@ export default function AdminControlCenter() {
     setProviders((current) => ({ ...current, settings: current.settings.map((setting) => setting.provider_key === key ? { ...setting, ...changes } : setting) }));
   }
 
+  async function saveMarketplaceSettings() {
+    const dollars = Number(window.prompt('Default author earnings per eligible digital sale:', String((marketplaceSettings?.default_author_earnings_cents || 500) / 100)));
+    if (!Number.isFinite(dollars) || dollars < 0 || dollars > 50) return;
+    setBusy(true); setError('');
+    try { await admin.updateMarketplaceSettings(Math.round(dollars * 100)); await load(); }
+    catch (caught) { setError(caught?.message || 'Marketplace settings could not be saved.'); setBusy(false); }
+  }
+
   if (!data && busy) return <div className="flex justify-center py-24"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   const overview = data?.overview || {};
   return <div className="space-y-8">
@@ -118,7 +128,7 @@ export default function AdminControlCenter() {
       </div>)}</div>
       <div className="mt-5 grid gap-3 md:grid-cols-2"><div><h3 className="font-semibold">Usage · last 7 days</h3>{(providers?.daily_usage || []).map((row) => <p key={`${row.provider_key}-${row.usage_date}`} className="mt-1 text-sm text-stone-600">{row.usage_date} · {row.provider_key}: {row.success_count}/{row.request_count} succeeded · {money(row.estimated_cost_usd)}</p>)}</div><div><h3 className="font-semibold">Recent provider events</h3>{(providers?.recent_events || []).slice(0, 8).map((event) => <p key={event.id} className="mt-1 text-sm text-stone-600">{event.provider_key} · {event.model_key} · {event.outcome}{event.failure_reason ? ` (${event.failure_reason})` : ''}</p>)}</div></div>
     </section>
-    <section className="rounded-3xl border bg-white p-5"><h2 className="font-display text-2xl font-semibold">Affiliate management</h2><p className="mt-1 text-sm text-stone-500">Approve applicants, configure commissions, and review referral performance. Payouts remain manual.</p><div className="mt-4 overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b text-stone-500"><th className="p-2">Affiliate</th><th className="p-2">Status</th><th className="p-2">Commission</th><th className="p-2">Performance</th><th className="p-2">Earnings</th><th className="p-2">Actions</th></tr></thead><tbody>{affiliates.map((row)=><tr key={row.id} className="border-b"><td className="p-2">{row.display_name}<div className="text-xs text-stone-400">{row.email}</div></td><td className="p-2 capitalize">{row.status}</td><td className="p-2">{(row.commission_bps/100).toFixed(2)}%</td><td className="p-2">{row.clicks} clicks · {row.signups} signups · {row.conversions} sales</td><td className="p-2">{money(row.earnings_cents/100)}</td><td className="p-2"><div className="flex gap-2"><Button size="sm" variant="outline" disabled={busy||data?.actor_role!=='owner'} onClick={()=>void reviewAffiliate(row,'approved')}>Approve</Button><Button size="sm" variant="outline" disabled={busy||data?.actor_role!=='owner'} onClick={()=>void reviewAffiliate(row,'suspended')}>Suspend</Button></div></td></tr>)}</tbody></table></div></section>
+    {data?.actor_role==='owner'&&marketplaceSettings&&<section className="rounded-3xl border bg-white p-5"><h2 className="font-display text-2xl font-semibold">Marketplace economics</h2><p className="mt-1 text-sm text-stone-500">The default applies only when a book is newly offered for sale or repriced. Existing purchase earnings never change retroactively.</p><div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-stone-50 p-4"><div><p className="font-semibold">Default author earnings</p><p className="text-sm text-stone-500">${(marketplaceSettings.default_author_earnings_cents/100).toFixed(2)} per eligible sale</p></div><Button variant="outline" disabled={busy} onClick={()=>void saveMarketplaceSettings()}>Change default</Button></div></section>}
     <section className="rounded-3xl border bg-white p-5"><h2 className="flex items-center gap-2 font-display text-2xl font-semibold"><ShieldCheck className="h-5 w-5" />Administrative activity</h2><div className="mt-4 space-y-2">{(data?.audit || []).map((entry) => <div key={entry.id} className="rounded-xl bg-stone-50 p-3 text-sm"><span className="font-medium">{entry.action}</span><span className="ml-2 text-stone-500">{new Date(entry.created_at).toLocaleString()}</span></div>)}</div></section>
   </div>;
 }

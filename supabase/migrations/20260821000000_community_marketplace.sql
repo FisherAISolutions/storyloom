@@ -13,6 +13,8 @@ create table public.author_profiles (
 
 alter table public.community_stories
   add column marketplace_enabled boolean not null default false,
+  add column marketplace_sales_enabled boolean not null default false,
+  add column marketplace_seller_unlisted boolean not null default false,
   add column marketplace_description text check (marketplace_description is null or char_length(marketplace_description) <= 2000),
   add column price_cents integer check (price_cents is null or price_cents between 699 and 5000),
   add column currency text not null default 'usd' check (currency = 'usd'),
@@ -20,7 +22,7 @@ alter table public.community_stories
   add column author_earnings_cents integer check (author_earnings_cents is null or author_earnings_cents >= 0);
 
 alter table public.community_stories add constraint community_marketplace_price_check check (
-  (marketplace_enabled = false and price_cents is null and author_earnings_cents is null)
+  (marketplace_enabled = false and marketplace_sales_enabled = false and price_cents is null and author_earnings_cents is null)
   or (marketplace_enabled = true and price_cents is not null and author_earnings_cents between 0 and price_cents)
 );
 
@@ -84,15 +86,19 @@ returns trigger language plpgsql security definer set search_path='' as $$
 begin
   if current_setting('app.marketplace_config',true) is distinct from 'allowed' then
     new.marketplace_enabled:=old.marketplace_enabled;
+    new.marketplace_sales_enabled:=old.marketplace_sales_enabled;
+    new.marketplace_seller_unlisted:=old.marketplace_seller_unlisted;
     new.marketplace_description:=old.marketplace_description;
     new.price_cents:=old.price_cents;
     new.currency:=old.currency;
     new.preview_page_count:=old.preview_page_count;
     new.author_earnings_cents:=old.author_earnings_cents;
   end if;
-  if not public.is_admin() and old.marketplace_enabled and new.status<>'published'
-     and exists(select 1 from public.marketplace_purchases mp where mp.community_story_id=old.id and mp.status='active') then
-    raise exception 'SOLD_LISTING_LOCKED';
+  if old.marketplace_enabled and new.status is distinct from old.status then
+    if new.status='published' then new.marketplace_seller_unlisted:=false;
+    elsif not public.is_admin() and auth.uid()=old.user_id then new.marketplace_seller_unlisted:=true;
+    else new.marketplace_seller_unlisted:=false;
+    end if;
   end if;
   return new;
 end; $$;
@@ -116,20 +122,23 @@ create policy "Authors read their earnings" on public.marketplace_author_earning
 
 create or replace function public.configure_marketplace_listing(p_story_id uuid,p_enabled boolean,p_price_cents integer default null,p_description text default null,p_preview_page_count integer default 2)
 returns public.community_stories language plpgsql security definer set search_path='' as $$
-declare v_user uuid := auth.uid(); v_share public.community_stories; v_pages integer; v_earnings integer;
+declare v_user uuid := auth.uid(); v_share public.community_stories; v_pages integer; v_earnings integer; v_has_sales boolean;
 begin
   if v_user is null then raise exception 'AUTH_REQUIRED'; end if;
-  select cs,s.page_count into v_share,v_pages from public.community_stories cs join public.stories s on s.id=cs.story_id and s.user_id=cs.user_id where cs.story_id=p_story_id and cs.user_id=v_user for update;
+  select cs.* into v_share from public.community_stories cs where cs.story_id=p_story_id and cs.user_id=v_user for update;
   if not found then raise exception 'STORY_NOT_PUBLISHED'; end if;
+  select s.page_count into v_pages from public.stories s where s.id=v_share.story_id and s.user_id=v_user;
   if v_share.status <> 'published' then raise exception 'STORY_NOT_PUBLISHED'; end if;
   if p_enabled then
     if v_pages < 4 then raise exception 'STORY_NOT_ELIGIBLE'; end if;
     if not exists(select 1 from public.author_profiles ap where ap.user_id=v_user) then raise exception 'AUTHOR_PROFILE_REQUIRED'; end if;
     if p_price_cents is null or p_price_cents not between 699 and 5000 then raise exception 'PRICE_INVALID'; end if;
     select least(p_price_cents,ms.default_author_earnings_cents) into v_earnings from public.marketplace_settings ms where ms.id=true;
+  else
+    select exists(select 1 from public.marketplace_purchases mp where mp.community_story_id=v_share.id and mp.status='active') into v_has_sales;
   end if;
   perform set_config('app.marketplace_config','allowed',true);
-  update public.community_stories set marketplace_enabled=p_enabled,marketplace_description=case when p_enabled then nullif(trim(p_description),'') else null end,price_cents=case when p_enabled then p_price_cents else null end,preview_page_count=case when p_enabled then p_preview_page_count else 2 end,author_earnings_cents=case when p_enabled then v_earnings else null end where id=v_share.id returning * into v_share;
+  update public.community_stories set marketplace_enabled=case when p_enabled then true when v_has_sales then true else false end,marketplace_sales_enabled=p_enabled,marketplace_description=case when p_enabled then nullif(trim(p_description),'') when v_has_sales then marketplace_description else null end,price_cents=case when p_enabled then p_price_cents when v_has_sales then price_cents else null end,preview_page_count=case when p_enabled then p_preview_page_count when v_has_sales then preview_page_count else 2 end,author_earnings_cents=case when p_enabled then v_earnings when v_has_sales then author_earnings_cents else null end where id=v_share.id returning * into v_share;
   return v_share;
 end; $$;
 
@@ -139,7 +148,7 @@ declare v_user uuid:=auth.uid(); v_share public.community_stories; v_id uuid;
 begin
   if v_user is null then raise exception 'AUTH_REQUIRED'; end if;
   update public.marketplace_checkout_requests set status='expired',updated_at=now() where buyer_user_id=v_user and status='pending' and expires_at<=now();
-  select * into v_share from public.community_stories where public_slug=p_slug and status='published' and marketplace_enabled=true;
+  select * into v_share from public.community_stories where public_slug=p_slug and status='published' and marketplace_enabled=true and marketplace_sales_enabled=true;
   if not found then raise exception 'LISTING_UNAVAILABLE'; end if;
   if v_share.user_id=v_user then raise exception 'SELF_PURCHASE'; end if;
   if exists(select 1 from public.marketplace_purchases mp where mp.community_story_id=v_share.id and mp.buyer_user_id=v_user and mp.status='active') then raise exception 'ALREADY_PURCHASED'; end if;
@@ -182,7 +191,7 @@ create or replace function public.get_author_marketplace_dashboard()
 returns jsonb language sql stable security definer set search_path='' as $$
   select jsonb_build_object(
     'profile',(select to_jsonb(ap) - 'user_id' from public.author_profiles ap where ap.user_id=auth.uid()),
-    'listings',coalesce((select jsonb_agg(jsonb_build_object('story_id',cs.story_id,'slug',cs.public_slug,'title',s.title,'status',cs.status,'enabled',cs.marketplace_enabled,'price_cents',cs.price_cents,'description',cs.marketplace_description,'preview_page_count',cs.preview_page_count,'author_earnings_cents',cs.author_earnings_cents)) from public.community_stories cs join public.stories s on s.id=cs.story_id where cs.user_id=auth.uid()),'[]'::jsonb),
+    'listings',coalesce((select jsonb_agg(jsonb_build_object('story_id',cs.story_id,'slug',cs.public_slug,'title',s.title,'status',cs.status,'enabled',cs.marketplace_sales_enabled,'is_paid',cs.marketplace_enabled,'price_cents',cs.price_cents,'description',cs.marketplace_description,'preview_page_count',cs.preview_page_count,'author_earnings_cents',cs.author_earnings_cents)) from public.community_stories cs join public.stories s on s.id=cs.story_id where cs.user_id=auth.uid()),'[]'::jsonb),
     'sales',coalesce((select count(*) from public.marketplace_purchases mp where mp.author_user_id=auth.uid() and mp.status='active'),0),
     'pending_earnings_cents',coalesce((select sum(me.amount_cents) from public.marketplace_author_earnings me where me.author_user_id=auth.uid() and me.status in ('pending','available')),0)
   );
@@ -196,10 +205,17 @@ begin
   update public.marketplace_settings set default_author_earnings_cents=p_default_author_earnings_cents,updated_at=now(),updated_by=auth.uid() where id=true;
 end; $$;
 
-revoke all on function public.configure_marketplace_listing(uuid,boolean,integer,text,integer),public.claim_marketplace_checkout(text,uuid),public.complete_marketplace_checkout_request(uuid,text,boolean),public.record_marketplace_purchase(text,text,text,uuid,uuid,integer,text),public.reverse_marketplace_purchase(text,text,text),public.get_author_marketplace_dashboard(),public.update_marketplace_settings(integer) from public,anon,authenticated;
+create or replace function public.get_marketplace_settings()
+returns jsonb language plpgsql stable security definer set search_path='' as $$
+begin
+  if not exists(select 1 from public.profiles p where p.id=auth.uid() and p.role='owner') then raise exception 'OWNER_REQUIRED'; end if;
+  return (select jsonb_build_object('default_author_earnings_cents',ms.default_author_earnings_cents,'updated_at',ms.updated_at) from public.marketplace_settings ms where ms.id=true);
+end; $$;
+
+revoke all on function public.configure_marketplace_listing(uuid,boolean,integer,text,integer),public.claim_marketplace_checkout(text,uuid),public.complete_marketplace_checkout_request(uuid,text,boolean),public.record_marketplace_purchase(text,text,text,uuid,uuid,integer,text),public.reverse_marketplace_purchase(text,text,text),public.get_author_marketplace_dashboard(),public.update_marketplace_settings(integer),public.get_marketplace_settings() from public,anon,authenticated;
 grant execute on function public.configure_marketplace_listing(uuid,boolean,integer,text,integer),public.claim_marketplace_checkout(text,uuid),public.get_author_marketplace_dashboard() to authenticated;
 grant execute on function public.complete_marketplace_checkout_request(uuid,text,boolean),public.record_marketplace_purchase(text,text,text,uuid,uuid,integer,text),public.reverse_marketplace_purchase(text,text,text) to service_role;
-grant execute on function public.update_marketplace_settings(integer) to authenticated;
+grant execute on function public.update_marketplace_settings(integer),public.get_marketplace_settings() to authenticated;
 
 comment on table public.marketplace_purchases is 'Server-authoritative digital book access granted only by verified Stripe webhooks.';
 comment on table public.marketplace_author_earnings is 'Author earnings ledger, separate from affiliate commissions. No payout authority is implemented.';

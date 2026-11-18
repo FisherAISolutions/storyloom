@@ -21,7 +21,7 @@ Deno.serve(async (request) => {
     if (claimed.error || !claimed.data) throw new BillingError('CHECKOUT_UNAVAILABLE', 'This book cannot be purchased right now.', 409);
     claimId = claimed.data;
 
-    const listing = await service.from('community_stories').select('id,user_id,public_slug,price_cents,currency,stories!inner(title)').eq('public_slug', body.slug).eq('status', 'published').eq('marketplace_enabled', true).maybeSingle();
+    const listing = await service.from('community_stories').select('id,user_id,public_slug,price_cents,currency,stories!inner(title)').eq('public_slug', body.slug).eq('status', 'published').eq('marketplace_enabled', true).eq('marketplace_sales_enabled',true).maybeSingle();
     if (listing.error || !listing.data) throw new BillingError('LISTING_UNAVAILABLE', 'This book is no longer available.', 409);
     const customer = await customerFor(user);
     const origin = appUrl();

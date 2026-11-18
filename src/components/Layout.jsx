@@ -86,6 +86,7 @@ export default function Layout() {
             <Link to="/community" className="hover:text-stone-900">Community</Link>
             <Link to="/affiliate" className="hover:text-stone-900">Affiliates</Link>
             {user&&<Link to="/author" className="hover:text-stone-900">Author dashboard</Link>}
+            {user&&<Link to="/purchases" className="hover:text-stone-900">Purchased books</Link>}
             <Link to="/privacy" className="hover:text-stone-900">Privacy</Link>
             <Link to="/terms" className="hover:text-stone-900">Terms</Link>
             <Link to="/support" className="hover:text-stone-900">Support</Link>

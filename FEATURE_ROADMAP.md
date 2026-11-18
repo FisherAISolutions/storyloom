@@ -74,8 +74,8 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 - [ ] Book descriptions and metadata — Paid descriptions and price metadata are implemented locally; deployment pending.
 - [ ] Preview pages — Preview-only delivery for unpaid viewers is implemented locally; deployment pending.
 - [ ] Digital checkout — Authenticated server-priced Stripe Checkout is implemented locally; live configuration and verification pending.
-- [ ] Buyer library — Purchase access is implemented locally; a dedicated buyer-library UI remains.
-- [ ] Seller earnings — Separate author earnings ledger and summary are implemented locally; deployment pending and payouts disabled.
+- [ ] Buyer library — Durable database entitlements and a Purchased Books UI are implemented locally and staging schema is validated; production deployment pending.
+- [ ] Seller earnings — Separate non-retroactive author earnings ledger, Owner default control, and seller summary are implemented locally; deployment pending and payouts disabled.
 - [ ] Moderation and reporting — Existing Community moderation applies to listings; marketplace-specific reports remain.
 - [ ] SEO and social sharing.
 - [ ] Related books.

@@ -33,6 +33,7 @@ const AffiliateReferral = lazy(() => import('@/pages/AffiliateReferral'));
 const AffiliateDashboard = lazy(() => import('@/pages/AffiliateDashboard'));
 const AuthorStorefront = lazy(() => import('@/pages/AuthorStorefront'));
 const AuthorDashboard = lazy(() => import('@/pages/AuthorDashboard'));
+const BuyerLibrary = lazy(() => import('@/pages/BuyerLibrary'));
 
 const withPageLoader = (page) => (
   <Suspense fallback={<div className="flex justify-center py-24">Loading…</div>}>
@@ -84,6 +85,7 @@ function AppRoutes() {
           <Route path="/billing/success" element={withPageLoader(<BillingSuccess />)} />
           <Route path="/affiliate" element={withPageLoader(<AffiliateDashboard />)} />
           <Route path="/author" element={withPageLoader(<AuthorDashboard />)} />
+          <Route path="/purchases" element={withPageLoader(<BuyerLibrary />)} />
           <Route element={<AdminRoute />}>
             <Route path="/admin" element={withPageLoader(<AdminControlCenter />)} />
             <Route path="/admin/ai-economics" element={withPageLoader(<AdminAiEconomics />)} />
