@@ -4,7 +4,7 @@
 
 ## Current milestone
 
-The affiliate/referral program is deployed and verified in production at commit `46ee725`. The Community Shelf marketplace MVP is release-ready locally on `codex/community-marketplace`, validated on optional staging, and awaiting separate production approval.
+Marketplace Personalization is implemented locally on `codex/marketplace-personalization`, building on the completed marketplace and Interactive Reader branches. It remains undeployed and its forward migration has not been applied.
 
 ## Git state
 
@@ -46,6 +46,10 @@ The affiliate/referral program is deployed and verified in production at commit 
 
 ## Work in progress
 
+- Implemented optional author-controlled personalization per published book, with existing listings defaulting off and customization limited to an approved story character and author-selected name, appearance, and clothing fields.
+- Implemented an authenticated buyer workflow that requires active purchase entitlement for paid books, shows an image-credit estimate, requires explicit confirmation, and creates an idempotent private buyer-owned copy without copying source image paths.
+- Personalized copies clone immutable Character Bible snapshots, World Bible locations/scenes, and appearance transitions; illustration generation uses the existing metered `generate-page-image` path and can resume missing pages without regenerating completed pages.
+- Added personalized editions to the Buyer Library and existing owner-only Interactive Reader route. Original author attribution is retained. Focused marketplace/personalization, billing, security, continuity, and reader checks passed (59 tests); focused lint and the production build passed. No AI request was made.
 - Completed local Interactive Reader Phase 2 hardening: serialized rapid navigation, synchronized cancellation/restart of narration, nearby authorized-image preloading, missing-media fallbacks, improved opening/closing/fullscreen behavior, browser voice selection, and reliable audio controls. Added backward-compatible optional page-media adapters for cached narration audio/timing metadata and visible-page-only animation with static fallback; no generation, pricing, schema, or paid API work was added.
 - Completed the local Interactive Storybook Reader milestone on `codex/interactive-storybook-reader`: realistic hardcover/opening and page-turn presentation, desktop spreads, mobile pages, fullscreen bedtime mode, keyboard/swipe/button navigation, local reading-position resume, browser speech narration with sentence highlighting and automatic advancement, and accessible reduced-motion/fallback behavior. Owner books use authenticated RLS/Storage paths; marketplace readers receive only the existing server-authorized purchased/free/preview payload. Deployment remains pending.
 - Completed the local marketplace visual-experience milestone: curved featured/new-book carousel with keyboard, swipe, responsive and reduced-motion support; searchable/filterable Community Shelf; redesigned access-aware book detail/preview experience; and polished author storefront catalogs. Existing entitlement, purchase, affiliate, earnings, and moderation paths are unchanged. Focused marketplace/community tests, lint, and the production build passed; deployment remains pending.
@@ -109,4 +113,4 @@ Rollback plan: take a fresh logical production backup before migrations; keep th
 
 ## Next recommended task
 
-Obtain separate marketplace production approval, confirm Stripe webhook subscriptions include Checkout completion, refunds, and disputes, then apply the two marketplace migrations and deploy only the required functions/frontend. Stripe Connect and automatic payouts remain disabled.
+Review and validate `20260822000000_marketplace_personalization.sql` against a disposable or approved target before any release. Marketplace production deployment, Stripe readiness, and all paid AI testing remain separate approval boundaries.

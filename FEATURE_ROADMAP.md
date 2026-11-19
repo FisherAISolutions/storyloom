@@ -127,15 +127,15 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 
 ## I. Personalized Marketplace Books
 
-- [ ] Author-enabled personalization.
-- [ ] Buyer personalization workflow.
-- [ ] Private child character information.
-- [ ] Personalized illustration generation.
-- [ ] Personalized buyer copies.
-- [ ] AI cost accounting.
+- [ ] Author-enabled personalization — Implemented locally with per-book opt-in, character selection, and field-level scope; deployment pending.
+- [ ] Buyer personalization workflow — Implemented locally for saved Character Bibles with purchase enforcement and explicit confirmation; deployment pending.
+- [ ] Private child character information — Buyer data and copies remain owner-scoped under RLS/private Storage; database validation and deployment pending.
+- [ ] Personalized illustration generation — Uses the existing entitlement-metered page generator and resumable missing-page flow; no paid live test performed.
+- [ ] Personalized buyer copies — Private copies and Buyer Library/Interactive Reader integration are implemented locally; deployment pending.
+- [ ] AI cost accounting — Image-credit estimate and existing per-image entitlement reservations are implemented; final standalone personalization pricing is intentionally unresolved.
 - [ ] Personalized digital checkout.
 - [ ] Personalized physical book ordering.
-- [ ] Privacy and publishing protections.
+- [ ] Privacy and publishing protections — Source images are never copied, author originals remain immutable, and public APIs expose only safe offer metadata; deployment verification pending.
 
 ## J. Creator & Business Tools
 
