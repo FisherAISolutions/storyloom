@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { BookHeart, BookOpen, ChevronLeft, ChevronRight, Loader2, LockKeyhole, Package, Sparkles, UserRound } from 'lucide-react';
+import { BookHeart, BookOpen, ChevronLeft, Loader2, LockKeyhole, Package, Sparkles, UserRound } from 'lucide-react';
+import InteractiveStorybookReader from '@/components/storybook/InteractiveStorybookReader';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/AuthContext';
 import * as community from '@/services/community';
@@ -10,12 +11,11 @@ const label = (value) => value ? String(value).replace(/[-_]/g,' ').replace(/\b\
 
 export default function PublicStory(){
   const {slug}=useParams();const location=useLocation();const navigate=useNavigate();const {isAuthenticated}=useAuth();
-  const [story,setStory]=useState(null);const [current,setCurrent]=useState(-1);const [error,setError]=useState('');const [buying,setBuying]=useState(false);
+  const [story,setStory]=useState(null);const [error,setError]=useState('');const [buying,setBuying]=useState(false);
   useEffect(()=>{community.getPublished(slug).then(setStory).catch((e)=>setError(e.message));},[slug,isAuthenticated]);
   async function buy(){if(!isAuthenticated){navigate(`/login?returnTo=${encodeURIComponent(location.pathname)}`);return;}setBuying(true);setError('');try{const {url}=await marketplace.createCheckout(slug);window.location.assign(url);}catch(e){setError(e.message);setBuying(false);}}
-  function startReading(){setCurrent(0);requestAnimationFrame(()=>document.getElementById('book-reader')?.scrollIntoView({behavior:'smooth',block:'start'}));}
+  function startReading(){document.getElementById('book-reader')?.scrollIntoView({behavior:'smooth',block:'start'});}
   if(error&&!story)return <div className="py-24 text-center">{error}</div>;if(!story)return <Loader2 className="mx-auto mt-24 h-8 w-8 animate-spin"/>;
-  const indices=current<0?[]:[current,current+1].filter((i)=>story.pages[i]);const shownCount=story.pages.length;
   const state=!story.is_paid?'Free to read':story.has_full_access?'Full book unlocked':story.available_for_purchase?'Preview available':'Preview only';
   return <div className="space-y-10">
     <Link to="/community" className="inline-flex items-center gap-1 text-sm font-medium text-stone-500 transition hover:text-[#087f7c]"><ChevronLeft className="h-4 w-4"/>Back to Community Shelf</Link>
@@ -33,6 +33,6 @@ export default function PublicStory(){
 
     <section className="grid gap-4 md:grid-cols-2" aria-label="Future book options"><div className="rounded-3xl border border-dashed border-[#8dc8c4] bg-[#f3fbfa] p-5"><div className="flex items-start gap-3"><Sparkles className="mt-1 h-5 w-5 text-[#087f7c]"/><div><h2 className="font-display text-xl font-semibold text-[#12304b]">Personalize this adventure</h2><p className="mt-1 text-sm leading-6 text-stone-600">Future option: create a private copy personalized for your family.</p><span className="mt-3 inline-block rounded-full bg-white px-3 py-1 text-xs font-semibold text-stone-500">Coming soon</span></div></div></div><div className="rounded-3xl border border-dashed border-amber-300 bg-amber-50/60 p-5"><div className="flex items-start gap-3"><Package className="mt-1 h-5 w-5 text-amber-700"/><div><h2 className="font-display text-xl font-semibold text-[#12304b]">Order a printed copy</h2><p className="mt-1 text-sm leading-6 text-stone-600">Future option: turn this digital story into a professionally printed keepsake.</p><span className="mt-3 inline-block rounded-full bg-white px-3 py-1 text-xs font-semibold text-stone-500">Coming soon</span></div></div></div></section>
 
-    <section id="book-reader" className="scroll-mt-24 space-y-5 rounded-[2.5rem] bg-stone-50 p-4 md:p-7" aria-labelledby="reader-heading"><div className="text-center"><p className="text-xs font-semibold uppercase tracking-[.2em] text-[#087f7c]">Story reader</p><h2 id="reader-heading" className="mt-1 font-display text-3xl font-semibold text-[#12304b]">{current<0?'Open the cover':'Turn the pages'}</h2></div><div className="flex items-center justify-center gap-4"><Button size="icon" variant="outline" className="rounded-full bg-white" onClick={()=>setCurrent(current<=0?-1:Math.max(0,current-2))} disabled={current<0} aria-label="Previous spread"><ChevronLeft/></Button><span className="min-w-36 text-center text-sm font-semibold">{current<0?'Cover':`Pages ${current+1}${indices.length>1?`–${current+2}`:''} of ${story.has_full_access?story.page_count:shownCount}`}</span><Button size="icon" variant="outline" className="rounded-full bg-white" onClick={()=>setCurrent(current<0?0:Math.min(shownCount-1,current+2))} disabled={current>=shownCount-2} aria-label="Next spread"><ChevronRight/></Button></div>{current<0?<button type="button" onClick={startReading} className="mx-auto block aspect-[3/4] w-full max-w-md overflow-hidden rounded-3xl border-[10px] border-[#79512e] shadow-2xl focus-visible:ring-2 focus-visible:ring-[#087f7c]" aria-label="Open book and begin reading"><img src={story.cover_url} alt={`Cover of ${story.title}`} className="h-full w-full object-cover"/></button>:<div className="storybook-spread mx-auto grid aspect-[1.55/1] max-w-6xl grid-cols-1 rounded-3xl bg-[#79512e] p-2 shadow-2xl md:grid-cols-2">{indices.map((i)=><div key={i} className="storybook-page relative overflow-hidden rounded-2xl"><img src={story.pages[i].image_url} alt={`Illustration for page ${i+1}`} className="h-full w-full object-cover"/><div className="storybook-page-text absolute inset-x-5 bottom-5 rounded-xl border border-white/70 bg-[#fffaf0]/95 p-4 font-display font-semibold leading-relaxed text-[#102a43] shadow-xl backdrop-blur">{story.pages[i].text}</div></div>)}</div>}</section>
+    <div id="book-reader" className="scroll-mt-24"><InteractiveStorybookReader title={story.title} pages={story.pages} coverUrl={story.cover_url} readerKey={`community:${story.slug}`} accessLabel={!story.is_paid?'Free community book':story.has_full_access?'Purchased book':`Authorized ${story.preview_page_count}-page preview`}/></div>
   </div>;
 }

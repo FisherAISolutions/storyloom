@@ -40,11 +40,8 @@ export default function Library() {
       ) : (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
           {stories.map((s) => (
-            <Link
-              key={s.id}
-              to={`/story/${s.id}`}
-              className="group overflow-hidden rounded-2xl border border-stone-200 bg-white transition hover:-translate-y-1 hover:shadow-xl hover:shadow-stone-200"
-            >
+            <article key={s.id} className="group overflow-hidden rounded-2xl border border-stone-200 bg-white transition hover:-translate-y-1 hover:shadow-xl hover:shadow-stone-200">
+              <Link to={s.status==='ready'?`/story/${s.id}/read`:`/story/${s.id}`} aria-label={`${s.status==='ready'?'Read':'Edit'} ${s.title}`}>
               <div className="relative aspect-[3/4] overflow-hidden bg-stone-100">
                 {s.cover_image_path ? (
                   <PrivateImage bucket={STORAGE_BUCKETS.STORY_IMAGES} path={s.cover_image_path} alt={s.title} fittingType="fill" className="h-full w-full transition duration-500 group-hover:scale-105" fallback={<div className="flex h-full items-center justify-center"><BookOpen className="h-8 w-8 text-stone-300" /></div>} />
@@ -55,11 +52,13 @@ export default function Library() {
                   <span className="absolute right-2 top-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">painting…</span>
                 )}
               </div>
+              </Link>
               <div className="p-3">
                 <h3 className="font-display text-sm font-semibold leading-snug line-clamp-2">{s.title}</h3>
                 {s.summary && <p className="mt-1 line-clamp-2 text-xs text-stone-400">{s.summary}</p>}
+                <div className="mt-3 flex gap-2 border-t border-stone-100 pt-3">{s.status==='ready'&&<Link to={`/story/${s.id}/read`} className="rounded-full bg-[#087f7c] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#066a68]">Read</Link>}<Link to={`/story/${s.id}`} className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-600 hover:border-stone-400">Edit</Link></div>
               </div>
-            </Link>
+            </article>
           ))}
         </div>
       )}

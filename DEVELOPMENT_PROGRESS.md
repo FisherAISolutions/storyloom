@@ -46,6 +46,7 @@ The affiliate/referral program is deployed and verified in production at commit 
 
 ## Work in progress
 
+- Completed the local Interactive Storybook Reader milestone on `codex/interactive-storybook-reader`: realistic hardcover/opening and page-turn presentation, desktop spreads, mobile pages, fullscreen bedtime mode, keyboard/swipe/button navigation, local reading-position resume, browser speech narration with sentence highlighting and automatic advancement, and accessible reduced-motion/fallback behavior. Owner books use authenticated RLS/Storage paths; marketplace readers receive only the existing server-authorized purchased/free/preview payload. Deployment remains pending.
 - Completed the local marketplace visual-experience milestone: curved featured/new-book carousel with keyboard, swipe, responsive and reduced-motion support; searchable/filterable Community Shelf; redesigned access-aware book detail/preview experience; and polished author storefront catalogs. Existing entitlement, purchase, affiliate, earnings, and moderation paths are unchanged. Focused marketplace/community tests, lint, and the production build passed; deployment remains pending.
 - Added a local forward-only Community Shelf marketplace migration with paid listings defaulting off, author profiles, checkout claims, buyer purchases, and author earnings kept separate from affiliate commissions.
 - Added local preview-only public delivery for paid books, active-purchase full access, author storefronts/dashboard, and server-priced one-time Stripe Checkout.

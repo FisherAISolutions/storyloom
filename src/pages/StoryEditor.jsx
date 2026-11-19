@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { BookOpen, Download, Globe2, Info, Loader2, Palette, Pencil, Plus, RefreshCw, Save } from 'lucide-react';
+import { BookOpen, Download, Eye, Globe2, Info, Loader2, Palette, Pencil, Plus, RefreshCw, Save } from 'lucide-react';
 import { generatePageImage, translateStory } from '@/lib/storyStudio';
 import { downloadStoryPdf } from '@/lib/storyPdf';
 import { invalidatePageTranslations, shouldSyncCoverForPage } from '@/lib/storyState';
@@ -203,6 +203,7 @@ export default function StoryEditor() {
           {story.summary && <p className="mt-1 max-w-2xl text-sm text-stone-500">{story.summary}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-2" aria-label="Story tools">
+          <Button asChild variant="outline" size="sm" className="rounded-full bg-white"><Link to={`/story/${story.id}/read`}><Eye className="mr-1.5 h-3.5 w-3.5"/> Read</Link></Button>
           <Button onClick={() => setContinueOpen(true)} variant="outline" size="sm" className="rounded-full bg-white"><Plus className="mr-1.5 h-3.5 w-3.5" /> Continue</Button>
           <LanguagePicker value={language} onChange={changeLanguage} translating={translating} />
           <Button onClick={() => setCoverOpen(true)} variant="outline" size="sm" className="rounded-full bg-white"><Palette className="mr-1.5 h-3.5 w-3.5" /> Cover</Button>

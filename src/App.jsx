@@ -18,6 +18,7 @@ const CreateStory = lazy(() => import('@/pages/CreateStory'));
 const Characters = lazy(() => import('@/pages/Characters'));
 const Library = lazy(() => import('@/pages/Library'));
 const StoryEditor = lazy(() => import('@/pages/StoryEditor'));
+const StoryReader = lazy(() => import('@/pages/StoryReader'));
 const Pricing = lazy(() => import('@/pages/Pricing'));
 const Billing = lazy(() => import('@/pages/Billing'));
 const BillingSuccess = lazy(() => import('@/pages/BillingSuccess'));
@@ -81,6 +82,7 @@ function AppRoutes() {
           <Route path="/characters" element={withPageLoader(<Characters />)} />
           <Route path="/library" element={withPageLoader(<Library />)} />
           <Route path="/story/:id" element={withPageLoader(<StoryEditor />)} />
+          <Route path="/story/:id/read" element={withPageLoader(<StoryReader />)} />
           <Route path="/billing" element={withPageLoader(<Billing />)} />
           <Route path="/billing/success" element={withPageLoader(<BillingSuccess />)} />
           <Route path="/affiliate" element={withPageLoader(<AffiliateDashboard />)} />
