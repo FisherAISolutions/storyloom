@@ -1,0 +1,10 @@
+export const PRINT_PROFILES = Object.freeze({
+  'square-8-5': Object.freeze({ id:'square-8-5', label:'8.5 × 8.5 in square', trimWidthIn:8.5, trimHeightIn:8.5, bleedIn:0.125, safeMarginIn:0.5, targetDpi:300 }),
+  'letter-8-5x11': Object.freeze({ id:'letter-8-5x11', label:'8.5 × 11 in portrait', trimWidthIn:8.5, trimHeightIn:11, bleedIn:0.125, safeMarginIn:0.5, targetDpi:300 }),
+  'trade-6x9': Object.freeze({ id:'trade-6x9', label:'6 × 9 in portrait', trimWidthIn:6, trimHeightIn:9, bleedIn:0.125, safeMarginIn:0.5, targetDpi:300 }),
+});
+export const BINDING_PROFILES = Object.freeze({paperback:Object.freeze({id:'paperback',label:'Paperback',planningMinimumPages:24}),hardcover:Object.freeze({id:'hardcover',label:'Hardcover',planningMinimumPages:24})});
+export const PRINT_ORDER_TRANSITIONS = Object.freeze({awaiting_payment:['paid','cancelled'],paid:['fulfillment_authorized','refunded'],fulfillment_authorized:['submitted','cancelled','refunded'],submitted:['in_production','failed','cancel_requested'],in_production:['printed','failed','reprint_requested'],printed:['shipped','reprint_requested'],shipped:['delivered','reprint_requested'],failed:['fulfillment_authorized','refunded'],cancel_requested:['cancelled','in_production'],reprint_requested:['in_production','refunded'],delivered:[],cancelled:[],refunded:[]});
+export function canTransitionPrintOrder(from,to){return Boolean(PRINT_ORDER_TRANSITIONS[from]?.includes(to));}
+export function calculatePrintPrice(input){const keys=['printingCents','shippingCents','stripeFeeCents','taxCents','platformMarginCents','authorRoyaltyCents'];const values=Object.fromEntries(keys.map((key)=>{const value=input[key];if(!Number.isInteger(value)||value<0)throw new Error(`${key} must be a non-negative integer.`);return [key,value];}));return {...values,totalCents:Object.values(values).reduce((sum,value)=>sum+value,0),currency:input.currency||'usd',isEstimate:input.isEstimate!==false};}
+export function effectiveDpi(widthPx,heightPx,profile){return Math.min(widthPx/(profile.trimWidthIn+profile.bleedIn*2),heightPx/(profile.trimHeightIn+profile.bleedIn*2));}

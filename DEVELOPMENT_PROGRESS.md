@@ -4,7 +4,7 @@
 
 ## Current milestone
 
-Marketplace Personalization is implemented locally on `codex/marketplace-personalization`, building on the completed marketplace and Interactive Reader branches. It remains undeployed and its forward migration has not been applied.
+Print-on-Demand preparation is implemented locally on `codex/print-on-demand-preparation`, building on the completed marketplace, personalization, and Interactive Reader branches. All of these feature layers remain undeployed.
 
 ## Git state
 
@@ -46,6 +46,11 @@ Marketplace Personalization is implemented locally on `codex/marketplace-persona
 
 ## Work in progress
 
+- Added a separate owner-only print-preparation workflow without changing the existing A4 PDF export. It supports configurable trim/binding planning profiles, bleed-aware interior proofs, effective-DPI inspection, page-count checks, missing-image handling, and explicit wrap-cover/provider-template blockers. Exports are visibly labeled `PRINT-PROOF-NOT-PROVIDER-READY`.
+- Added a provider-neutral print adapter contract, bounded retry rules, itemized quote math, legal order-state transitions, and a forward-only service-authoritative fulfillment ledger with buyer read-only RLS, quote/payment gates, provider/webhook idempotency fields, status history, tracking, cancellation, refund, failure, and reprint states.
+- Added an owner-only print-order status page. No shipping address is stored before a secure checkout/provider workflow exists, and no product, quote, payment, provider call, or order was created.
+- Documented current official Lulu and Bookvault prepress/API requirements and open provider-selection inputs. Provider selection and all live pricing remain unresolved pending exact quotes, templates, credentials, and physical samples.
+- Print-focused ownership, privacy, pricing, state-machine, idempotency, refund/cancellation, personalized-copy, and existing PDF regression checks passed within a 66-test focused suite. Full lint and the production build also passed.
 - Implemented optional author-controlled personalization per published book, with existing listings defaulting off and customization limited to an approved story character and author-selected name, appearance, and clothing fields.
 - Implemented an authenticated buyer workflow that requires active purchase entitlement for paid books, shows an image-credit estimate, requires explicit confirmation, and creates an idempotent private buyer-owned copy without copying source image paths.
 - Personalized copies clone immutable Character Bible snapshots, World Bible locations/scenes, and appearance transitions; illustration generation uses the existing metered `generate-page-image` path and can resume missing pages without regenerating completed pages.
@@ -81,6 +86,9 @@ Marketplace Personalization is implemented locally on `codex/marketplace-persona
 
 ## Known bugs and blockers
 
+- Generated page art is currently 1024px; at an 8.5-inch square trim plus bleed it is only about 117 effective DPI, below the 300 PPI professional target. A separately approved high-resolution generation/upscaling strategy is required before these books can be certified print-ready.
+- The personalization migration still needs the previously identified deletion-safe provenance and refund/chargeback access corrections before it is eligible for deployment.
+- Print fulfillment requires provider selection, verified product/page-count rules, generated wrap-cover templates, live quote integration, secure address collection, payment authorization, signed provider events, and physical sample approval. The new print migration and UI remain local only.
 - No remaining database blocker was found in focused staging validation.
 - No outstanding Admin Control Center deployment blocker is known.
 - This release proceeded under an explicit no-backup risk waiver; recoverable logical backup capability remains an operational gap to address before higher-risk or customer-data migrations.
@@ -113,4 +121,4 @@ Rollback plan: take a fresh logical production backup before migrations; keep th
 
 ## Next recommended task
 
-Review and validate `20260822000000_marketplace_personalization.sql` against a disposable or approved target before any release. Marketplace production deployment, Stripe readiness, and all paid AI testing remain separate approval boundaries.
+Resolve the personalization migration blockers, then select and sandbox one print provider using exact product templates and quotes. Do not enable checkout or fulfillment until high-resolution output and a physical sample pass provider validation.

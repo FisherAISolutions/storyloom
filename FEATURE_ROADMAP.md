@@ -112,17 +112,17 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 
 ## H. Print-on-Demand
 
-- [ ] Lulu Print API evaluation.
-- [ ] Bookvault evaluation.
-- [ ] Print provider selection.
-- [ ] Print-ready PDF validation.
-- [ ] Cover and trim specifications.
-- [ ] Printing price estimates.
-- [ ] Shipping estimates.
-- [ ] Physical book checkout.
-- [ ] Print order submission.
-- [ ] Order status tracking.
-- [ ] Refund and cancellation handling.
+- [ ] Lulu Print API evaluation — Official file requirements reviewed; sandbox products, quote/order API behavior, exact page minimums, and commercial terms still require verification.
+- [ ] Bookvault evaluation — Official transient-title, file, webhook, bleed, and template requirements reviewed; sandbox quoting and US fulfillment still require verification.
+- [ ] Print provider selection — Provider-neutral adapter is implemented locally; provider and physical sample remain undecided.
+- [ ] Print-ready PDF validation — Local preflight/proof supports DPI, bleed dimensions, safe layout, missing images, page count, and explicit provider-template blockers; current 1024px art generally fails 300 PPI at large trim sizes.
+- [ ] Cover and trim specifications — Configurable trim planning profiles exist; exact back/spine/front provider templates and spine calculation remain.
+- [ ] Printing price estimates — Itemized quote calculations and immutable quote schema are implemented locally; no live provider price is used.
+- [ ] Shipping estimates — Quote schema supports shipping snapshots; provider/destination integration remains.
+- [ ] Physical book checkout — Customer preparation/status UI exists, but address collection, confirmed quote, and payment are intentionally disabled.
+- [ ] Print order submission — Service-authoritative payment/authorization gates, provider adapter, bounded retry, and idempotency foundation are implemented; no live provider submission exists.
+- [ ] Order status tracking — Buyer-readable status/event/tracking foundation is implemented locally; signed provider webhook integration remains.
+- [ ] Refund and cancellation handling — Legal state transitions and refund/cancellation/reprint states are implemented locally; provider and Stripe orchestration remains.
 - [ ] Physical sample testing.
 
 ## I. Personalized Marketplace Books

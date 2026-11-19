@@ -36,6 +36,8 @@ const AuthorStorefront = lazy(() => import('@/pages/AuthorStorefront'));
 const AuthorDashboard = lazy(() => import('@/pages/AuthorDashboard'));
 const BuyerLibrary = lazy(() => import('@/pages/BuyerLibrary'));
 const PersonalizeStory = lazy(() => import('@/pages/PersonalizeStory'));
+const PrintPreparation = lazy(() => import('@/pages/PrintPreparation'));
+const PrintOrders = lazy(() => import('@/pages/PrintOrders'));
 
 const withPageLoader = (page) => (
   <Suspense fallback={<div className="flex justify-center py-24">Loading…</div>}>
@@ -84,6 +86,8 @@ function AppRoutes() {
           <Route path="/library" element={withPageLoader(<Library />)} />
           <Route path="/story/:id" element={withPageLoader(<StoryEditor />)} />
           <Route path="/story/:id/read" element={withPageLoader(<StoryReader />)} />
+          <Route path="/story/:id/print" element={withPageLoader(<PrintPreparation />)} />
+          <Route path="/print-orders" element={withPageLoader(<PrintOrders />)} />
           <Route path="/billing" element={withPageLoader(<Billing />)} />
           <Route path="/billing/success" element={withPageLoader(<BillingSuccess />)} />
           <Route path="/affiliate" element={withPageLoader(<AffiliateDashboard />)} />

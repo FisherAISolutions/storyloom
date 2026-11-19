@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { BookOpen, Download, Eye, Globe2, Info, Loader2, Palette, Pencil, Plus, RefreshCw, Save } from 'lucide-react';
+import { BookOpen, Download, Eye, Globe2, Info, Loader2, Package, Palette, Pencil, Plus, RefreshCw, Save } from 'lucide-react';
 import { generatePageImage, translateStory } from '@/lib/storyStudio';
 import { downloadStoryPdf } from '@/lib/storyPdf';
 import { invalidatePageTranslations, shouldSyncCoverForPage } from '@/lib/storyState';
@@ -208,6 +208,7 @@ export default function StoryEditor() {
           <LanguagePicker value={language} onChange={changeLanguage} translating={translating} />
           <Button onClick={() => setCoverOpen(true)} variant="outline" size="sm" className="rounded-full bg-white"><Palette className="mr-1.5 h-3.5 w-3.5" /> Cover</Button>
           <Button onClick={downloadPdf} disabled={downloading} size="sm" className="rounded-full bg-[#087f7c] hover:bg-[#066c69]">{downloading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Download className="mr-1.5 h-3.5 w-3.5" />} PDF</Button>
+          <Button asChild variant="outline" size="sm" className="rounded-full bg-white"><Link to={`/story/${story.id}/print`}><Package className="mr-1.5 h-3.5 w-3.5"/> Print prep</Link></Button>
           {communityState?.status === 'published' ? <Button onClick={unpublishCommunity} disabled={sharing} variant="outline" size="sm" className="rounded-full bg-white">Unpublish</Button> : <AlertDialog><AlertDialogTrigger asChild><Button disabled={sharing} variant="outline" size="sm" className="rounded-full bg-white"><Globe2 className="mr-1.5 h-3.5 w-3.5"/> Share to Community</Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Share this story publicly?</AlertDialogTitle><AlertDialogDescription>Your story title, generated cover, story text, and generated illustrations will be publicly viewable. Your account email, original uploaded photo, billing information, and private account details will not be shown.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Keep private</AlertDialogCancel><AlertDialogAction onClick={shareCommunity}>Confirm and share</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>}
         </div>
       </header>
