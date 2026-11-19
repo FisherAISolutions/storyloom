@@ -23,8 +23,8 @@ create table public.print_product_specs (
 create table public.print_quotes (
   id uuid primary key default gen_random_uuid(),
   request_id uuid not null,
-  buyer_user_id uuid not null references public.profiles(id) on delete cascade,
-  story_id uuid not null,
+  buyer_user_id uuid references public.profiles(id) on delete set null,
+  story_id uuid,
   product_spec_id uuid not null references public.print_product_specs(id),
   provider_key text not null,
   provider_quote_id text,
@@ -43,14 +43,14 @@ create table public.print_quotes (
   created_at timestamptz not null default now(),
   unique(buyer_user_id,request_id),
   constraint print_quotes_story_owner_fk foreign key (buyer_user_id,story_id)
-    references public.stories(user_id,id) on delete cascade
+    references public.stories(user_id,id) on delete set null (story_id)
 );
 
 create table public.print_orders (
   id uuid primary key default gen_random_uuid(),
-  buyer_user_id uuid not null references public.profiles(id) on delete restrict,
-  story_id uuid not null,
-  quote_id uuid not null unique references public.print_quotes(id) on delete restrict,
+  buyer_user_id uuid references public.profiles(id) on delete set null,
+  story_id uuid,
+  quote_id uuid unique references public.print_quotes(id) on delete set null,
   payment_reference text not null unique,
   provider_key text not null,
   provider_order_id text unique,
@@ -70,7 +70,7 @@ create table public.print_orders (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint print_orders_story_owner_fk foreign key (buyer_user_id,story_id)
-    references public.stories(user_id,id) on delete restrict
+    references public.stories(user_id,id) on delete set null (story_id)
 );
 
 create table public.print_order_events (

@@ -7,6 +7,8 @@ const migration=read('supabase/migrations/20260822000000_marketplace_personaliza
 const publicFn=read('supabase/functions/community-public/index.ts');
 const page=read('src/pages/PersonalizeStory.jsx');
 const service=read('src/services/marketplace.js');
+const storyAi=read('supabase/functions/story-ai/index.ts');
+const storage=read('src/services/storage.js');
 
 test('author personalization is opt-in and constrained to a character in the owned published story',()=>{
   assert.match(migration,/enabled boolean not null default false/);
@@ -17,9 +19,48 @@ test('author personalization is opt-in and constrained to a character in the own
 
 test('paid personalization requires an active purchase and forbids self-personalization',()=>{
   assert.match(migration,/SELF_PERSONALIZATION_NOT_ALLOWED/);
-  assert.match(migration,/marketplace_enabled and not exists/);
+  assert.match(migration,/qualifying_purchase_id uuid references public\.marketplace_purchases\(id\) on delete set null/);
+  assert.match(migration,/requires_active_purchase boolean not null/);
   assert.match(migration,/buyer_user_id=v_buyer and mp\.status='active'/);
   assert.match(migration,/PURCHASE_REQUIRED/);
+});
+
+test('refunds and disputes revoke paid personalized editions without deleting buyer content',()=>{
+  assert.match(migration,/can_access_owned_story/);
+  assert.match(migration,/mp\.id=mpe\.qualifying_purchase_id and mp\.buyer_user_id=p_user_id and mp\.status='active'/);
+  assert.match(migration,/Users can read accessible owned stories/);
+  assert.match(migration,/Users can read pages of accessible stories/);
+  assert.match(migration,/Owners manage accessible story worlds/);
+  assert.match(migration,/Owners read accessible story character snapshots/);
+  assert.match(migration,/can_access_story_storage_object/);
+  assert.match(migration,/Users can read accessible Story Loom objects/);
+  assert.doesNotMatch(migration,/delete from public\.marketplace_personalized_editions/);
+});
+
+test('ordinary private stories and free personalized editions remain accessible',()=>{
+  assert.match(migration,/not exists\(select 1 from public\.marketplace_personalized_editions mpe where mpe\.personalized_story_id=p_story_id\)/);
+  assert.match(migration,/not mpe\.requires_active_purchase/);
+});
+
+test('repurchase restores preserved editions and generation is stopped by authoritative RLS',()=>{
+  assert.match(migration,/update public\.marketplace_personalized_editions set qualifying_purchase_id=v_purchase/);
+  assert.match(migration,/complete_marketplace_personalized_edition[\s\S]*can_access_owned_story/);
+  assert.match(storyAi,/const story = await ownedStory\(client, storyId\)/);
+  assert.match(storyAi,/uploadImage\(client, 'story-images'/);
+});
+
+test('source, character, and account deletion preserve attribution without restrictive foreign keys',()=>{
+  assert.match(migration,/community_story_id uuid references public\.community_stories\(id\) on delete set null/);
+  assert.match(migration,/source_story_id uuid references public\.stories\(id\) on delete set null/);
+  assert.match(migration,/marketplace_personalized_buyer_character_fk[\s\S]*on delete set null \(buyer_character_id\)/);
+  assert.match(migration,/source_author_user_id uuid references public\.profiles\(id\) on delete set null/);
+  assert.match(migration,/source_author_name text not null/);
+  assert.match(migration,/source_title text not null/);
+});
+
+test('private Storage bearer URLs expire promptly after access is revoked',()=>{
+  assert.match(storage,/PRIVATE_SIGNED_URL_TTL_SECONDS = 60/);
+  assert.match(storage,/expiresIn !== PRIVATE_SIGNED_URL_TTL_SECONDS/);
 });
 
 test('private copy is buyer-owned and never reuses protected source image paths',()=>{
@@ -64,6 +105,6 @@ test('public API exposes only safe offer metadata, not Character Bibles or buyer
 
 test('personalized editions remain owner-only reader books',()=>{
   assert.match(migration,/Buyers read personalized editions/);
-  assert.match(migration,/\(select auth\.uid\(\)\) = buyer_user_id/);
+  assert.match(migration,/can_access_owned_story\(\(select auth\.uid\(\)\),personalized_story_id\)/);
   assert.match(page,/navigate\(`\/story\/\$\{edition\.story_id\}\/read`\)/);
 });

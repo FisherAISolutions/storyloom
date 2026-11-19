@@ -4,7 +4,7 @@
 
 ## Current milestone
 
-Print-on-Demand preparation is implemented locally on `codex/print-on-demand-preparation`, building on the completed marketplace, personalization, and Interactive Reader branches. All of these feature layers remain undeployed.
+Marketplace personalization lifecycle hardening is implemented locally on `codex/personalization-lifecycle-security`, building from print-preparation commit `145a30e`. Marketplace, Interactive Reader, personalization, print preparation, and these security fixes remain undeployed.
 
 ## Git state
 
@@ -16,6 +16,9 @@ Print-on-Demand preparation is implemented locally on `codex/print-on-demand-pre
 
 ## Recently completed
 
+- Linked paid personalized editions to the exact qualifying marketplace purchase and made active entitlement authoritative across story/page/world/character RLS, Buyer Library, Reader/API access, and private `story-images` Storage policies. Refunds and disputes preserve private content while denying access; a legitimate repurchase can restore it.
+- Replaced restrictive personalization/marketplace/print provenance foreign keys with deletion-safe anonymization or snapshots, preserving attribution and financial records without blocking source-book, character, personalized-story, or account deletion. Private signed media URLs are now limited to 60 seconds to bound already-issued URL access after revocation.
+- Verified migrations `20260822000000` and `20260823000000` are pending in both known Supabase environments, so the pending migration files were safely corrected rather than adding a forward corrective migration. No database migration was applied.
 - Preserved the Repaint/Supabase JWT gateway fix. Production `story-ai` was previously verified at version 26 with in-function user authentication retained.
 - Implemented locally: staff roles, one-time Owner bootstrap, protected Admin Control Center, user search, constrained role management, audited/idempotent complimentary credits, cost-capped staff AI testing, and administrative audit records.
 - Added focused authorization and service-contract tests.
@@ -87,7 +90,7 @@ Print-on-Demand preparation is implemented locally on `codex/print-on-demand-pre
 ## Known bugs and blockers
 
 - Generated page art is currently 1024px; at an 8.5-inch square trim plus bleed it is only about 117 effective DPI, below the 300 PPI professional target. A separately approved high-resolution generation/upscaling strategy is required before these books can be certified print-ready.
-- The personalization migration still needs the previously identified deletion-safe provenance and refund/chargeback access corrections before it is eligible for deployment.
+- Personalization lifecycle fixes are locally complete and require migration validation in a disposable/staging database before production eligibility.
 - Print fulfillment requires provider selection, verified product/page-count rules, generated wrap-cover templates, live quote integration, secure address collection, payment authorization, signed provider events, and physical sample approval. The new print migration and UI remain local only.
 - No remaining database blocker was found in focused staging validation.
 - No outstanding Admin Control Center deployment blocker is known.

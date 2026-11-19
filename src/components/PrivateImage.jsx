@@ -16,7 +16,7 @@ export default function PrivateImage({ bucket, path, fallback = null, onError = 
       .then((signedUrl) => {
         if (!active) return;
         setUrl(signedUrl);
-        refreshTimer = setTimeout(refresh, 275_000);
+        refreshTimer = setTimeout(refresh, 45_000);
       })
       .catch(() => { if (active) setFailed(true); });
     refresh();

@@ -9,8 +9,10 @@ export const STORAGE_BUCKETS = Object.freeze({
 });
 
 const ALLOWED_BUCKETS = new Set(Object.values(STORAGE_BUCKETS));
-const DEFAULT_SIGNED_URL_TTL_SECONDS = 300;
-const CACHE_SAFETY_WINDOW_MS = 30_000;
+// Keep private-media bearer URLs short-lived so an entitlement revocation takes
+// effect promptly even when a URL was signed immediately before the revocation.
+const PRIVATE_SIGNED_URL_TTL_SECONDS = 60;
+const CACHE_SAFETY_WINDOW_MS = 10_000;
 const signedUrlCache = new Map();
 const IMAGE_EXTENSIONS = Object.freeze({
   'image/jpeg': 'jpg',
@@ -60,10 +62,10 @@ export function clearSignedUrlCache() {
   signedUrlCache.clear();
 }
 
-export async function getSignedUrl(bucket, path, expiresIn = DEFAULT_SIGNED_URL_TTL_SECONDS) {
+export async function getSignedUrl(bucket, path, expiresIn = PRIVATE_SIGNED_URL_TTL_SECONDS) {
   const safeBucket = requireBucket(bucket);
-  if (!Number.isInteger(expiresIn) || expiresIn < 60 || expiresIn > 3600) {
-    throw new ServiceError('VALIDATION', 'Signed URL lifetime must be between 60 and 3600 seconds.');
+  if (!Number.isInteger(expiresIn) || expiresIn !== PRIVATE_SIGNED_URL_TTL_SECONDS) {
+    throw new ServiceError('VALIDATION', 'Private signed URLs must use the 60-second lifetime.');
   }
 
   const user = await requireAuthenticatedUser();

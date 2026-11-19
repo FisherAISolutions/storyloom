@@ -71,6 +71,14 @@ test('print preparation remains owner-scoped and supports personalized owner cop
   assert.doesNotMatch(pdf,/fetch\(/);
 });
 
+test('print ledgers do not block safe story or account deletion',()=>{
+  assert.match(migration,/buyer_user_id uuid references public\.profiles\(id\) on delete set null/);
+  assert.match(migration,/print_quotes_story_owner_fk[\s\S]*on delete set null \(story_id\)/);
+  assert.match(migration,/quote_id uuid unique references public\.print_quotes\(id\) on delete set null/);
+  assert.match(migration,/print_orders_story_owner_fk[\s\S]*on delete set null \(story_id\)/);
+  assert.doesNotMatch(migration,/on delete restrict/);
+});
+
 test('proof export is never falsely named provider-ready and requires wrap cover template',()=>{
   assert.match(pdf,/PRINT-PROOF-NOT-PROVIDER-READY/);
   assert.match(pdf,/WRAP_COVER_MISSING/);
