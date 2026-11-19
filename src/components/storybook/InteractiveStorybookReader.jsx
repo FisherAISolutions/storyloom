@@ -1,111 +1,89 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BookOpen, ChevronLeft, ChevronRight, Gauge, Maximize2, Minimize2, Pause, Play, RotateCcw, Square, Users, Volume2, VolumeX } from 'lucide-react';
 import PrivateImage from '@/components/PrivateImage';
+import StoryPageMedia from '@/components/storybook/StoryPageMedia';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { STORAGE_BUCKETS } from '@/services/storage';
+import { getPageNarration, splitNarrationSentences } from '@/lib/storyMedia';
+import { getStoryImageUrl, STORAGE_BUCKETS } from '@/services/storage';
 import { cn } from '@/lib/utils';
 
-const sentenceParts = (text) => String(text || '').match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map((part)=>part.trim()).filter(Boolean) || [];
-
-function ReaderImage({ url, path, alt, className }) {
-  if (url) return <img src={url} alt={alt} className={className}/>;
-  if (path) return <PrivateImage bucket={STORAGE_BUCKETS.STORY_IMAGES} path={path} alt={alt} fittingType="fill" className={className} fallback={<div className="flex h-full items-center justify-center bg-stone-100"><BookOpen className="h-10 w-10 text-stone-300"/></div>}/>;
-  return <div className="flex h-full items-center justify-center bg-stone-100"><BookOpen className="h-10 w-10 text-stone-300"/></div>;
+function ReaderCover({ url, path, alt }) {
+  if(url)return <img src={url} alt={alt} className="h-full w-full object-cover"/>;
+  if(path)return <PrivateImage bucket={STORAGE_BUCKETS.STORY_IMAGES} path={path} alt={alt} fittingType="fill" className="h-full w-full" fallback={<div className="reader-media-fallback"><BookOpen className="h-10 w-10"/><span>Loading cover…</span></div>}/>;
+  return <div className="reader-media-fallback"><BookOpen className="h-10 w-10"/><span>Cover unavailable</span></div>;
 }
 
-export default function InteractiveStorybookReader({ title, pages, coverUrl, coverPath, readerKey, accessLabel = 'Storybook', onClose }) {
-  const isMobile=useIsMobile(); const rootRef=useRef(null); const touchStart=useRef(null); const utteranceRef=useRef(null); const openingTimer=useRef(null);
-  const currentRef=useRef(-1); const narratingRef=useRef(false); const speedRef=useRef(1);
-  const [current,setCurrentState]=useState(-1); const [direction,setDirection]=useState('next'); const [mode,setMode]=useState('together');
-  const [narrating,setNarrating]=useState(false); const [paused,setPaused]=useState(false); const [speed,setSpeed]=useState(1); const [activeSentence,setActiveSentence]=useState(-1);
-  const [fullscreen,setFullscreen]=useState(false); const [resumeMessage,setResumeMessage]=useState(''); const [opening,setOpening]=useState(false);
+export default function InteractiveStorybookReader({ title, pages, coverUrl, coverPath, readerKey, accessLabel='Storybook', onClose }) {
+  const isMobile=useIsMobile();
+  const rootRef=useRef(null);const touchStart=useRef(null);const openingTimer=useRef(null);const transitionTimer=useRef(null);const narrationTimer=useRef(null);
+  const currentRef=useRef(-1);const navigationLocked=useRef(false);const playbackToken=useRef(0);const audioRef=useRef(null);const narratingRef=useRef(false);const speedRef=useRef(1);const voiceNameRef=useRef('');const voicesRef=useRef([]);
+  const [current,setCurrentState]=useState(-1);const [direction,setDirection]=useState('next');const [mode,setMode]=useState('together');const [opening,setOpening]=useState(false);const [closing,setClosing]=useState(false);const [transitioning,setTransitioning]=useState(false);
+  const [narrating,setNarrating]=useState(false);const [paused,setPaused]=useState(false);const [speed,setSpeed]=useState(1);const [activeSentence,setActiveSentence]=useState(-1);const [narrationSource,setNarrationSource]=useState('browser');const [narrationError,setNarrationError]=useState('');
+  const [fullscreen,setFullscreen]=useState(false);const [resumeMessage,setResumeMessage]=useState('');const [reducedMotion,setReducedMotion]=useState(false);const [voices,setVoices]=useState([]);const [voiceName,setVoiceName]=useState('');
   const speechAvailable=typeof window!=='undefined'&&'speechSynthesis' in window&&'SpeechSynthesisUtterance' in window;
-  const storageKey=`mystorybook-reader:${readerKey}`;
-  const pageCount=pages.length;
-  const spreadStart=current<0?-1:(isMobile?current:Math.floor(current/2)*2);
-  const shownIndices=current<0?[]:(isMobile?[current]:[spreadStart,spreadStart+1]).filter((index)=>pages[index]);
-  const progress=current<0?0:Math.min(100,Math.round(((current+1)/Math.max(pageCount,1))*100));
+  const recordedNarrationAvailable=pages.some((page)=>Boolean(getPageNarration(page).audioUrl));const narrationAvailable=speechAvailable||recordedNarrationAvailable;
+  const storageKey=`mystorybook-reader:${readerKey}`;const pageCount=pages.length;const spreadStart=current<0?-1:(isMobile?current:Math.floor(current/2)*2);
+  const shownIndices=current<0?[]:(isMobile?[current]:[spreadStart,spreadStart+1]).filter((index)=>pages[index]);const progress=current<0?0:Math.min(100,Math.round(((current+1)/Math.max(pageCount,1))*100));
 
-  const setCurrent=useCallback((next, announce=true)=>{
-    const bounded=Math.max(-1,Math.min(next,pageCount-1)); currentRef.current=bounded; setCurrentState(bounded);
-    if(readerKey&&bounded>=0){try{localStorage.setItem(storageKey,JSON.stringify({page:bounded,updatedAt:Date.now()}));}catch{/* Reading still works if storage is unavailable. */}}
-    if(announce)setActiveSentence(-1);
-  },[pageCount,readerKey,storageKey]);
+  const setCurrent=useCallback((next,announce=true)=>{const bounded=Math.max(-1,Math.min(next,pageCount-1));currentRef.current=bounded;setCurrentState(bounded);if(readerKey&&bounded>=0){try{localStorage.setItem(storageKey,JSON.stringify({page:bounded,updatedAt:Date.now()}));}catch{/* Reading remains available without local storage. */}}if(announce)setActiveSentence(-1);},[pageCount,readerKey,storageKey]);
+  const pauseVisibleAnimation=useCallback(()=>rootRef.current?.querySelectorAll('video').forEach((video)=>video.pause()),[]);
+  const releaseNavigation=useCallback(()=>{navigationLocked.current=false;setTransitioning(false);window.clearTimeout(transitionTimer.current);transitionTimer.current=null;},[]);
 
-  useEffect(()=>{
-    if(!readerKey||!pageCount)return;
-    try{const saved=JSON.parse(localStorage.getItem(storageKey));if(Number.isInteger(saved?.page)&&saved.page>=0&&saved.page<pageCount){setCurrent(saved.page,false);setResumeMessage(`Resumed at page ${saved.page+1}.`);}}
-    catch{/* Ignore unavailable or malformed local progress. */}
-  },[pageCount,readerKey,setCurrent,storageKey]);
-
-  const stopNarration=useCallback(()=>{
-    narratingRef.current=false; setNarrating(false); setPaused(false); setActiveSentence(-1); utteranceRef.current=null;
-    if(speechAvailable)window.speechSynthesis.cancel();
+  const cancelNarration=useCallback((clearHighlight=true)=>{
+    playbackToken.current+=1;narratingRef.current=false;setNarrating(false);setPaused(false);setNarrationSource('browser');window.clearTimeout(narrationTimer.current);narrationTimer.current=null;
+    if(audioRef.current){audioRef.current.pause();audioRef.current.removeAttribute('src');audioRef.current.load();audioRef.current=null;}
+    if(speechAvailable)window.speechSynthesis.cancel();if(clearHighlight)setActiveSentence(-1);
   },[speechAvailable]);
 
-  const openBook=useCallback(()=>{
-    if(openingTimer.current)return;setOpening(true);const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    openingTimer.current=window.setTimeout(()=>{openingTimer.current=null;setOpening(false);setDirection('next');setCurrent(0);},reduced?0:520);
-  },[setCurrent]);
-
-  const speakSentence=useCallback(function speak(pageIndex,sentenceIndex){
-    if(!speechAvailable||!narratingRef.current||!pages[pageIndex])return;
-    const parts=sentenceParts(pages[pageIndex].text);
-    if(!parts.length){const next=pageIndex+1;if(next<pageCount){setDirection('next');setCurrent(next,false);speak(next,0);}else stopNarration();return;}
-    const index=Math.min(sentenceIndex,parts.length-1); setActiveSentence(index);
-    const utterance=new window.SpeechSynthesisUtterance(parts[index]);utterance.rate=speedRef.current;utteranceRef.current=utterance;
-    utterance.onend=()=>{if(!narratingRef.current)return;if(index+1<parts.length){speak(pageIndex,index+1);return;}const next=pageIndex+1;if(next<pageCount){setDirection('next');setCurrent(next,false);window.setTimeout(()=>speak(next,0),180);}else stopNarration();};
-    utterance.onerror=(event)=>{if(event.error!=='canceled'&&event.error!=='interrupted')stopNarration();};
+  const playNarration=useCallback(function play(pageIndex,sentenceIndex,token,forceBrowser=false){
+    if(token!==playbackToken.current||!narratingRef.current||!pages[pageIndex])return;
+    const page=pages[pageIndex];const narration=getPageNarration(page);const sentences=splitNarrationSentences(page.text);
+    const finishPage=()=>{if(token!==playbackToken.current||!narratingRef.current)return;const next=pageIndex+1;if(next>=pageCount){cancelNarration();return;}pauseVisibleAnimation();setDirection('next');setTransitioning(true);setCurrent(next,false);narrationTimer.current=window.setTimeout(()=>{setTransitioning(false);play(next,0,token);},reducedMotion?0:360);};
+    if(narration.audioUrl&&!forceBrowser){
+      setNarrationSource('recorded');setActiveSentence(narration.timings[0]?.sentence_index??0);const audio=new Audio();audioRef.current=audio;audio.src=narration.audioUrl;audio.preload='auto';audio.playbackRate=speedRef.current;
+      let fellBack=false;const fallback=()=>{if(fellBack||token!==playbackToken.current)return;fellBack=true;audio.pause();audioRef.current=null;if(speechAvailable){play(pageIndex,Math.max(sentenceIndex,0),token,true);}else{setNarrationError('Recorded narration is temporarily unavailable. You can continue in Read Together mode.');cancelNarration();}};
+      audio.ontimeupdate=()=>{if(token!==playbackToken.current)return;const elapsed=audio.currentTime*1000;let timing=narration.timings.find((item)=>elapsed>=item.start_ms&&elapsed<item.end_ms);if(!timing&&sentences.length&&audio.duration>0)timing={sentence_index:Math.min(sentences.length-1,Math.floor((audio.currentTime/audio.duration)*sentences.length))};if(timing)setActiveSentence(timing.sentence_index);};
+      audio.onended=finishPage;audio.onerror=fallback;audio.play().catch(fallback);return;
+    }
+    if(!speechAvailable){setNarrationError('Read to Me is unavailable in this browser. You can continue in Read Together mode.');cancelNarration();return;}
+    setNarrationSource('browser');if(!sentences.length){finishPage();return;}const index=Math.min(Math.max(sentenceIndex,0),sentences.length-1);setActiveSentence(index);
+    const utterance=new window.SpeechSynthesisUtterance(sentences[index]);utterance.rate=speedRef.current;const selected=voicesRef.current.find((voice)=>voice.name===voiceNameRef.current);if(selected)utterance.voice=selected;
+    utterance.onend=()=>{if(token!==playbackToken.current||!narratingRef.current)return;if(index+1<sentences.length)play(pageIndex,index+1,token,true);else finishPage();};
+    utterance.onerror=(event)=>{if(token===playbackToken.current&&!['canceled','interrupted'].includes(event.error)){setNarrationError('Narration stopped unexpectedly. Try another voice or continue in Read Together mode.');cancelNarration();}};
     window.speechSynthesis.speak(utterance);
-  },[pageCount,pages,setCurrent,speechAvailable,stopNarration]);
+  },[cancelNarration,pageCount,pages,pauseVisibleAnimation,reducedMotion,setCurrent,speechAvailable]);
 
-  const startNarration=useCallback(()=>{
-    if(!speechAvailable||!pageCount)return;window.speechSynthesis.cancel();const start=currentRef.current<0?0:currentRef.current;
-    setMode('narrate');setCurrent(start,false);narratingRef.current=true;setNarrating(true);setPaused(false);speakSentence(start,0);
-  },[pageCount,setCurrent,speakSentence,speechAvailable]);
+  const startNarrationAt=useCallback((pageIndex,sentenceIndex=0)=>{cancelNarration(false);const token=playbackToken.current;narratingRef.current=true;setNarrating(true);setPaused(false);setNarrationError('');setMode('narrate');setCurrent(pageIndex,false);playNarration(pageIndex,sentenceIndex,token);},[cancelNarration,playNarration,setCurrent]);
 
-  const previous=useCallback(()=>{stopNarration();setDirection('previous');if(currentRef.current<0)return;const step=isMobile?1:2;const start=isMobile?currentRef.current:Math.floor(currentRef.current/2)*2;setCurrent(start-step);},[isMobile,setCurrent,stopNarration]);
-  const next=useCallback(()=>{stopNarration();setDirection('next');if(currentRef.current<0){openBook();return;}const step=isMobile?1:2;const start=isMobile?currentRef.current:Math.floor(currentRef.current/2)*2;if(start+step<pageCount)setCurrent(start+step);},[isMobile,openBook,pageCount,setCurrent,stopNarration]);
-  const chooseTogether=()=>{stopNarration();setMode('together');};
-  const togglePause=()=>{if(!speechAvailable||!narrating)return;if(paused){window.speechSynthesis.resume();setPaused(false);}else{window.speechSynthesis.pause();setPaused(true);}};
-  const changeSpeed=(value)=>{const nextSpeed=Number(value);speedRef.current=nextSpeed;setSpeed(nextSpeed);if(narrating){window.speechSynthesis.cancel();setPaused(false);speakSentence(currentRef.current,Math.max(activeSentence,0));}};
-  const toggleFullscreen=async()=>{try{if(!document.fullscreenElement)await rootRef.current?.requestFullscreen();else await document.exitFullscreen();}catch{/* Keep the in-page reader usable when fullscreen is blocked. */}};
-
+  useEffect(()=>{if(!readerKey||!pageCount)return;try{const saved=JSON.parse(localStorage.getItem(storageKey));if(Number.isInteger(saved?.page)&&saved.page>=0&&saved.page<pageCount){setCurrent(saved.page,false);setResumeMessage(`Resumed at page ${saved.page+1}.`);}}catch{/* Ignore unavailable or malformed local progress. */}},[pageCount,readerKey,setCurrent,storageKey]);
+  useEffect(()=>{const query=window.matchMedia('(prefers-reduced-motion: reduce)');const update=()=>setReducedMotion(query.matches);update();query.addEventListener?.('change',update);return()=>query.removeEventListener?.('change',update);},[]);
+  useEffect(()=>{if(!speechAvailable)return;const load=()=>{const next=window.speechSynthesis.getVoices();voicesRef.current=next;setVoices(next);if(!voiceNameRef.current&&next[0]){voiceNameRef.current=next[0].name;setVoiceName(next[0].name);}};load();window.speechSynthesis.addEventListener?.('voiceschanged',load);return()=>window.speechSynthesis.removeEventListener?.('voiceschanged',load);},[speechAvailable]);
+  useEffect(()=>{if(current<0)return;let active=true;const nearby=[current-2,current-1,current,current+1,current+2,current+3].filter((index)=>pages[index]);(async()=>{for(const index of nearby){if(!active)return;const page=pages[index];try{const url=page.image_url||(page.image_path?await getStoryImageUrl(page.image_path):null);if(url){const image=new window.Image();image.decoding='async';image.src=url;}}catch{/* Preloading is opportunistic; visible media handles failures. */}}})();return()=>{active=false;};},[current,pages]);
   useEffect(()=>{const changed=()=>setFullscreen(document.fullscreenElement===rootRef.current);document.addEventListener('fullscreenchange',changed);return()=>document.removeEventListener('fullscreenchange',changed);},[]);
-  useEffect(()=>()=>{window.clearTimeout(openingTimer.current);if(speechAvailable)window.speechSynthesis.cancel();},[speechAvailable]);
+  useEffect(()=>()=>{window.clearTimeout(openingTimer.current);window.clearTimeout(transitionTimer.current);window.clearTimeout(narrationTimer.current);pauseVisibleAnimation();cancelNarration();},[cancelNarration,pauseVisibleAnimation]);
 
-  const onKeyDown=(event)=>{
-    if(['INPUT','SELECT','TEXTAREA'].includes(event.target.tagName))return;
-    if(event.key==='ArrowLeft'){event.preventDefault();previous();}else if(event.key==='ArrowRight'){event.preventDefault();next();}else if(event.key===' '&&event.target.tagName!=='BUTTON'){event.preventDefault();narrating?togglePause():next();}else if(event.key==='Escape'&&onClose&&!document.fullscreenElement)onClose();
-  };
-  const finishSwipe=(clientX)=>{if(touchStart.current===null)return;const distance=clientX-touchStart.current;if(Math.abs(distance)>45)(distance>0?previous:next)();touchStart.current=null;};
+  function lockTransition(callback,duration=360){if(navigationLocked.current)return false;navigationLocked.current=true;setTransitioning(true);callback();transitionTimer.current=window.setTimeout(releaseNavigation,reducedMotion?0:duration);return true;}
+  function openBook(){if(openingTimer.current||navigationLocked.current)return;navigationLocked.current=true;setOpening(true);openingTimer.current=window.setTimeout(()=>{openingTimer.current=null;setOpening(false);setDirection('next');setCurrent(0);releaseNavigation();},reducedMotion?0:520);}
+  function closeBook(){if(navigationLocked.current)return;cancelNarration();pauseVisibleAnimation();navigationLocked.current=true;setTransitioning(true);setClosing(true);transitionTimer.current=window.setTimeout(()=>{setCurrent(-1);setClosing(false);releaseNavigation();},reducedMotion?0:420);}
+  function navigateManually(target,nextDirection){if(target<0){closeBook();return;}const resume=narratingRef.current;const sentence=0;cancelNarration();pauseVisibleAnimation();lockTransition(()=>{setDirection(nextDirection);setCurrent(target);},420);if(resume)narrationTimer.current=window.setTimeout(()=>startNarrationAt(target,sentence),reducedMotion?20:440);}
+  function previous(){if(currentRef.current<0||navigationLocked.current)return;const step=isMobile?1:2;const start=isMobile?currentRef.current:Math.floor(currentRef.current/2)*2;navigateManually(start-step,'previous');}
+  function next(){if(navigationLocked.current)return;if(currentRef.current<0){openBook();return;}const step=isMobile?1:2;const start=isMobile?currentRef.current:Math.floor(currentRef.current/2)*2;if(start+step<pageCount)navigateManually(start+step,'next');}
+  function startNarration(){if(!narrationAvailable||!pageCount)return;startNarrationAt(currentRef.current<0?0:currentRef.current,0);}
+  function chooseTogether(){cancelNarration();setMode('together');setNarrationError('');}
+  function togglePause(){if(!narrating)return;if(paused){if(audioRef.current)audioRef.current.play().catch(()=>setNarrationError('Narration could not resume.'));else if(speechAvailable)window.speechSynthesis.resume();setPaused(false);}else{if(audioRef.current)audioRef.current.pause();else if(speechAvailable)window.speechSynthesis.pause();setPaused(true);}}
+  function changeSpeed(value){const nextSpeed=Number(value);speedRef.current=nextSpeed;setSpeed(nextSpeed);if(audioRef.current){audioRef.current.playbackRate=nextSpeed;return;}if(narrating){const page=currentRef.current;const sentence=Math.max(activeSentence,0);startNarrationAt(page,sentence);}}
+  function changeVoice(value){voiceNameRef.current=value;setVoiceName(value);if(narrating&&narrationSource==='browser')startNarrationAt(currentRef.current,Math.max(activeSentence,0));}
+  async function toggleFullscreen(){try{if(!document.fullscreenElement)await rootRef.current?.requestFullscreen();else await document.exitFullscreen();}catch{/* In-page reading remains available when fullscreen is blocked. */}}
+  function onKeyDown(event){if(['INPUT','SELECT','TEXTAREA'].includes(event.target.tagName))return;if(event.key==='ArrowLeft'){event.preventDefault();previous();}else if(event.key==='ArrowRight'){event.preventDefault();next();}else if(event.key===' '&&event.target.tagName!=='BUTTON'){event.preventDefault();narrating?togglePause():next();}else if(event.key==='Escape'&&onClose&&!document.fullscreenElement)onClose();}
+  function finishSwipe(clientX){if(touchStart.current===null)return;const distance=clientX-touchStart.current;if(Math.abs(distance)>45)(distance>0?previous:next)();touchStart.current=null;}
   const atEnd=current>=0&&(isMobile?current>=pageCount-1:Math.floor(current/2)*2+2>=pageCount);
 
-  return <section ref={rootRef} className={cn('interactive-reader outline-none',fullscreen&&'interactive-reader-fullscreen')} tabIndex={0} onKeyDown={onKeyDown} onTouchStart={(event)=>{touchStart.current=event.touches[0].clientX;}} onTouchEnd={(event)=>finishSwipe(event.changedTouches[0].clientX)} aria-label={`Interactive reader for ${title}`}>
-    <div className="interactive-reader-toolbar">
-      <div className="min-w-0"><p className="truncate font-display text-lg font-semibold text-[#12304b]">{title}</p><p className="text-xs text-stone-500">{accessLabel} · {pageCount} {pageCount===1?'page':'pages'}</p></div>
-      <div className="flex flex-wrap items-center justify-end gap-2"><Button type="button" size="sm" variant={mode==='together'?'default':'outline'} className="rounded-full" onClick={chooseTogether}><Users className="mr-1.5 h-4 w-4"/>Read Together</Button><Button type="button" size="sm" variant={mode==='narrate'?'default':'outline'} className="rounded-full" onClick={startNarration} disabled={!speechAvailable}><Volume2 className="mr-1.5 h-4 w-4"/>Read to Me</Button><Button type="button" size="icon" variant="outline" className="rounded-full" onClick={toggleFullscreen} aria-label={fullscreen?'Exit bedtime fullscreen':'Enter fullscreen bedtime mode'}>{fullscreen?<Minimize2/>:<Maximize2/>}</Button>{onClose&&<Button type="button" size="sm" variant="ghost" className="rounded-full" onClick={onClose}>Close</Button>}</div>
-    </div>
-    {!speechAvailable&&<div className="mx-4 mt-3 flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-2 text-sm text-amber-900" role="status"><VolumeX className="h-4 w-4"/>Read to Me is unavailable in this browser. Manual reading remains fully available.</div>}
-    <div className="interactive-reader-progress" aria-label={`Reading progress ${progress}%`}><span style={{width:`${progress}%`}}/></div>
-    <p className="sr-only" aria-live="polite">{resumeMessage}</p>
-
-    <div className="interactive-reader-stage">
-      {current<0?<button type="button" className={cn('reader-hardcover reader-book-opening',opening&&'reader-book-opening-active')} onClick={next} disabled={opening} aria-label={`Open ${title}`}><span className="reader-hardcover-edge"/><ReaderImage url={coverUrl} path={coverPath} alt={`Cover of ${title}`} className="h-full w-full object-cover"/><span className="reader-cover-invitation">{opening?'Opening…':'Open book'}</span></button>:
-      <div key={`${spreadStart}-${direction}`} className={cn('reader-spread',isMobile?'reader-single-page':'reader-two-page',direction==='previous'?'reader-flip-previous':'reader-flip-next')}>
-        {!isMobile&&<span className="reader-gutter"/>}
-        {shownIndices.map((index)=><article key={pages[index].id||pages[index].page_number||index} className={cn('reader-page',index===current&&narrating&&'reader-page-narrating')} aria-label={`Page ${index+1}`}>
-          <ReaderImage url={pages[index].image_url} path={pages[index].image_path} alt={`Illustration for page ${index+1} of ${title}`} className="h-full w-full object-cover"/>
-          <div className="reader-page-copy">{index===current&&narrating?sentenceParts(pages[index].text).map((sentence,sentenceIndex)=><span key={`${sentenceIndex}-${sentence}`} className={cn(sentenceIndex===activeSentence&&'reader-sentence-active')}>{sentence}{' '}</span>):pages[index].text}<span className="reader-page-number">{index+1}</span></div>
-        </article>)}
-      </div>}
-      <Button type="button" size="icon" variant="outline" className="reader-nav reader-nav-previous" onClick={previous} disabled={current<0} aria-label="Previous page"><ChevronLeft/></Button><Button type="button" size="icon" variant="outline" className="reader-nav reader-nav-next" onClick={next} disabled={atEnd} aria-label={current<0?'Open book':'Next page'}><ChevronRight/></Button>
-    </div>
-
-    <div className="interactive-reader-controls"><div className="flex items-center gap-2"><Button type="button" size="icon" variant="outline" className="rounded-full" onClick={previous} disabled={current<0} aria-label="Previous page"><ChevronLeft/></Button><span className="min-w-32 text-center text-sm font-semibold text-stone-700">{current<0?'Cover':isMobile?`Page ${current+1} of ${pageCount}`:`Pages ${spreadStart+1}${shownIndices.length>1?`–${spreadStart+2}`:''} of ${pageCount}`}</span><Button type="button" size="icon" variant="outline" className="rounded-full" onClick={next} disabled={atEnd} aria-label="Next page"><ChevronRight/></Button></div>
-      {mode==='narrate'&&speechAvailable&&<div className="flex flex-wrap items-center justify-center gap-2"><Button type="button" size="sm" variant="outline" className="rounded-full" onClick={narrating?togglePause:startNarration}>{narrating?(paused?<Play className="mr-1.5 h-4 w-4"/>:<Pause className="mr-1.5 h-4 w-4"/>):<Play className="mr-1.5 h-4 w-4"/>}{narrating?(paused?'Resume':'Pause'):'Start'}</Button><Button type="button" size="sm" variant="outline" className="rounded-full" onClick={stopNarration} disabled={!narrating}><Square className="mr-1.5 h-3.5 w-3.5"/>Stop</Button><label className="flex items-center gap-2 text-xs font-semibold text-stone-600"><Gauge className="h-4 w-4"/><span>Speed</span><select value={speed} onChange={(event)=>changeSpeed(event.target.value)} className="rounded-full border bg-white px-3 py-1.5" aria-label="Narration speed"><option value="0.75">0.75×</option><option value="1">1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option></select></label></div>}
-      {current>=0&&<button type="button" className="inline-flex items-center gap-1 text-xs font-semibold text-stone-500 hover:text-[#087f7c]" onClick={()=>{stopNarration();setDirection('previous');setCurrent(-1);}}><RotateCcw className="h-3.5 w-3.5"/>Return to cover</button>}
-    </div>
+  return <section ref={rootRef} className={cn('interactive-reader outline-none',fullscreen&&'interactive-reader-fullscreen')} tabIndex={0} onKeyDown={onKeyDown} onTouchStart={(event)=>{touchStart.current=event.touches[0].clientX;}} onTouchEnd={(event)=>finishSwipe(event.changedTouches[0].clientX)} aria-label={`Interactive reader for ${title}`} aria-busy={transitioning}>
+    <div className="interactive-reader-toolbar"><div className="min-w-0"><p className="truncate font-display text-lg font-semibold text-[#12304b]">{title}</p><p className="text-xs text-stone-500">{accessLabel} · {pageCount} {pageCount===1?'page':'pages'}</p></div><div className="flex flex-wrap items-center justify-end gap-2"><Button type="button" size="sm" variant={mode==='together'?'default':'outline'} className="rounded-full" onClick={chooseTogether}><Users className="mr-1.5 h-4 w-4"/>Read Together</Button><Button type="button" size="sm" variant={mode==='narrate'?'default':'outline'} className="rounded-full" onClick={startNarration} disabled={!narrationAvailable}><Volume2 className="mr-1.5 h-4 w-4"/>Read to Me</Button><Button type="button" size="icon" variant="outline" className="rounded-full" onClick={toggleFullscreen} aria-label={fullscreen?'Exit bedtime fullscreen':'Enter fullscreen bedtime mode'}>{fullscreen?<Minimize2/>:<Maximize2/>}</Button>{onClose&&<Button type="button" size="sm" variant="ghost" className="rounded-full" onClick={onClose}>Close</Button>}</div></div>
+    {!narrationAvailable&&<div className="mx-4 mt-3 flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-2 text-sm text-amber-900" role="status"><VolumeX className="h-4 w-4"/>Read to Me is unavailable in this browser. Manual reading remains fully available.</div>}{narrationError&&<div className="mx-4 mt-3 rounded-xl bg-amber-50 px-4 py-2 text-sm text-amber-900" role="alert">{narrationError}</div>}
+    <div className="interactive-reader-progress" aria-label={`Reading progress ${progress}%`}><span style={{width:`${progress}%`}}/></div><p className="sr-only" aria-live="polite">{resumeMessage}</p>
+    <div className="interactive-reader-stage">{current<0?<button type="button" className={cn('reader-hardcover reader-book-opening',opening&&'reader-book-opening-active')} onClick={openBook} disabled={opening||transitioning} aria-label={`Open ${title}`}><span className="reader-hardcover-edge"/><ReaderCover url={coverUrl} path={coverPath} alt={`Cover of ${title}`}/><span className="reader-cover-invitation">{opening?'Opening…':'Open book'}</span></button>:<div key={`${spreadStart}-${direction}`} className={cn('reader-spread',isMobile?'reader-single-page':'reader-two-page',direction==='previous'?'reader-flip-previous':'reader-flip-next',closing&&'reader-book-closing')}>{!isMobile&&<span className="reader-gutter"/>}{shownIndices.map((index)=><article key={pages[index].id||pages[index].page_number||index} className={cn('reader-page',index===current&&narrating&&'reader-page-narrating')} aria-label={`Page ${index+1}`}><StoryPageMedia page={pages[index]} alt={`Illustration for page ${index+1} of ${title}`} className="h-full w-full object-cover" reducedMotion={reducedMotion}/><div className="reader-page-copy">{index===current&&narrating?splitNarrationSentences(pages[index].text).map((sentence,sentenceIndex)=><span key={`${sentenceIndex}-${sentence}`} className={cn(sentenceIndex===activeSentence&&'reader-sentence-active')}>{sentence}{' '}</span>):pages[index].text}<span className="reader-page-number">{index+1}</span></div></article>)}</div>}<Button type="button" size="icon" variant="outline" className="reader-nav reader-nav-previous" onClick={previous} disabled={current<0||transitioning} aria-label="Previous page"><ChevronLeft/></Button><Button type="button" size="icon" variant="outline" className="reader-nav reader-nav-next" onClick={next} disabled={atEnd||transitioning} aria-label={current<0?'Open book':'Next page'}><ChevronRight/></Button></div>
+    <div className="interactive-reader-controls"><div className="flex items-center gap-2"><Button type="button" size="icon" variant="outline" className="rounded-full" onClick={previous} disabled={current<0||transitioning} aria-label="Previous page"><ChevronLeft/></Button><span className="min-w-32 text-center text-sm font-semibold text-stone-700">{current<0?'Cover':isMobile?`Page ${current+1} of ${pageCount}`:`Pages ${spreadStart+1}${shownIndices.length>1?`–${spreadStart+2}`:''} of ${pageCount}`}</span><Button type="button" size="icon" variant="outline" className="rounded-full" onClick={next} disabled={atEnd||transitioning} aria-label="Next page"><ChevronRight/></Button></div>{mode==='narrate'&&narrationAvailable&&<div className="flex flex-wrap items-center justify-center gap-2"><Button type="button" size="sm" variant="outline" className="rounded-full" onClick={narrating?togglePause:startNarration}>{narrating?(paused?<Play className="mr-1.5 h-4 w-4"/>:<Pause className="mr-1.5 h-4 w-4"/>):<Play className="mr-1.5 h-4 w-4"/>}{narrating?(paused?'Resume':'Pause'):'Start'}</Button><Button type="button" size="sm" variant="outline" className="rounded-full" onClick={()=>cancelNarration()} disabled={!narrating}><Square className="mr-1.5 h-3.5 w-3.5"/>Stop</Button><label className="flex items-center gap-2 text-xs font-semibold text-stone-600"><Gauge className="h-4 w-4"/><span>Speed</span><select value={speed} onChange={(event)=>changeSpeed(event.target.value)} className="rounded-full border bg-white px-3 py-1.5" aria-label="Narration speed"><option value="0.75">0.75×</option><option value="1">1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option></select></label>{speechAvailable&&voices.length>0&&narrationSource==='browser'&&<label className="text-xs font-semibold text-stone-600"><span className="sr-only">Narrator voice</span><select value={voiceName} onChange={(event)=>changeVoice(event.target.value)} className="max-w-40 rounded-full border bg-white px-3 py-1.5" aria-label="Narrator voice">{voices.map((voice)=><option key={`${voice.name}-${voice.lang}`} value={voice.name}>{voice.name} ({voice.lang})</option>)}</select></label>}{narrationSource==='recorded'&&<span className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800">Premium narration</span>}</div>}{current>=0&&<button type="button" className="inline-flex items-center gap-1 text-xs font-semibold text-stone-500 hover:text-[#087f7c]" onClick={closeBook} disabled={transitioning}><RotateCcw className="h-3.5 w-3.5"/>Close book</button>}</div>
   </section>;
 }

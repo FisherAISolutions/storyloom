@@ -9,6 +9,8 @@ const publicStory=read('src/pages/PublicStory.jsx');
 const app=read('src/App.jsx');
 const publicFunction=read('supabase/functions/community-public/index.ts');
 const styles=read('src/index.css');
+const pageMedia=read('src/components/storybook/StoryPageMedia.jsx');
+const mediaModel=read('src/lib/storyMedia.js');
 
 test('owner reader remains behind authentication and owner-scoped services',()=>{
   assert.match(app,/<Route element={<ProtectedRoute \/>}>[\s\S]*\/story\/:id\/read/);
@@ -39,7 +41,7 @@ test('browser narration has controls, sentence highlighting, fallback, and auto 
   assert.match(reader,/SpeechSynthesisUtterance/);
   assert.match(reader,/speechSynthesis\.pause/);
   assert.match(reader,/speechSynthesis\.resume/);
-  assert.match(reader,/stopNarration/);
+  assert.match(reader,/cancelNarration/);
   assert.match(reader,/Narration speed/);
   assert.match(reader,/reader-sentence-active/);
   assert.match(reader,/const next=pageIndex\+1/);
@@ -51,4 +53,35 @@ test('reader animations respect reduced-motion preferences',()=>{
   assert.match(styles,/reader-flip-next/);
   assert.match(styles,/prefers-reduced-motion: reduce/);
   assert.match(styles,/\.reader-book-opening,[\s\S]*animation: none/);
+});
+
+test('rapid navigation and narration cancellation are serialized',()=>{
+  assert.match(reader,/navigationLocked/);
+  assert.match(reader,/playbackToken\.current\+=1/);
+  assert.match(reader,/token!==playbackToken\.current/);
+  assert.match(reader,/disabled={atEnd\|\|transitioning}/);
+  assert.match(reader,/pauseVisibleAnimation/);
+});
+
+test('nearby preloading stays within the already-authorized page collection',()=>{
+  assert.match(reader,/\[current-2,current-1,current,current\+1,current\+2,current\+3\]\.filter\(\(index\)=>pages\[index\]\)/);
+  assert.match(reader,/getStoryImageUrl\(page\.image_path\)/);
+  assert.doesNotMatch(reader,/animationUrl.*new window\.Image/s);
+});
+
+test('optional narration metadata is backward compatible and server-delivered',async()=>{
+  const {getPageNarration}=await import('../src/lib/storyMedia.js');
+  assert.deepEqual(getPageNarration({text:'Static page'}),{audioUrl:null,durationMs:null,timings:[],voiceId:null});
+  assert.deepEqual(getPageNarration({narration:{audio_url:'https://media.example/page.mp3',duration_ms:3200,voice_id:'warm',timings:[{start_ms:0,end_ms:1500,sentence_index:0}]}}),{audioUrl:'https://media.example/page.mp3',durationMs:3200,timings:[{start_ms:0,end_ms:1500,sentence_index:0}],voiceId:'warm'});
+  assert.match(mediaModel,/server-authoritative/);
+  assert.doesNotMatch(mediaModel,/stripe|price_cents/i);
+});
+
+test('optional animated pages load only when visible and fall back to static media',()=>{
+  assert.match(pageMedia,/getPageAnimation/);
+  assert.match(pageMedia,/preload="metadata"/);
+  assert.match(pageMedia,/onError=\{\(\)=>setAnimationFailed\(true\)\}/);
+  assert.match(pageMedia,/return <StaticPageImage/);
+  assert.match(pageMedia,/!reducedMotion/);
+  assert.doesNotMatch(reader,/OPTIONAL_MEDIA_OPERATIONS/);
 });

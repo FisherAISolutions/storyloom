@@ -16,7 +16,7 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 - [x] Story continuation.
 - [x] Cover generation.
 - [x] PDF export.
-- [ ] Interactive Storybook Reader — Locally implemented for owner, purchased, free, and authorized-preview books with responsive page turns, fullscreen, saved local progress, and browser narration; production deployment and live device verification remain pending.
+- [ ] Interactive Storybook Reader — Locally implemented and Phase 2 hardened for owner, purchased, free, and authorized-preview books with responsive page turns, fullscreen, saved local progress, synchronized browser narration, resilient media loading, and backward-compatible optional narration/animation playback; production deployment and live device verification remain pending.
 - [ ] Character consistency testing — Automated contract coverage exists; end-to-end visual consistency needs verification.
 - [ ] Mobile responsiveness — Needs verification across supported devices.
 - [ ] Multi-provider image generation — Production schema, Edge Function, frontend, and safe disabled defaults are deployed; real Cloudflare provider integration verification remains pending.
