@@ -1,4 +1,4 @@
-import { BillingError, response, safeFailure, service, verifyStripeSignature } from '../_shared/billing.ts';
+import { BillingError, response, safeFailure, service, stripeGet, verifyStripeSignature } from '../_shared/billing.ts';
 
 const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET') || '';
 const subscriptionEvents = new Set(['customer.subscription.created','customer.subscription.updated','customer.subscription.deleted','customer.subscription.paused','customer.subscription.resumed']);
@@ -40,33 +40,65 @@ async function recordPaidInvoice(invoice: any) {
   if (recorded.error) throw new BillingError('DATABASE', 'Affiliate commission could not be recorded.', 500);
 }
 
-async function reverseCommission(charge: any, reason: string, fullReversal: boolean) {
-  const chargeId = typeof charge?.id === 'string' ? charge.id : null;
-  const invoiceId = typeof charge?.invoice === 'string' ? charge.invoice : charge?.invoice?.id || null;
-  if (!chargeId && !invoiceId) return;
-  const reversed = await service.rpc('reverse_affiliate_commission', { p_stripe_invoice_id: invoiceId, p_stripe_charge_id: chargeId, p_refunded_amount_cents: Number.isInteger(charge?.amount_refunded) ? charge.amount_refunded : 0, p_reason: reason, p_full_reversal: fullReversal });
-  if (reversed.error) throw new BillingError('DATABASE', 'Affiliate commission reversal failed.', 500);
+function objectId(value: any) { return typeof value === 'string' ? value : typeof value?.id === 'string' ? value.id : null; }
+
+async function resolveCharge(chargeLike: any) {
+  const chargeId = objectId(chargeLike);
+  if (!chargeId) return null;
+  if (typeof chargeLike === 'object' && chargeLike && objectId(chargeLike.payment_intent)) return chargeLike;
+  return stripeGet(`charges/${encodeURIComponent(chargeId)}`);
+}
+
+async function paymentIdentifiersForSession(session: any) {
+  const paymentIntentId = objectId(session?.payment_intent);
+  if (!paymentIntentId) return { paymentIntentId: null, chargeId: null };
+  const embedded = typeof session.payment_intent === 'object' ? session.payment_intent : null;
+  const paymentIntent = embedded && objectId(embedded.latest_charge)
+    ? embedded : await stripeGet(`payment_intents/${encodeURIComponent(paymentIntentId)}`);
+  return { paymentIntentId, chargeId: objectId(paymentIntent?.latest_charge) };
 }
 
 async function recordMarketplacePurchase(session: any) {
   const metadata = session?.metadata || {};
   if (metadata.purchase_type !== 'marketplace_book') return false;
+  if (session.payment_status !== 'paid') return false;
   const buyerId = metadata.buyer_user_id || session.client_reference_id;
   const listingId = metadata.community_story_id;
-  const paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id || null;
-  if (!session.id || session.payment_status !== 'paid' || !buyerId || !listingId || !Number.isInteger(session.amount_total) || session.amount_total <= 0 || typeof session.currency !== 'string') throw new BillingError('STRIPE_EVENT_INVALID', 'Marketplace checkout payload is invalid.', 409);
-  const recorded = await service.rpc('record_marketplace_purchase', { p_checkout_session_id: session.id, p_payment_intent_id: paymentIntentId, p_charge_id: null, p_buyer_user_id: buyerId, p_listing_id: listingId, p_amount_cents: session.amount_total, p_currency: session.currency });
+  if (!session.id || !buyerId || !listingId || !Number.isInteger(session.amount_total) || session.amount_total <= 0 || typeof session.currency !== 'string') throw new BillingError('STRIPE_EVENT_INVALID', 'Marketplace checkout payload is invalid.', 409);
+  const { paymentIntentId, chargeId } = await paymentIdentifiersForSession(session);
+  if (!paymentIntentId) throw new BillingError('STRIPE_EVENT_INVALID', 'Marketplace payment identifier is missing.', 409);
+  const recorded = await service.rpc('record_marketplace_purchase', { p_checkout_session_id: session.id, p_payment_intent_id: paymentIntentId, p_charge_id: chargeId, p_buyer_user_id: buyerId, p_listing_id: listingId, p_amount_cents: session.amount_total, p_currency: session.currency });
   if (recorded.error) throw new BillingError('DATABASE', 'Marketplace purchase could not be recorded.', 500);
   if (metadata.checkout_claim_id) await service.rpc('complete_marketplace_checkout_request', { p_id: metadata.checkout_claim_id, p_session_id: session.id, p_success: true });
   return true;
 }
 
-async function reverseMarketplacePurchase(charge: any, reason: string) {
-  const chargeId = typeof charge?.id === 'string' ? charge.id : null;
-  const paymentIntentId = typeof charge?.payment_intent === 'string' ? charge.payment_intent : charge?.payment_intent?.id || null;
-  if (!chargeId && !paymentIntentId) return;
-  const reversed = await service.rpc('reverse_marketplace_purchase', { p_payment_intent_id: paymentIntentId, p_charge_id: chargeId, p_reason: reason });
-  if (reversed.error) throw new BillingError('DATABASE', 'Marketplace purchase reversal failed.', 500);
+async function failMarketplaceCheckout(session: any) {
+  if (session?.metadata?.purchase_type !== 'marketplace_book') return;
+  const claimId = session.metadata.checkout_claim_id;
+  if (!claimId) return;
+  const failed = await service.rpc('complete_marketplace_checkout_request', { p_id: claimId, p_session_id: session.id || '', p_success: false });
+  if (failed.error) throw new BillingError('DATABASE', 'Marketplace checkout failure could not be recorded.', 500);
+}
+
+async function recordPaymentRisk(eventId: string, chargeLike: any, reason: 'refund'|'chargeback'|'fraud_warning', fullReversal: boolean) {
+  const charge = await resolveCharge(chargeLike);
+  const chargeId = objectId(charge);
+  const paymentIntentId = objectId(charge?.payment_intent);
+  if (!chargeId && !paymentIntentId) throw new BillingError('STRIPE_EVENT_INVALID', 'Payment risk identifier is missing.', 409);
+  const recorded = await service.rpc('record_stripe_payment_risk', {
+    p_stripe_event_id: eventId, p_payment_intent_id: paymentIntentId, p_charge_id: chargeId,
+    p_reason: reason, p_refunded_amount_cents: Number.isInteger(charge?.amount_refunded) ? charge.amount_refunded : 0,
+    p_full_reversal: fullReversal,
+  });
+  if (recorded.error) throw new BillingError('DATABASE', 'Payment risk event could not be recorded.', 500);
+}
+
+async function syncFailedInvoice(invoice: any) {
+  const subscriptionId = objectId(invoice?.subscription || invoice?.parent?.subscription_details?.subscription);
+  if (!subscriptionId) return;
+  const subscription = await stripeGet(`subscriptions/${encodeURIComponent(subscriptionId)}`);
+  await syncSubscription(subscription);
 }
 
 Deno.serve(async (request) => {
@@ -78,15 +110,18 @@ Deno.serve(async (request) => {
   if (claim.error) return response({ error: { code: 'DATABASE', message: 'Webhook event could not be claimed.' } }, 500);
   if (!claim.data) return response({ received: true, duplicate: true }, 200);
   try {
-    if (event.type === 'checkout.session.completed') {
+    if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
       const session = event.data?.object; const userId = session?.client_reference_id || session?.metadata?.supabase_user_id; const customerId = typeof session?.customer === 'string' ? session.customer : session?.customer?.id;
       if (userId && customerId) { const saved = await service.from('stripe_customers').upsert({ user_id: userId, stripe_customer_id: customerId }, { onConflict: 'user_id' }); if (saved.error) throw new BillingError('DATABASE', 'Customer mapping failed.', 500); }
       await recordMarketplacePurchase(session);
       // Checkout completion is reconciliation only for subscriptions. Subscription entitlement still comes only from a valid subscription event.
-    } else if (subscriptionEvents.has(event.type)) await syncSubscription(event.data?.object);
+    } else if (event.type === 'checkout.session.async_payment_failed') await failMarketplaceCheckout(event.data?.object);
+    else if (subscriptionEvents.has(event.type)) await syncSubscription(event.data?.object);
     else if (event.type === 'invoice.paid') await recordPaidInvoice(event.data?.object);
-    else if (event.type === 'charge.refunded') { await reverseCommission(event.data?.object, 'refund', false); await reverseMarketplacePurchase(event.data?.object, 'refund'); }
-    else if (event.type === 'charge.dispute.created') { const dispute = event.data?.object; const charge = typeof dispute?.charge === 'string' ? { id: dispute.charge, payment_intent: dispute.payment_intent } : dispute?.charge; await reverseCommission(charge, 'chargeback', true); await reverseMarketplacePurchase(charge, 'chargeback'); }
+    else if (event.type === 'invoice.payment_failed') await syncFailedInvoice(event.data?.object);
+    else if (event.type === 'charge.refunded') await recordPaymentRisk(event.id,event.data?.object,'refund',false);
+    else if (event.type === 'charge.dispute.created') await recordPaymentRisk(event.id,event.data?.object?.charge,'chargeback',true);
+    else if (event.type === 'radar.early_fraud_warning.created') await recordPaymentRisk(event.id,event.data?.object?.charge,'fraud_warning',true);
     await service.rpc('complete_stripe_webhook_event', { p_event_id: event.id, p_success: true, p_error: null });
     return response({ received: true }, 200);
   } catch (caught) {

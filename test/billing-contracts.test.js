@@ -62,6 +62,8 @@ test('subscription synchronization covers lifecycle without trusting checkout su
   assert.match(webhook, /Checkout completion is reconciliation only/);
   assert.match(webhook, /status: subscription\.status/);
   assert.match(webhook, /stripe_price_id/);
+  assert.match(webhook, /invoice\.payment_failed/);
+  assert.match(webhook, /syncFailedInvoice/);
 });
 
 test('plan and operation weights are configurable and cost-sensitive', () => {

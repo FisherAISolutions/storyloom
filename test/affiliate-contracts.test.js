@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const migration = read('supabase/migrations/20260820000000_affiliate_referral_program.sql');
+const lifecycleMigration = read('supabase/migrations/20260824000000_stripe_marketplace_payment_lifecycle.sql');
 const webhook = read('supabase/functions/stripe-webhook/index.ts');
 const checkout = read('supabase/functions/billing-checkout/index.ts');
 const publicFunction = read('supabase/functions/affiliate-public/index.ts');
@@ -45,7 +46,9 @@ test('Stripe creates and reverses commissions through idempotent webhook process
   assert.match(webhook, /record_affiliate_conversion/);
   assert.match(webhook, /event\.type === 'charge\.refunded'/);
   assert.match(webhook, /event\.type === 'charge\.dispute\.created'/);
-  assert.match(webhook, /reverse_affiliate_commission/);
+  assert.match(webhook, /record_stripe_payment_risk/);
+  assert.match(lifecycleMigration, /create or replace function public\.record_affiliate_conversion/);
+  assert.match(lifecycleMigration, /stripe_payment_risk_events/);
   assert.match(migration, /stripe_invoice_id text not null unique/);
   assert.match(migration, /auth\.role\(\)<>'service_role'/);
 });

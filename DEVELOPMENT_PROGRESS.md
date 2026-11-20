@@ -4,7 +4,7 @@
 
 ## Current milestone
 
-Marketplace personalization lifecycle hardening and print-preparation migrations are validated on staging from `codex/personalization-lifecycle-security`. Marketplace, Interactive Reader, personalization, print preparation, and these security fixes remain undeployed to production.
+Stripe marketplace payment-lifecycle hardening is implemented locally on `codex/personalization-lifecycle-security`. Marketplace, Interactive Reader, personalization, print preparation, and these payment/security fixes remain undeployed to production.
 
 ## Git state
 
@@ -15,6 +15,11 @@ Marketplace personalization lifecycle hardening and print-preparation migrations
 - Baseline on `main`: `cac2571 fix: resolve Supabase JWT gateway blocking AI requests`
 
 ## Recently completed
+
+- Added a forward-only Stripe marketplace lifecycle migration that stores trusted Charge IDs, records idempotent/out-of-order refund, dispute, and early-fraud-warning events, revokes only the exactly matched marketplace entitlement, and preserves dependent personalized content for possible restoration.
+- Added paid-only asynchronous Checkout fulfillment/failure handling, authoritative subscription resynchronization after failed invoices, and dynamic Stripe payment methods without changing subscription checkout authority.
+- Coordinated marketplace author-earnings and affiliate-commission reversals through service-role-only database functions. No client-provided payment identifier can grant or revoke access.
+- Focused payment, marketplace, personalization, affiliate, subscription, Community, and security contract checks passed locally. No migration was applied, no Checkout Session/payment was created, and no Stripe or production configuration changed.
 
 - Corrected the pending personalization migration with an ownership-aware `story_characters(user_id,id)` unique key. This is safe because `id` is already the primary key and `user_id` is non-null; it adds no data rewrite or behavioral change to Character/World Bibles.
 - Applied staging-only migrations `20260822000000_marketplace_personalization.sql` and `20260823000000_print_fulfillment_foundation.sql` to `wbrjyytwpnpxcwrvtnhv`. Remote history, generated table relationships, public-schema lint, and anonymous denial for all new tables/helpers were verified. No production database was changed.
@@ -90,6 +95,8 @@ Marketplace personalization lifecycle hardening and print-preparation migrations
 - Verified the live home, `/admin`, and `/billing` routes return HTTP 200. The unchanged billing checkout function rejects unauthenticated access with HTTP 401. No image generation or Stripe payment was invoked.
 
 ## Known bugs and blockers
+
+- Migration `20260824000000_stripe_marketplace_payment_lifecycle.sql` and the updated `marketplace-checkout`/`stripe-webhook` functions require controlled database and Edge Function deployment before the marketplace release. The Stripe webhook endpoint must subscribe to the new async payment, failed-invoice, dispute/refund, and early-fraud-warning events.
 
 - Generated page art is currently 1024px; at an 8.5-inch square trim plus bleed it is only about 117 effective DPI, below the 300 PPI professional target. A separately approved high-resolution generation/upscaling strategy is required before these books can be certified print-ready.
 - Personalization and print migrations passed staging validation; production rollout remains blocked on explicit approval and the existing backup/recovery decision.

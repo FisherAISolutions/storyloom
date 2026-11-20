@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const read=(path)=>readFileSync(path,'utf8');
 const migration=read('supabase/migrations/20260821000000_community_marketplace.sql');
+const lifecycleMigration=read('supabase/migrations/20260824000000_stripe_marketplace_payment_lifecycle.sql');
 const publicFn=read('supabase/functions/community-public/index.ts');
 const checkout=read('supabase/functions/marketplace-checkout/index.ts');
 const webhook=read('supabase/functions/stripe-webhook/index.ts');
@@ -46,8 +47,8 @@ test('author earnings remain separate from affiliate commissions and payouts are
   assert.match(migration,/create table public\.marketplace_author_earnings/);
   assert.match(migration,/default_author_earnings_cents integer not null default 500/);
   assert.doesNotMatch(migration,/stripe_connect|transfer_id|payout_id|automatic_payout/i);
-  assert.match(webhook,/reverse_marketplace_purchase/);
-  assert.match(webhook,/reverseAffiliate|reverseCommission/);
+  assert.match(webhook,/record_stripe_payment_risk/);
+  assert.match(lifecycleMigration,/update public\.affiliate_commissions set[\s\S]*status=.*'reversed'/);
   assert.match(migration,/default_author_earnings_cents/);
   assert.match(migration,/insert into public\.marketplace_author_earnings/);
   assert.doesNotMatch(migration,/update public\.marketplace_author_earnings set amount_cents/);
@@ -59,6 +60,7 @@ test('financial writes are service-only and buyer access is revoked on refunds o
   assert.match(migration,/status=v_status,revoked_at=now\(\)/);
   assert.match(migration,/status='reversed'/);
   assert.match(migration,/unique references public\.marketplace_purchases/);
+  assert.match(lifecycleMigration,/stripe_payment_risk_events/);
 });
 
 test('buyer entitlements survive seller unlisting but not moderation or reversal',()=>{

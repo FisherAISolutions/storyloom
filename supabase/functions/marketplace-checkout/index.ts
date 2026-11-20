@@ -28,7 +28,6 @@ Deno.serve(async (request) => {
     const title = (listing.data as any).stories.title;
     const session = await stripe('checkout/sessions', {
       mode: 'payment', customer,
-      'payment_method_types[0]': 'card',
       'line_items[0][price_data][currency]': listing.data.currency,
       'line_items[0][price_data][unit_amount]': String(listing.data.price_cents),
       'line_items[0][price_data][product_data][name]': `Digital storybook: ${title}`,

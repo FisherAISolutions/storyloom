@@ -51,6 +51,14 @@ export async function stripe(path: string, fields: Record<string, string>, idemp
   return payload;
 }
 
+export async function stripeGet(path: string) {
+  if (!STRIPE_KEY.startsWith('sk_test_') && Deno.env.get('STRIPE_LIVE_MODE') !== 'enabled') throw new BillingError('BILLING_CONFIG', 'Stripe test mode is not configured.', 503);
+  const result = await fetch(`https://api.stripe.com/v1/${path}`, { headers: { Authorization: `Bearer ${STRIPE_KEY}` } });
+  const payload = await result.json();
+  if (!result.ok) { console.error('Stripe API lookup failed', path.split('/')[0], payload?.error?.type); throw new BillingError('STRIPE_API', 'The billing request could not be completed.', 502); }
+  return payload;
+}
+
 export async function customerFor(user: { id: string; email?: string }) {
   const existing = await service.from('stripe_customers').select('stripe_customer_id').eq('user_id', user.id).maybeSingle();
   if (existing.error) throw new BillingError('DATABASE', 'Billing details could not be loaded.', 500);

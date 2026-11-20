@@ -47,7 +47,7 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 - [ ] Credit purchases — Not implemented as a paid standalone purchase flow.
 - [x] Webhook verification and idempotency.
 - [x] Subscription entitlement synchronization.
-- [ ] Payment and refund handling — Needs end-to-end verification and documented refund behavior.
+- [ ] Payment and refund handling — Trusted Charge/PaymentIntent matching, idempotent refunds/disputes/fraud warnings, async Checkout, and failed-invoice handling are implemented locally; migration/function deployment and live webhook verification remain.
 - [ ] Production billing readiness — Needs Stripe Dashboard and live-mode readiness review.
 
 ## D. Affiliate Program
@@ -74,7 +74,7 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 - [x] Stable shareable book URLs — Existing Community Shelf public slugs are reused.
 - [ ] Book descriptions and metadata — Paid descriptions and price metadata are implemented locally; deployment pending.
 - [ ] Preview pages — Preview-only delivery for unpaid viewers is implemented locally; deployment pending.
-- [ ] Digital checkout — Authenticated server-priced Stripe Checkout is implemented locally; live configuration and verification pending.
+- [ ] Digital checkout — Authenticated server-priced Stripe Checkout with dynamic payment methods and paid-only async fulfillment is implemented locally; live configuration and verification pending.
 - [ ] Buyer library — Durable database entitlements and a Purchased Books UI are implemented locally and staging schema is validated; production deployment pending.
 - [ ] Seller earnings — Separate non-retroactive author earnings ledger, Owner default control, and seller summary are implemented locally; deployment pending and payouts disabled.
 - [ ] Moderation and reporting — Existing Community moderation applies to listings; marketplace-specific reports remain.
