@@ -4,7 +4,7 @@
 
 ## Current milestone
 
-Stripe marketplace payment-lifecycle hardening is implemented locally on `codex/personalization-lifecycle-security`. Marketplace, Interactive Reader, personalization, print preparation, and these payment/security fixes remain undeployed to production.
+The staging release rehearsal is partially complete on `codex/personalization-lifecycle-security`. All 23 migrations and `community-public` are deployed to staging; marketplace payment functions and authenticated role-specific UI rehearsal remain blocked on isolated staging Stripe secrets and approved staging test identities. Nothing in this feature release is deployed to production.
 
 ## Git state
 
@@ -15,6 +15,10 @@ Stripe marketplace payment-lifecycle hardening is implemented locally on `codex/
 - Baseline on `main`: `cac2571 fix: resolve Supabase JWT gateway blocking AI requests`
 
 ## Recently completed
+
+- Applied and verified migration `20260824000000_stripe_marketplace_payment_lifecycle.sql` on staging only. Staging now records all 23 migrations, database lint is clean, the risk ledger is RLS-protected with no browser grants, and financial functions execute only for `service_role`.
+- Corrected a `community-public` list-response parenthesis error exposed by Supabase's staging bundler, deployed function version 1 to staging with gateway JWT verification disabled as intended for public delivery, and verified anonymous listing, 401 Buyer Library denial, and 404 unknown-book behavior.
+- Prepared an isolated local frontend preview using only staging Supabase URL/key material. The Community marketplace rendered successfully and protected purchases redirected anonymous users to login. Ninety-six focused regressions, ESLint, and the production build passed without payments or paid AI calls.
 
 - Added a forward-only Stripe marketplace lifecycle migration that stores trusted Charge IDs, records idempotent/out-of-order refund, dispute, and early-fraud-warning events, revokes only the exactly matched marketplace entitlement, and preserves dependent personalized content for possible restoration.
 - Added paid-only asynchronous Checkout fulfillment/failure handling, authoritative subscription resynchronization after failed invoices, and dynamic Stripe payment methods without changing subscription checkout authority.
@@ -96,7 +100,9 @@ Stripe marketplace payment-lifecycle hardening is implemented locally on `codex/
 
 ## Known bugs and blockers
 
-- Migration `20260824000000_stripe_marketplace_payment_lifecycle.sql` and the updated `marketplace-checkout`/`stripe-webhook` functions require controlled database and Edge Function deployment before the marketplace release. The Stripe webhook endpoint must subscribe to the new async payment, failed-invoice, dispute/refund, and early-fraud-warning events.
+- Staging has no Stripe API key or webhook signing secret, so `marketplace-checkout` and `stripe-webhook` were intentionally not deployed there. Payment-function rehearsal requires isolated Stripe test/sandbox credentials and required test webhook events.
+- Staging has one Auth user but no Owner profile and no approved test credentials. Authenticated Buyer Library, personalization, admin, print, Reader, and owner story-creation UI smoke tests remain blocked; their focused contract/RLS tests pass.
+- Migration `20260824000000_stripe_marketplace_payment_lifecycle.sql` and the updated payment functions remain pending in production. The production webhook endpoint must subscribe to the new async payment, failed-invoice, dispute/refund, and early-fraud-warning events.
 
 - Generated page art is currently 1024px; at an 8.5-inch square trim plus bleed it is only about 117 effective DPI, below the 300 PPI professional target. A separately approved high-resolution generation/upscaling strategy is required before these books can be certified print-ready.
 - Personalization and print migrations passed staging validation; production rollout remains blocked on explicit approval and the existing backup/recovery decision.

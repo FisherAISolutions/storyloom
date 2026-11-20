@@ -68,7 +68,7 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 ## E. Digital Book Marketplace
 
 - [x] Existing Community Shelf and safe public publishing — Opt-in sharing, ownership checks, moderation, private Storage, and public viewing are deployed and verified.
-- [ ] Marketplace browsing — Existing Community Shelf is reused; curved featured/new-book discovery, paid badges, prices, and responsive book grids are implemented locally, deployment pending.
+- [ ] Marketplace browsing — Existing Community Shelf is reused; curved discovery, paid badges, prices, and responsive grids are deployed and anonymously smoke-tested on staging, while production and populated-catalog verification remain pending.
 - [ ] Search and categories — Local title/author/theme/style search plus access and art-style filters are implemented; dedicated category taxonomy is not stored yet.
 - [ ] Individual book product pages — Redesigned cover, description, author, theme, access state, protected preview, purchase/read actions, and future-option placeholders are implemented locally; deployment pending.
 - [x] Stable shareable book URLs — Existing Community Shelf public slugs are reused.
