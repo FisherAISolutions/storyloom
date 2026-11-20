@@ -11,6 +11,7 @@ const storyAi=read('supabase/functions/story-ai/index.ts');
 const storage=read('src/services/storage.js');
 
 test('author personalization is opt-in and constrained to a character in the owned published story',()=>{
+  assert.match(migration,/story_characters_user_id_id_key unique \(user_id, id\)/);
   assert.match(migration,/enabled boolean not null default false/);
   assert.match(migration,/cs\.story_id=p_story_id and cs\.user_id=v_user/);
   assert.match(migration,/sc\.story_id=p_story_id and sc\.user_id=v_user/);

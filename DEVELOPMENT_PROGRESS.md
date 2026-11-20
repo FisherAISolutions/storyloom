@@ -4,7 +4,7 @@
 
 ## Current milestone
 
-Marketplace personalization lifecycle hardening is implemented locally on `codex/personalization-lifecycle-security`, building from print-preparation commit `145a30e`. Marketplace, Interactive Reader, personalization, print preparation, and these security fixes remain undeployed.
+Marketplace personalization lifecycle hardening and print-preparation migrations are validated on staging from `codex/personalization-lifecycle-security`. Marketplace, Interactive Reader, personalization, print preparation, and these security fixes remain undeployed to production.
 
 ## Git state
 
@@ -16,9 +16,11 @@ Marketplace personalization lifecycle hardening is implemented locally on `codex
 
 ## Recently completed
 
+- Corrected the pending personalization migration with an ownership-aware `story_characters(user_id,id)` unique key. This is safe because `id` is already the primary key and `user_id` is non-null; it adds no data rewrite or behavioral change to Character/World Bibles.
+- Applied staging-only migrations `20260822000000_marketplace_personalization.sql` and `20260823000000_print_fulfillment_foundation.sql` to `wbrjyytwpnpxcwrvtnhv`. Remote history, generated table relationships, public-schema lint, and anonymous denial for all new tables/helpers were verified. No production database was changed.
 - Linked paid personalized editions to the exact qualifying marketplace purchase and made active entitlement authoritative across story/page/world/character RLS, Buyer Library, Reader/API access, and private `story-images` Storage policies. Refunds and disputes preserve private content while denying access; a legitimate repurchase can restore it.
 - Replaced restrictive personalization/marketplace/print provenance foreign keys with deletion-safe anonymization or snapshots, preserving attribution and financial records without blocking source-book, character, personalized-story, or account deletion. Private signed media URLs are now limited to 60 seconds to bound already-issued URL access after revocation.
-- Verified migrations `20260822000000` and `20260823000000` are pending in both known Supabase environments, so the pending migration files were safely corrected rather than adding a forward corrective migration. No database migration was applied.
+- Before staging application, verified migrations `20260822000000` and `20260823000000` were pending in both known environments, so the unapplied files were corrected rather than adding a forward corrective migration. They are now applied only to staging and remain pending in production.
 - Preserved the Repaint/Supabase JWT gateway fix. Production `story-ai` was previously verified at version 26 with in-function user authentication retained.
 - Implemented locally: staff roles, one-time Owner bootstrap, protected Admin Control Center, user search, constrained role management, audited/idempotent complimentary credits, cost-capped staff AI testing, and administrative audit records.
 - Added focused authorization and service-contract tests.
@@ -90,7 +92,7 @@ Marketplace personalization lifecycle hardening is implemented locally on `codex
 ## Known bugs and blockers
 
 - Generated page art is currently 1024px; at an 8.5-inch square trim plus bleed it is only about 117 effective DPI, below the 300 PPI professional target. A separately approved high-resolution generation/upscaling strategy is required before these books can be certified print-ready.
-- Personalization lifecycle fixes are locally complete and require migration validation in a disposable/staging database before production eligibility.
+- Personalization and print migrations passed staging validation; production rollout remains blocked on explicit approval and the existing backup/recovery decision.
 - Print fulfillment requires provider selection, verified product/page-count rules, generated wrap-cover templates, live quote integration, secure address collection, payment authorization, signed provider events, and physical sample approval. The new print migration and UI remain local only.
 - No remaining database blocker was found in focused staging validation.
 - No outstanding Admin Control Center deployment blocker is known.

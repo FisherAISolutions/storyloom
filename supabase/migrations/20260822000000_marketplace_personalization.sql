@@ -1,6 +1,12 @@
 -- Optional, buyer-funded personalized editions of Community Marketplace books.
 -- Source books remain unchanged and no source image path is copied.
 
+-- `story_characters.id` is already the primary key, so this pair cannot contain
+-- duplicates. The explicit owner/id key lets personalization provenance use an
+-- ownership-aware foreign key without changing Character Bible behavior.
+alter table public.story_characters
+  add constraint story_characters_user_id_id_key unique (user_id, id);
+
 create table public.marketplace_personalization_settings (
   community_story_id uuid primary key references public.community_stories(id) on delete cascade,
   author_user_id uuid not null references public.profiles(id) on delete cascade,
