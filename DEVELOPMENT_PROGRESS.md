@@ -4,7 +4,7 @@
 
 ## Current milestone
 
-The staging release rehearsal is partially complete on `codex/personalization-lifecycle-security`. All 23 migrations and `community-public` are deployed to staging; marketplace payment functions and authenticated role-specific UI rehearsal remain blocked on isolated staging Stripe secrets and approved staging test identities. Nothing in this feature release is deployed to production.
+The non-payment staging release rehearsal is complete on `codex/personalization-lifecycle-security`. All 23 migrations and `community-public` are deployed to staging, dedicated Author/Buyer identities and marked marketplace fixtures are present, and authenticated API/RLS checks pass. Owner browser testing awaits an explicitly authorized staging Owner; payment-function rehearsal awaits isolated Stripe sandbox secrets. Nothing in this feature release is deployed to production.
 
 ## Git state
 
@@ -15,6 +15,11 @@ The staging release rehearsal is partially complete on `codex/personalization-li
 - Baseline on `main`: `cac2571 fix: resolve Supabase JWT gateway blocking AI requests`
 
 ## Recently completed
+
+- Created dedicated confirmed staging Auth identities for an Author and Buyer through the supported Supabase Auth Admin API. Both retain the ordinary `user` profile role; no Owner/Admin privilege was assigned.
+- Created four clearly marked staging fixtures with canonical private artwork: a free published book, paid preview book, personalization-enabled paid book, and private book. Page ownership, Character Bible snapshots, World Bible/location/scene continuity, and Community relationships were verified.
+- Authenticated staging API rehearsal passed login/logout, author ownership, cross-user RLS denial, free full-book delivery, paid two-page preview limits, private-book exclusion, empty unverified Buyer Library, purchase-gated personalization, and private Storage isolation.
+- Seventy-two focused Community, marketplace, personalization, Reader, print, payment-lifecycle, and security regressions passed. ESLint and the production build passed. No payment, paid AI call, production change, or payment-function deployment occurred.
 
 - Applied and verified migration `20260824000000_stripe_marketplace_payment_lifecycle.sql` on staging only. Staging now records all 23 migrations, database lint is clean, the risk ledger is RLS-protected with no browser grants, and financial functions execute only for `service_role`.
 - Corrected a `community-public` list-response parenthesis error exposed by Supabase's staging bundler, deployed function version 1 to staging with gateway JWT verification disabled as intended for public delivery, and verified anonymous listing, 401 Buyer Library denial, and 404 unknown-book behavior.
@@ -101,7 +106,7 @@ The staging release rehearsal is partially complete on `codex/personalization-li
 ## Known bugs and blockers
 
 - Staging has no Stripe API key or webhook signing secret, so `marketplace-checkout` and `stripe-webhook` were intentionally not deployed there. Payment-function rehearsal requires isolated Stripe test/sandbox credentials and required test webhook events.
-- Staging has one Auth user but no Owner profile and no approved test credentials. Authenticated Buyer Library, personalization, admin, print, Reader, and owner story-creation UI smoke tests remain blocked; their focused contract/RLS tests pass.
+- Staging now has dedicated Author and Buyer test identities, but no authorized Owner. Owner/Admin UI testing remains blocked until the user identifies a specific staging account for `assign_initial_owner()` or another approved role-assignment path. Browser-authenticated UI testing was not claimed because no user-shareable test password was created; equivalent authenticated API/RLS checks and focused UI contracts pass.
 - Migration `20260824000000_stripe_marketplace_payment_lifecycle.sql` and the updated payment functions remain pending in production. The production webhook endpoint must subscribe to the new async payment, failed-invoice, dispute/refund, and early-fraud-warning events.
 
 - Generated page art is currently 1024px; at an 8.5-inch square trim plus bleed it is only about 117 effective DPI, below the 300 PPI professional target. A separately approved high-resolution generation/upscaling strategy is required before these books can be certified print-ready.

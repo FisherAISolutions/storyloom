@@ -68,14 +68,14 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 ## E. Digital Book Marketplace
 
 - [x] Existing Community Shelf and safe public publishing — Opt-in sharing, ownership checks, moderation, private Storage, and public viewing are deployed and verified.
-- [ ] Marketplace browsing — Existing Community Shelf is reused; curved discovery, paid badges, prices, and responsive grids are deployed and anonymously smoke-tested on staging, while production and populated-catalog verification remain pending.
+- [ ] Marketplace browsing — Existing Community Shelf is reused; curved discovery, paid badges, prices, and responsive grids are populated and anonymously/API smoke-tested with marked staging fixtures. Production verification remains pending.
 - [ ] Search and categories — Local title/author/theme/style search plus access and art-style filters are implemented; dedicated category taxonomy is not stored yet.
 - [ ] Individual book product pages — Redesigned cover, description, author, theme, access state, protected preview, purchase/read actions, and future-option placeholders are implemented locally; deployment pending.
 - [x] Stable shareable book URLs — Existing Community Shelf public slugs are reused.
 - [ ] Book descriptions and metadata — Paid descriptions and price metadata are implemented locally; deployment pending.
 - [ ] Preview pages — Preview-only delivery for unpaid viewers is implemented locally; deployment pending.
 - [ ] Digital checkout — Authenticated server-priced Stripe Checkout with dynamic payment methods and paid-only async fulfillment is implemented locally; live configuration and verification pending.
-- [ ] Buyer library — Durable database entitlements and a Purchased Books UI are implemented locally and staging schema is validated; production deployment pending.
+- [ ] Buyer library — Durable database entitlements and a Purchased Books UI are implemented; authenticated staging confirmed that no access appears without a verified purchase. Paid test-mode purchase and production deployment remain pending.
 - [ ] Seller earnings — Separate non-retroactive author earnings ledger, Owner default control, and seller summary are implemented locally; deployment pending and payouts disabled.
 - [ ] Moderation and reporting — Existing Community moderation applies to listings; marketplace-specific reports remain.
 - [ ] SEO and social sharing.
@@ -159,7 +159,7 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 - [ ] Marketplace content moderation.
 - [ ] Production deployment checks — Admin and multi-provider releases passed deployment, route, authorization, and safe-default smoke checks; repeat for every release.
 - [ ] Backup and recovery planning — This additive release used an explicit no-backup waiver; verified recovery tooling remains required for future higher-risk migrations.
-- [ ] End-to-end purchase testing — Needs verification for the current Stripe configuration.
+- [ ] End-to-end purchase testing — Non-payment entitlement and preview boundaries pass in staging; isolated Stripe sandbox credentials, webhook endpoint, and test-mode Checkout are still required.
 - [ ] Launch readiness.
 
 ## Roadmap maintenance rules
