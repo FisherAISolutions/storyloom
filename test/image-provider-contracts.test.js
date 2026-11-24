@@ -13,9 +13,11 @@ test('character generation requires edit and reference capabilities', () => {
 
 test('entitlement reservation remains before provider invocation and finalizes once after storage', () => {
   const page = edge.slice(edge.indexOf("if (action === 'generate-page-image')"), edge.indexOf("if (action === 'suggest-continuation')"));
+  const generation = page.slice(page.indexOf('const result = await generateConfiguredImage'));
   assert.ok(page.indexOf('assertAiEntitlement') < page.indexOf('generateConfiguredImage'));
-  assert.ok(page.indexOf('generateConfiguredImage') < page.indexOf('uploadImage'));
-  assert.ok(page.indexOf('uploadImage') < page.indexOf('finalizeAiEntitlement'));
+  assert.ok(generation.indexOf('generateConfiguredImage') < generation.indexOf('uploadImage'));
+  assert.ok(generation.indexOf('uploadImage') < generation.indexOf('finalizeAiEntitlement'));
+  assert.ok(generation.indexOf("'provider_completed'") < generation.indexOf('uploadImage'));
   assert.match(edge, /releaseAiEntitlement\(service, reservation\)/);
 });
 

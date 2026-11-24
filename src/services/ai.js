@@ -1,10 +1,11 @@
 import { getSupabaseClient } from '@/lib/supabase';
 import { ServiceError } from '@/services/errors';
 
-const ERROR_CODES = new Set(['AUTH_REQUIRED', 'PERMISSION_DENIED', 'VALIDATION', 'AI_PROVIDER', 'AI_RESPONSE_INVALID', 'STORAGE', 'DATABASE', 'RATE_LIMIT', 'ENTITLEMENT_LIMIT', 'ENTITLEMENT_UNAVAILABLE']);
+const ERROR_CODES = new Set(['AUTH_REQUIRED', 'PERMISSION_DENIED', 'VALIDATION', 'AI_PROVIDER', 'AI_RESPONSE_INVALID', 'STORAGE', 'DATABASE', 'RATE_LIMIT', 'ENTITLEMENT_LIMIT', 'ENTITLEMENT_UNAVAILABLE', 'GENERATION_RECONCILIATION_REQUIRED']);
 
 async function invokeAi(action, payload = {}) {
-  const { data, error } = await getSupabaseClient().functions.invoke('story-ai', { body: { action, requestId: crypto.randomUUID(), ...payload } });
+  const requestId = typeof payload.requestId === 'string' ? payload.requestId : crypto.randomUUID();
+  const { data, error } = await getSupabaseClient().functions.invoke('story-ai', { body: { ...payload, action, requestId } });
   if (error) {
     let details;
     try { details = await error.context?.json(); } catch {}

@@ -161,7 +161,8 @@ test('repainting keeps story prose separate from illustration instructions', () 
   assert.match(pages, /illustration_scene/);
   assert.match(pages, /illustration_instructions/);
   assert.match(editor, /illustration_instructions: illustrationDraft\.trim\(\)/);
-  assert.match(editor, /storyPagesService\.update\(page\.id, \{ image_path: imagePath \}\)/);
+  assert.doesNotMatch(editor, /storyPagesService\.update\(page\.id, \{ image_path: imagePath \}\)/);
+  assert.match(edge, /existingPage\.data\?\.id[\s\S]*\.update\(\{ image_path: path \}\)\.eq\('id', existingPage\.data\.id\)/);
   assert.doesNotMatch(editor, /image_path: imagePath, text:/);
   assert.doesNotMatch(studio, /generatePageImage\(\{ storyId, pageNumber, text \}\)/);
   assert.match(edge, /existingPage\.data!\.illustration_scene \|\| existingPage\.data!\.text/);

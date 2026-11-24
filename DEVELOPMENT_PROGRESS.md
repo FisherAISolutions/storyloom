@@ -144,4 +144,14 @@ Rollback plan: take a fresh logical production backup before migrations; keep th
 
 ## Next recommended task
 
-Resolve the personalization migration blockers, then select and sandbox one print provider using exact product templates and quotes. Do not enable checkout or fulfillment until high-resolution output and a physical sample pass provider validation.
+Configure the six FisherCreations test-mode Stripe Prices and required webhook events, then perform the approved ordered production database/function/frontend rollout. Keep real-money checkout, Connect payouts, and print fulfillment disabled.
+
+## Milestone: final launch billing (local)
+
+- Implemented the final Free, one-time Starter, Family, and Creator catalog plus permanent Small/Medium/Large packs in two forward-only migrations.
+- Added server-authoritative feature gates, monthly-first transactional reservations, FIFO purchased balances, cancellation carryover, failed-operation restoration, once-per-account Starter, and refund/dispute debt controls.
+- Added authenticated one-time credit Checkout and idempotent paid/async webhook fulfillment; test Stripe Price IDs remain intentionally unset.
+- Hardened image generation with stable page request IDs, server-side canonical page persistence, provider-completed tracking, replay protection, explicit reconciliation, and non-silent entitlement finalization.
+- Set prospective marketplace economics to an Owner-configurable 80% author share after processing fees and excluding tax; historical earnings remain unchanged and payouts remain disabled.
+- Updated pricing, billing balances, Admin economics, and Stripe/entitlement documentation. Physical checkout remains disabled and marked Coming Soon.
+- Production migrations, functions, Stripe configuration, and frontend deployment remain unperformed pending explicit release approval.

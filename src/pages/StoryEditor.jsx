@@ -144,7 +144,7 @@ export default function StoryEditor() {
     try {
       await storyPagesService.update(page.id, { illustration_instructions: illustrationDraft.trim() });
       const imagePath = await generatePageImage({ storyId: story.id, pageNumber: page.page_number });
-      const updated = await storyPagesService.update(page.id, { image_path: imagePath });
+      const updated = { ...page, image_path: imagePath };
       const copy = [...pages];
       copy[current] = updated;
       setPages(copy);

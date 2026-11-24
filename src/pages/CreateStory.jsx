@@ -178,9 +178,9 @@ export default function CreateStory() {
         const imagePath = await generatePageImage({
           storyId: story.id,
           pageNumber: i + 1,
+          requestId: page.id,
         });
         if (i === 0) coverPath = imagePath;
-        await storyPagesService.update(page.id, { image_path: imagePath });
       }
       await storiesService.update(story.id, { status: 'ready', cover_image_path: coverPath });
       navigate(`/story/${story.id}`);

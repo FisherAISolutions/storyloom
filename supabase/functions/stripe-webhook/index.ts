@@ -58,6 +58,20 @@ async function paymentIdentifiersForSession(session: any) {
   return { paymentIntentId, chargeId: objectId(paymentIntent?.latest_charge) };
 }
 
+async function paymentCosts(chargeId: string | null, session: any) {
+  let processingFeeCents = 0;
+  if (chargeId) {
+    const charge = await stripeGet(`charges/${encodeURIComponent(chargeId)}`);
+    const balanceId = objectId(charge?.balance_transaction);
+    if (balanceId) {
+      const balance = await stripeGet(`balance_transactions/${encodeURIComponent(balanceId)}`);
+      if (Number.isInteger(balance?.fee) && balance.fee >= 0) processingFeeCents = balance.fee;
+    }
+  }
+  const taxCents = Number.isInteger(session?.total_details?.amount_tax) ? session.total_details.amount_tax : 0;
+  return { processingFeeCents, taxCents };
+}
+
 async function recordMarketplacePurchase(session: any) {
   const metadata = session?.metadata || {};
   if (metadata.purchase_type !== 'marketplace_book') return false;
@@ -67,11 +81,27 @@ async function recordMarketplacePurchase(session: any) {
   if (!session.id || !buyerId || !listingId || !Number.isInteger(session.amount_total) || session.amount_total <= 0 || typeof session.currency !== 'string') throw new BillingError('STRIPE_EVENT_INVALID', 'Marketplace checkout payload is invalid.', 409);
   const { paymentIntentId, chargeId } = await paymentIdentifiersForSession(session);
   if (!paymentIntentId) throw new BillingError('STRIPE_EVENT_INVALID', 'Marketplace payment identifier is missing.', 409);
-  const recorded = await service.rpc('record_marketplace_purchase', { p_checkout_session_id: session.id, p_payment_intent_id: paymentIntentId, p_charge_id: chargeId, p_buyer_user_id: buyerId, p_listing_id: listingId, p_amount_cents: session.amount_total, p_currency: session.currency });
+  const costs = await paymentCosts(chargeId, session);
+  const recorded = await service.rpc('record_marketplace_purchase', { p_checkout_session_id: session.id, p_payment_intent_id: paymentIntentId, p_charge_id: chargeId, p_buyer_user_id: buyerId, p_listing_id: listingId, p_amount_cents: session.amount_total, p_currency: session.currency, p_processing_fee_cents: costs.processingFeeCents, p_tax_cents: costs.taxCents });
   if (recorded.error) throw new BillingError('DATABASE', 'Marketplace purchase could not be recorded.', 500);
   if (metadata.checkout_claim_id) await service.rpc('complete_marketplace_checkout_request', { p_id: metadata.checkout_claim_id, p_session_id: session.id, p_success: true });
   return true;
 }
+
+async function recordCreditPurchase(session: any) {
+  const metadata=session?.metadata||{};
+  if(metadata.purchase_type!=='ai_credits')return false;
+  if(session.payment_status!=='paid')return false;
+  const userId=metadata.user_id||session.client_reference_id;const productKey=metadata.product_key;
+  if(!session.id||!userId||!productKey||!Number.isInteger(session.amount_total)||session.amount_total<=0||typeof session.currency!=='string')throw new BillingError('STRIPE_EVENT_INVALID','Credit checkout payload is invalid.',409);
+  const {paymentIntentId,chargeId}=await paymentIdentifiersForSession(session);if(!paymentIntentId)throw new BillingError('STRIPE_EVENT_INVALID','Credit payment identifier is missing.',409);
+  const recorded=await service.rpc('record_credit_purchase',{p_checkout_session_id:session.id,p_payment_intent_id:paymentIntentId,p_charge_id:chargeId,p_user_id:userId,p_product_key:productKey,p_amount_cents:session.amount_total,p_currency:session.currency});
+  if(recorded.error)throw new BillingError('DATABASE','Purchased credits could not be recorded.',500);
+  if(metadata.checkout_claim_id)await service.rpc('complete_credit_checkout_request',{p_id:metadata.checkout_claim_id,p_session_id:session.id,p_success:true});
+  return true;
+}
+
+async function failCreditCheckout(session:any){if(session?.metadata?.purchase_type!=='ai_credits')return;const claimId=session.metadata.checkout_claim_id;if(!claimId)return;const failed=await service.rpc('complete_credit_checkout_request',{p_id:claimId,p_session_id:session.id||'',p_success:false});if(failed.error)throw new BillingError('DATABASE','Credit checkout failure could not be recorded.',500);}
 
 async function failMarketplaceCheckout(session: any) {
   if (session?.metadata?.purchase_type !== 'marketplace_book') return;
@@ -92,6 +122,8 @@ async function recordPaymentRisk(eventId: string, chargeLike: any, reason: 'refu
     p_full_reversal: fullReversal,
   });
   if (recorded.error) throw new BillingError('DATABASE', 'Payment risk event could not be recorded.', 500);
+  const reversedCredits=await service.rpc('reverse_credit_purchase',{p_payment_intent_id:paymentIntentId,p_charge_id:chargeId,p_reason:reason});
+  if(reversedCredits.error)throw new BillingError('DATABASE','Purchased credit reversal could not be recorded.',500);
 }
 
 async function syncFailedInvoice(invoice: any) {
@@ -114,8 +146,9 @@ Deno.serve(async (request) => {
       const session = event.data?.object; const userId = session?.client_reference_id || session?.metadata?.supabase_user_id; const customerId = typeof session?.customer === 'string' ? session.customer : session?.customer?.id;
       if (userId && customerId) { const saved = await service.from('stripe_customers').upsert({ user_id: userId, stripe_customer_id: customerId }, { onConflict: 'user_id' }); if (saved.error) throw new BillingError('DATABASE', 'Customer mapping failed.', 500); }
       await recordMarketplacePurchase(session);
+      await recordCreditPurchase(session);
       // Checkout completion is reconciliation only for subscriptions. Subscription entitlement still comes only from a valid subscription event.
-    } else if (event.type === 'checkout.session.async_payment_failed') await failMarketplaceCheckout(event.data?.object);
+    } else if (event.type === 'checkout.session.async_payment_failed') { await failMarketplaceCheckout(event.data?.object); await failCreditCheckout(event.data?.object); }
     else if (subscriptionEvents.has(event.type)) await syncSubscription(event.data?.object);
     else if (event.type === 'invoice.paid') await recordPaidInvoice(event.data?.object);
     else if (event.type === 'invoice.payment_failed') await syncFailedInvoice(event.data?.object);

@@ -18,7 +18,7 @@ export default function PersonalizeStory(){
     try{
       const edition=await marketplace.createPersonalizedEdition(slug,characterId,requestId.current);
       const pages=await storyPages.listByStory(edition.story_id);let completed=pages.filter((page)=>page.image_path).length;
-      for(const page of pages){if(page.image_path)continue;setProgress(`Creating illustration ${completed+1} of ${pages.length}…`);const imagePath=await storyStudio.generatePageImage({storyId:edition.story_id,pageNumber:page.page_number});await storyPages.update(page.id,{image_path:imagePath});completed+=1;}
+      for(const page of pages){if(page.image_path)continue;setProgress(`Creating illustration ${completed+1} of ${pages.length}…`);await storyStudio.generatePageImage({storyId:edition.story_id,pageNumber:page.page_number,requestId:page.id});completed+=1;}
       await marketplace.completePersonalizedEdition(edition.story_id);setProgress('Your private edition is ready.');navigate(`/story/${edition.story_id}/read`);
     }catch(e){setError(e.message);setBusy(false);}
   }

@@ -2,7 +2,7 @@ import { getSupabaseClient } from '@/lib/supabase';
 import { ServiceError } from '@/services/errors';
 
 const PLAN_NAMES = Object.freeze({
-  free: 'MyStorybook AI Starter',
+  free: 'MyStorybook AI Free',
   unpaid: 'No active plan',
   family: 'MyStorybook AI Family',
   creator: 'MyStorybook AI Creator',
@@ -23,10 +23,12 @@ async function invoke(functionName, body = {}) {
 }
 
 export async function getPlans() {
-  const { data, error } = await getSupabaseClient().rpc('get_public_billing_plans');
+  const { data, error } = await getSupabaseClient().rpc('get_billing_catalog');
   if (error) throw new ServiceError('BILLING_ERROR', 'Plans could not be loaded.');
-  return (data || []).map(withPublicPlanName);
+  return (data?.plans || []).map(withPublicPlanName);
 }
+
+export async function getCatalog() { const {data,error}=await getSupabaseClient().rpc('get_billing_catalog');if(error)throw new ServiceError('BILLING_ERROR','Billing catalog could not be loaded.');return data; }
 
 export async function getEntitlements() {
   const { data, error } = await getSupabaseClient().rpc('get_billing_summary');
@@ -37,4 +39,5 @@ export async function getEntitlements() {
 export const getSubscription = getEntitlements;
 export const getUsage = getEntitlements;
 export const createCheckout = (planKey) => invoke('billing-checkout', { plan_key: planKey });
+export const createCreditCheckout = (productKey, requestId=crypto.randomUUID()) => invoke('credit-checkout', { product_key: productKey, request_id: requestId });
 export const createPortalSession = () => invoke('billing-portal');

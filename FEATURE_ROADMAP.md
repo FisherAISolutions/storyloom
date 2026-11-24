@@ -41,13 +41,13 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 ## C. Subscriptions and Payments
 
 - [ ] Stripe integration verification — Code paths reviewed; Stripe Dashboard mode and webhook delivery verification remain.
-- [ ] Stripe test-mode checkout — Partially implemented; Family and Creator mappings exist, live end-to-end status needs verification.
-- [x] Subscription plans.
+- [ ] Stripe test-mode checkout — Final Family/Creator subscription and Starter/credit-pack flows are implemented locally; test Price mapping and end-to-end production-project test-mode verification remain.
+- [x] Subscription plans — Final Free, Family, and Creator allowances are server-authoritative; deployment remains pending.
 - [x] Customer billing portal.
-- [ ] Credit purchases — Not implemented as a paid standalone purchase flow.
+- [ ] Credit purchases — One-time Starter and three permanent pack flows, monthly-first allocation, idempotent fulfillment, and reversals are implemented locally; Stripe Price configuration and deployment remain.
 - [x] Webhook verification and idempotency.
 - [x] Subscription entitlement synchronization.
-- [ ] Payment and refund handling — Trusted Charge/PaymentIntent matching, idempotent refunds/disputes/fraud warnings, async Checkout, and failed-invoice handling are implemented locally; migration/function deployment and live webhook verification remain.
+- [ ] Payment and refund handling — Trusted Charge/PaymentIntent matching, async Checkout, out-of-order/duplicate events, purchased-credit debt handling, and marketplace/affiliate reversals are implemented locally; deployment and test-mode webhook verification remain.
 - [ ] Production billing readiness — Needs Stripe Dashboard and live-mode readiness review.
 
 ## D. Affiliate Program

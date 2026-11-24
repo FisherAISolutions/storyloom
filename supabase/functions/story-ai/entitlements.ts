@@ -17,7 +17,7 @@ export async function assertAiEntitlement(input: { service: SupabaseClient; user
 
 export async function finalizeAiEntitlement(service: SupabaseClient, reservation: EntitlementReservation | null) {
   if (!reservation) return; const { error } = await service.rpc('finalize_ai_entitlement', { p_reservation_id: reservation.reservationId, p_provider_request_id: null });
-  if (error) console.error('entitlement finalization failed', reservation.reservationId);
+  if (error) { console.error('entitlement finalization failed', reservation.reservationId); throw new AppError('ENTITLEMENT_UNAVAILABLE', 'Generation completed but billing finalization is pending reconciliation.', 503); }
 }
 
 export async function releaseAiEntitlement(service: SupabaseClient, reservation: EntitlementReservation | null) {

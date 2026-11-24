@@ -9,7 +9,7 @@ Deno.serve(async (request) => {
     if (!body || typeof body.plan_key !== 'string' || Object.keys(body).some((key) => key !== 'plan_key')) throw new BillingError('VALIDATION', 'Choose a supported plan.');
     const plan = await service.from('billing_plans').select('plan_key,stripe_price_id').eq('plan_key', body.plan_key).eq('active', true).maybeSingle();
     if (plan.error) throw new BillingError('DATABASE', 'Plans could not be loaded.', 500);
-    if (!plan.data || plan.data.plan_key === 'unpaid' || !plan.data.stripe_price_id) throw new BillingError('PLAN_UNAVAILABLE', 'That subscription plan is not available.');
+    if (!plan.data || !['family','creator'].includes(plan.data.plan_key) || !plan.data.stripe_price_id) throw new BillingError('PLAN_UNAVAILABLE', 'That subscription plan is not available.');
     const active = await service.from('subscriptions').select('id').eq('user_id', user.id).in('status', ['active','trialing']).limit(1);
     if (active.error) throw new BillingError('DATABASE', 'Subscription status could not be loaded.', 500);
     if (active.data?.length) throw new BillingError('USE_PORTAL', 'Manage your existing subscription from Billing.');
@@ -17,7 +17,8 @@ Deno.serve(async (request) => {
     if (attribution.error) throw new BillingError('DATABASE', 'Referral attribution could not be loaded.', 500);
     const returnOrigin = appUrl(); const customer = await customerFor(user);
     const affiliateMetadata = attribution.data ? { 'subscription_data[metadata][affiliate_id]': attribution.data.affiliate_id } : {};
-    const session = await stripe('checkout/sessions', { mode: 'subscription', customer, 'line_items[0][price]': plan.data.stripe_price_id, 'line_items[0][quantity]': '1', client_reference_id: user.id, 'subscription_data[metadata][supabase_user_id]': user.id, 'subscription_data[metadata][plan_key]': plan.data.plan_key, ...affiliateMetadata, success_url: `${returnOrigin}/billing/success`, cancel_url: `${returnOrigin}/pricing?checkout=cancelled` });
+    const suffix=crypto.randomUUID().replaceAll('-','').slice(0,8);
+    const session = await stripe('checkout/sessions', { mode: 'subscription', customer, 'line_items[0][price]': plan.data.stripe_price_id, 'line_items[0][quantity]': '1', client_reference_id: user.id, 'subscription_data[metadata][supabase_user_id]': user.id, 'subscription_data[metadata][plan_key]': plan.data.plan_key, ...affiliateMetadata, integration_identifier:`mystorybook-subscription-${suffix}`, success_url: `${returnOrigin}/billing/success`, cancel_url: `${returnOrigin}/pricing?checkout=cancelled` });
     return response({ data: { url: session.url } }, 200, headers);
   } catch (caught) { const error = safeFailure(caught); return response({ error: { code: error.code, message: error.message } }, error.status, headers); }
 });

@@ -94,10 +94,10 @@ export default function AdminControlCenter() {
   }
 
   async function saveMarketplaceSettings() {
-    const dollars = Number(window.prompt('Default author earnings per eligible digital sale:', String((marketplaceSettings?.default_author_earnings_cents || 500) / 100)));
-    if (!Number.isFinite(dollars) || dollars < 0 || dollars > 50) return;
+    const percent = Number(window.prompt('Author share after payment processing fees, excluding tax (0–100%):', String((marketplaceSettings?.author_share_bps || 8000) / 100)));
+    if (!Number.isFinite(percent) || percent < 0 || percent > 100) return;
     setBusy(true); setError('');
-    try { await admin.updateMarketplaceSettings(Math.round(dollars * 100)); await load(); }
+    try { await admin.updateMarketplaceSettings(Math.round(percent * 100)); await load(); }
     catch (caught) { setError(caught?.message || 'Marketplace settings could not be saved.'); setBusy(false); }
   }
 
@@ -128,7 +128,7 @@ export default function AdminControlCenter() {
       </div>)}</div>
       <div className="mt-5 grid gap-3 md:grid-cols-2"><div><h3 className="font-semibold">Usage · last 7 days</h3>{(providers?.daily_usage || []).map((row) => <p key={`${row.provider_key}-${row.usage_date}`} className="mt-1 text-sm text-stone-600">{row.usage_date} · {row.provider_key}: {row.success_count}/{row.request_count} succeeded · {money(row.estimated_cost_usd)}</p>)}</div><div><h3 className="font-semibold">Recent provider events</h3>{(providers?.recent_events || []).slice(0, 8).map((event) => <p key={event.id} className="mt-1 text-sm text-stone-600">{event.provider_key} · {event.model_key} · {event.outcome}{event.failure_reason ? ` (${event.failure_reason})` : ''}</p>)}</div></div>
     </section>
-    {data?.actor_role==='owner'&&marketplaceSettings&&<section className="rounded-3xl border bg-white p-5"><h2 className="font-display text-2xl font-semibold">Marketplace economics</h2><p className="mt-1 text-sm text-stone-500">The default applies only when a book is newly offered for sale or repriced. Existing purchase earnings never change retroactively.</p><div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-stone-50 p-4"><div><p className="font-semibold">Default author earnings</p><p className="text-sm text-stone-500">${(marketplaceSettings.default_author_earnings_cents/100).toFixed(2)} per eligible sale</p></div><Button variant="outline" disabled={busy} onClick={()=>void saveMarketplaceSettings()}>Change default</Button></div></section>}
+    {data?.actor_role==='owner'&&marketplaceSettings&&<section className="rounded-3xl border bg-white p-5"><h2 className="font-display text-2xl font-semibold">Marketplace economics</h2><p className="mt-1 text-sm text-stone-500">The share is snapshotted on each new purchase after payment processing fees and excluding tax. Historical earnings never change retroactively.</p><div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-stone-50 p-4"><div><p className="font-semibold">Author revenue share</p><p className="text-sm text-stone-500">{(marketplaceSettings.author_share_bps/100).toFixed(2)}% author · {(100-marketplaceSettings.author_share_bps/100).toFixed(2)}% platform</p></div><Button variant="outline" disabled={busy} onClick={()=>void saveMarketplaceSettings()}>Change split</Button></div></section>}
     <section className="rounded-3xl border bg-white p-5"><h2 className="flex items-center gap-2 font-display text-2xl font-semibold"><ShieldCheck className="h-5 w-5" />Administrative activity</h2><div className="mt-4 space-y-2">{(data?.audit || []).map((entry) => <div key={entry.id} className="rounded-xl bg-stone-50 p-3 text-sm"><span className="font-medium">{entry.action}</span><span className="ml-2 text-stone-500">{new Date(entry.created_at).toLocaleString()}</span></div>)}</div></section>
   </div>;
 }
