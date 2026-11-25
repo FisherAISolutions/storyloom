@@ -67,6 +67,18 @@ export async function stripeV2(path: string, method = 'GET', body?: Record<strin
   return payload;
 }
 
+export function stripeRecipientState(account: any) {
+  const capability = account?.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status
+    || (account?.capabilities?.transfers === 'active' ? 'active' : account?.capabilities?.transfers === 'pending' ? 'pending' : account?.capabilities?.transfers === 'restricted' ? 'restricted' : 'inactive');
+  const requirements = Array.isArray(account?.requirements?.entries)
+    ? account.requirements.entries
+    : [...(account?.requirements?.currently_due || []), ...(account?.requirements?.past_due || [])];
+  const status = capability === 'active' ? 'eligible' : capability === 'restricted' ? 'restricted' : account?.id ? 'onboarding' : 'not_started';
+  const disabledReason = account?.requirements?.disabled_reason
+    || (account?.requirements?.summary?.minimum_deadline?.status === 'past_due' ? 'requirements_past_due' : null);
+  return { capability, requirements, status, disabledReason };
+}
+
 export async function customerFor(user: { id: string; email?: string }) {
   const existing = await service.from('stripe_customers').select('stripe_customer_id').eq('user_id', user.id).maybeSingle();
   if (existing.error) throw new BillingError('DATABASE', 'Billing details could not be loaded.', 500);

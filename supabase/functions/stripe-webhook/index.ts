@@ -1,4 +1,4 @@
-import { BillingError, response, safeFailure, service, stripeGet, stripeV2, verifyStripeSignature } from '../_shared/billing.ts';
+import { BillingError, response, safeFailure, service, stripeGet, stripeRecipientState, stripeV2, verifyStripeSignature } from '../_shared/billing.ts';
 
 const webhookSecrets = [
   Deno.env.get('STRIPE_WEBHOOK_SECRET'),
@@ -149,10 +149,8 @@ async function syncFailedInvoice(invoice: any) {
 
 async function syncSellerAccount(account: any) {
   const accountId = objectId(account); if (!accountId) return;
-  const capability = account?.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status || (account?.capabilities?.transfers === 'active' ? 'active' : account?.capabilities?.transfers === 'pending' ? 'pending' : 'inactive');
-  const requirements = account?.requirements?.currently_due || account?.requirements?.past_due || [];
-  const status = capability === 'active' && requirements.length === 0 ? 'eligible' : account?.requirements?.disabled_reason ? 'restricted' : 'onboarding';
-  const saved = await service.from('seller_accounts').update({ status, transfers_capability_status: capability, requirements_due: requirements, disabled_reason: account?.requirements?.disabled_reason || null, details_submitted: Boolean(account?.details_submitted || status === 'eligible'), onboarding_completed_at: status === 'eligible' ? new Date().toISOString() : null, last_stripe_sync_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('stripe_connected_account_id', accountId);
+  const state = stripeRecipientState(account);
+  const saved = await service.from('seller_accounts').update({ status: state.status, transfers_capability_status: state.capability, requirements_due: state.requirements, disabled_reason: state.disabledReason, details_submitted: Boolean(account?.details_submitted || state.status === 'eligible'), onboarding_completed_at: state.status === 'eligible' ? new Date().toISOString() : null, last_stripe_sync_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('stripe_connected_account_id', accountId);
   if (saved.error) throw new BillingError('DATABASE', 'Seller account sync failed.', 500);
 }
 
@@ -185,7 +183,7 @@ Deno.serve(async (request) => {
     else if (event.type === 'invoice.paid') await recordPaidInvoice(event.data?.object);
     else if (event.type === 'invoice.payment_failed') await syncFailedInvoice(event.data?.object);
     else if (event.type === 'account.updated') await syncSellerAccount(event.data?.object);
-    else if (typeof event.type === 'string' && event.type.startsWith('v2.core.account')) { const id=objectId(event.related_object) || objectId(event.data?.object);if(id)await syncSellerAccount(await stripeV2(`core/accounts/${encodeURIComponent(id)}`)); }
+    else if (typeof event.type === 'string' && event.type.startsWith('v2.core.account')) { const id=objectId(event.related_object) || objectId(event.data?.object);if(id)await syncSellerAccount(await stripeV2(`core/accounts/${encodeURIComponent(id)}?include[]=configuration.recipient&include[]=requirements&include[]=identity&include[]=defaults`)); }
     else if (event.type === 'transfer.created') await syncTransfer(event.data?.object,false);
     else if (event.type === 'transfer.reversed') await syncTransfer(event.data?.object,true);
     else if (event.type === 'charge.refunded') await recordPaymentRisk(event.id,event.data?.object,'refund',false);

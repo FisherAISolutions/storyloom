@@ -23,12 +23,12 @@ Affiliate commissions are not assumed to use the seller Connect configuration. T
 ## Manual Stripe requirements before test activation
 
 1. Rotate the sandbox API key exposed during CLI diagnostics, review Workbench request logs, and use a least-privilege restricted key for Edge Functions.
-2. In the FisherCreations sandbox (`acct_1S5NhuHEiMUagmiv`), activate Connect and complete the platform profile. Accounts v2 currently returns `non_connect_platform_accounts_v2_access_blocked` until this is done.
+2. Use the Connect-enabled FisherCreations onboarding sandbox (`acct_1S5NiGH8FszCF9JP`) for Connect testing. Accounts v2 recipient creation, hosted onboarding, and transfer-capability retrieval were verified there on November 25, 2026. Keep the original billing test account (`acct_1S5NhuHEiMUagmiv`) unchanged until the separately approved catalog migration is complete.
 3. Confirm Accounts v2 recipient accounts with Express Dashboard access are available and that `stripe_balance.stripe_transfers` can become active after hosted onboarding.
 4. On the existing **Your account** snapshot webhook endpoint, add `transfer.created` and `transfer.reversed`.
 5. Add a **Connected accounts** snapshot destination to the same function URL for `account.updated`; store its independent signing secret as `STRIPE_CONNECT_WEBHOOK_SECRET`.
 6. Add an Accounts v2 thin-event destination to the same function URL for `v2.core.account.created`, `v2.core.account.updated`, `v2.core.account.closed`, `v2.core.account[requirements].updated`, `v2.core.account[configuration.recipient].updated`, and `v2.core.account[configuration.recipient].capability_status_updated`; store its signing secret as `STRIPE_THIN_WEBHOOK_SECRET`.
-7. Configure a sandbox restricted key with only account, account-link, login-link, transfer, Checkout, customer, subscription, refund/read, balance-transaction/read, and webhook-related permissions actually used.
+7. Configure a sandbox restricted key with only account, Account Links v2, transfer, Checkout, customer, subscription, refund/read, balance-transaction/read, and webhook-related permissions actually used.
 8. Keep `STRIPE_CONNECT_TEST_MODE_ENABLED` unset until onboarding and transfer tests are approved.
 9. Review Radar, dispute handling, negative-balance recovery, tax registrations, 1099/reporting requirements, and the platform merchant-of-record position with qualified advisers.
 10. Review and activate the versioned seller, affiliate, and customer-referral policies before enabling their corresponding server-side switches.

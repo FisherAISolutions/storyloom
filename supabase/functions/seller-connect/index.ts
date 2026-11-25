@@ -1,11 +1,4 @@
-import { BillingError, appUrl, authenticate, cors, response, safeFailure, service, stripe, stripeV2 } from '../_shared/billing.ts';
-
-function statusFrom(account: any) {
-  const capability = account?.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status || 'inactive';
-  const requirements = account?.requirements?.currently_due || account?.requirements?.past_due || [];
-  const eligible = capability === 'active' && requirements.length === 0;
-  return { capability, requirements, status: eligible ? 'eligible' : account?.id ? 'onboarding' : 'not_started' };
-}
+import { BillingError, appUrl, authenticate, cors, response, safeFailure, service, stripeRecipientState, stripeV2 } from '../_shared/billing.ts';
 
 Deno.serve(async (request) => {
   let headers: HeadersInit = {};
@@ -24,24 +17,27 @@ Deno.serve(async (request) => {
     if (accepted.error || !accepted.data) throw new BillingError('TERMS_REQUIRED', 'Accept the current seller terms before onboarding.', 409);
     let accountId = existing.data?.stripe_connected_account_id as string | null;
     if (!accountId) {
-      const account = await stripeV2('core/accounts', 'POST', {
+      const country = (Deno.env.get('STRIPE_CONNECT_DEFAULT_COUNTRY') || 'US').trim().toUpperCase();
+      if (!/^[A-Z]{2}$/.test(country)) throw new BillingError('CONNECT_CONFIG', 'Seller onboarding is not configured.', 503);
+      const account = await stripeV2('core/accounts?include[]=configuration.recipient&include[]=requirements&include[]=identity&include[]=defaults', 'POST', {
         contact_email: user.email,
+        identity: { country },
         dashboard: 'express',
         defaults: { responsibilities: { fees_collector: 'application', losses_collector: 'application' } },
         configuration: { recipient: { capabilities: { stripe_balance: { stripe_transfers: { requested: true } } } } },
         metadata: { supabase_user_id: user.id },
       }, `seller-account:${user.id}`);
       accountId = account.id;
-      const state = statusFrom(account);
-      const saved = await service.from('seller_accounts').upsert({ user_id: user.id, stripe_connected_account_id: accountId, dashboard_type: 'express', fees_collector: 'application', losses_collector: 'application', status: state.status, transfers_capability_status: state.capability, requirements_due: state.requirements, terms_version: accepted.data.policy_version, terms_accepted_at: new Date().toISOString(), last_stripe_sync_at: new Date().toISOString() });
+      const state = stripeRecipientState(account);
+      const saved = await service.from('seller_accounts').upsert({ user_id: user.id, stripe_connected_account_id: accountId, dashboard_type: 'express', fees_collector: 'application', losses_collector: 'application', status: state.status, transfers_capability_status: state.capability, requirements_due: state.requirements, disabled_reason: state.disabledReason, terms_version: accepted.data.policy_version, terms_accepted_at: new Date().toISOString(), last_stripe_sync_at: new Date().toISOString() });
       if (saved.error) throw new BillingError('DATABASE', 'Seller status could not be saved.', 500);
     }
     if (!accountId) throw new BillingError('CONNECT_ACCOUNT_MISSING', 'Seller onboarding could not be completed.', 502);
+    const origin = appUrl();
     if (body.action === 'dashboard') {
-      const link = await stripe(`accounts/${encodeURIComponent(accountId)}/login_links`, {});
+      const link = await stripeV2('core/account_links', 'POST', { account: accountId, use_case: { type: 'account_dashboard', account_dashboard: { refresh_url: `${origin}/author?connect=dashboard-refresh` } } });
       return response({ data: { url: link.url } }, 200, headers);
     }
-    const origin = appUrl();
     const link = await stripeV2('core/account_links', 'POST', { account: accountId, use_case: { type: 'account_onboarding', account_onboarding: { configurations: ['recipient'], refresh_url: `${origin}/author?connect=refresh`, return_url: `${origin}/author?connect=return` } } });
     return response({ data: { url: link.url } }, 200, headers);
   } catch (caught) {

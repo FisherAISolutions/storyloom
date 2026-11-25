@@ -10,6 +10,7 @@ const webhook=read('supabase/functions/stripe-webhook/index.ts');
 const checkout=read('supabase/functions/marketplace-checkout/index.ts');
 const connect=read('supabase/functions/seller-connect/index.ts');
 const payout=read('supabase/functions/payout-transfer/index.ts');
+const billing=read('supabase/functions/_shared/billing.ts');
 
 test('commercial features default to independent server-side disabled controls',()=>{
   for(const setting of ['paid_selling_enabled','author_payouts_enabled','affiliate_commissions_enabled','customer_referrals_enabled','affiliate_payouts_enabled'])assert.match(sql,new RegExp(`${setting} boolean not null default false`));
@@ -23,9 +24,14 @@ test('seller onboarding uses hosted Connect with eligibility and policy gates',(
   assert.match(connect,/losses_collector: 'application'/);
   assert.match(connect,/stripe_transfers/);
   assert.match(connect,/policy_acceptances/);
+  assert.match(connect,/identity: \{ country \}/);
+  assert.match(connect,/STRIPE_CONNECT_DEFAULT_COUNTRY/);
+  assert.match(connect,/core\/accounts\?include\[\]=configuration\.recipient&include\[\]=requirements&include\[\]=identity&include\[\]=defaults/);
   assert.match(connect,/configurations: \['recipient'\]/);
-  assert.match(connect,/accounts\/\$\{encodeURIComponent\(accountId\)\}\/login_links/);
-  assert.doesNotMatch(connect,/account_dashboard/);
+  assert.match(connect,/type: 'account_dashboard'/);
+  assert.match(connect,/account_dashboard: \{ refresh_url:/);
+  assert.match(billing,/requirements\?\.entries/);
+  assert.match(billing,/stripeRecipientState/);
   assert.match(sql,/SELLER_ONBOARDING_REQUIRED/);
 });
 
@@ -34,7 +40,7 @@ test('Accounts v2 thin events resolve the trusted related object before status s
   assert.match(webhook,/STRIPE_THIN_WEBHOOK_SECRET/);
   assert.match(webhook,/event\.type\.startsWith\('v2\.core\.account'\)/);
   assert.match(webhook,/event\.related_object/);
-  assert.match(webhook,/stripeV2\(`core\/accounts\/\$\{encodeURIComponent\(id\)\}`\)/);
+  assert.match(webhook,/stripeV2\(`core\/accounts\/\$\{encodeURIComponent\(id\)\}\?include\[\]=configuration\.recipient/);
 });
 
 test('author economics snapshot 80 percent of net after fees and tax',()=>{
