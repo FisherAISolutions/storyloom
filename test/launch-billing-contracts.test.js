@@ -9,6 +9,7 @@ const read=(path)=>readFileSync(resolve(root,path),'utf8');
 const catalog=read('supabase/migrations/20260825000000_launch_pricing_credit_packs.sql');
 const credits=read('supabase/migrations/20260825010000_credit_reservations_and_reliability.sql');
 const periodFix=read('supabase/migrations/20260825020000_fix_entitlement_period_aliases.sql');
+const amountFix=read('supabase/migrations/20260825030000_fix_entitlement_usage_amount_qualification.sql');
 const webhook=read('supabase/functions/stripe-webhook/index.ts');
 const ai=read('supabase/functions/story-ai/index.ts');
 const checkout=read('supabase/functions/credit-checkout/index.ts');
@@ -36,6 +37,14 @@ test('subscription periods are explicitly normalized while monthly credits remai
   assert.match(periodFix,/purchased_credit_reservations/);
   assert.match(periodFix,/security definer set search_path=''/);
   assert.match(periodFix,/revoke all on function public\.reserve_ai_entitlement_customer/);
+});
+
+test('entitlement usage aggregate explicitly qualifies the amount output-variable conflict',()=>{
+  assert.match(amountFix,/eu\.monthly_amount>0 then eu\.monthly_amount/);
+  assert.match(amountFix,/then eu\.amount else 0/);
+  assert.match(amountFix,/eu\.billing_period_start=v_start/);
+  assert.match(amountFix,/security definer set search_path=''/);
+  assert.match(amountFix,/revoke all on function public\.reserve_ai_entitlement_customer/);
 });
 
 test('refunds, disputes, async payments, duplicate events, and out-of-order risk are handled server-side',()=>{
