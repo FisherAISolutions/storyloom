@@ -14,12 +14,12 @@ update public.billing_plans set
 where plan_key='free';
 update public.billing_plans set
   display_name='MyStorybook AI Family', monthly_price_display='$12.99/month', monthly_price_cents=1299,
-  story_units_limit=10, image_units_limit=100, max_story_pages=24,
+  story_units_limit=10, image_units_limit=100, max_story_pages=24, stripe_price_id='price_1UfPD8HEiMUagmivmbdfyImM',
   can_personalize=true, can_publish_free=true, can_sell_paid=false, can_buy_credit_packs=true
 where plan_key='family';
 update public.billing_plans set
   display_name='MyStorybook AI Creator', monthly_price_display='$24.99/month', monthly_price_cents=2499,
-  story_units_limit=25, image_units_limit=250, max_story_pages=30,
+  story_units_limit=25, image_units_limit=250, max_story_pages=30, stripe_price_id='price_1U2LvdHEiMUagmivD6tjJMkF',
   can_personalize=true, can_publish_free=true, can_sell_paid=true, can_buy_credit_packs=true
 where plan_key='creator';
 
@@ -38,13 +38,13 @@ create table public.credit_products (
   sort_order integer not null default 0,
   created_at timestamptz not null default now(), updated_at timestamptz not null default now()
 );
-insert into public.credit_products(product_key,display_name,price_display,price_cents,story_units,image_units,max_story_pages,requires_active_subscription,once_per_account,sort_order) values
- ('starter','MyStorybook AI Starter','$2.99 one time',299,1,10,6,false,true,0),
- ('credits_small','Small credit pack','$4.99',499,3,30,24,true,false,10),
- ('credits_medium','Medium credit pack','$9.99',999,6,75,24,true,false,20),
- ('credits_large','Large credit pack','$19.99',1999,12,160,24,true,false,30)
+insert into public.credit_products(product_key,display_name,price_display,price_cents,stripe_price_id,story_units,image_units,max_story_pages,requires_active_subscription,once_per_account,sort_order) values
+ ('starter','MyStorybook AI Starter','$2.99 one time',299,'price_1UfPW7HEiMUagmivdejEVlTs',1,10,6,false,true,0),
+ ('credits_small','Small credit pack','$4.99',499,'price_1UfPjTHEiMUagmivwnsaJLuy',3,30,24,true,false,10),
+ ('credits_medium','Medium credit pack','$9.99',999,'price_1UfQJyHEiMUagmivWYL3h4dh',6,75,24,true,false,20),
+ ('credits_large','Large credit pack','$19.99',1999,'price_1UfQLSHEiMUagmivm4X5clC1',12,160,24,true,false,30)
 on conflict(product_key) do update set display_name=excluded.display_name,price_display=excluded.price_display,
- price_cents=excluded.price_cents,story_units=excluded.story_units,image_units=excluded.image_units,
+ price_cents=excluded.price_cents,stripe_price_id=excluded.stripe_price_id,story_units=excluded.story_units,image_units=excluded.image_units,
  max_story_pages=excluded.max_story_pages,requires_active_subscription=excluded.requires_active_subscription,
  once_per_account=excluded.once_per_account,sort_order=excluded.sort_order;
 

@@ -29,7 +29,7 @@ test('launch catalog replaces the legacy recurring starter with free plus one-ti
   assert.match(starter, /plan_key='free'/);
   assert.match(launch, /display_name='MyStorybook AI Free'/);
   assert.match(launch, /story_units_limit=0, image_units_limit=0/);
-  assert.match(launch, /'starter','MyStorybook AI Starter','\$2\.99 one time',299,1,10,6,false,true/);
+  assert.match(launch, /'starter','MyStorybook AI Starter','\$2\.99 one time',299,'price_[^']+',1,10,6,false,true/);
   assert.match(starter, /values \('unpaid', 'No active plan', '\$0', 0, null, 0, 0, 6/);
   assert.match(checkout, /\['family','creator'\]\.includes/);
 });

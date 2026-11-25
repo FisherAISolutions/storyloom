@@ -15,16 +15,16 @@ Checkout remains disabled until the FisherCreations **test-mode** Price IDs belo
 
 Metadata is documentation/operations context only. Checkout chooses trusted database Price IDs and writes authoritative Session metadata itself.
 
-After creating test-mode Prices, map identifiers through reviewed SQL:
+The verified FisherCreations test-mode Price identifiers are mapped by `20260825000000_launch_pricing_credit_packs.sql`. Replace them only through a reviewed forward migration during a separately approved live-mode cutover.
 
 ```sql
-update public.billing_plans set stripe_price_id='price_TEST_FAMILY' where plan_key='family';
-update public.billing_plans set stripe_price_id='price_TEST_CREATOR' where plan_key='creator';
+update public.billing_plans set stripe_price_id='price_1UfPD8HEiMUagmivmbdfyImM' where plan_key='family';
+update public.billing_plans set stripe_price_id='price_1U2LvdHEiMUagmivD6tjJMkF' where plan_key='creator';
 update public.credit_products set stripe_price_id=case product_key
-  when 'starter' then 'price_TEST_STARTER'
-  when 'credits_small' then 'price_TEST_SMALL'
-  when 'credits_medium' then 'price_TEST_MEDIUM'
-  when 'credits_large' then 'price_TEST_LARGE'
+  when 'starter' then 'price_1UfPW7HEiMUagmivdejEVlTs'
+  when 'credits_small' then 'price_1UfPjTHEiMUagmivwnsaJLuy'
+  when 'credits_medium' then 'price_1UfQJyHEiMUagmivWYL3h4dh'
+  when 'credits_large' then 'price_1UfQLSHEiMUagmivm4X5clC1'
 end where product_key in ('starter','credits_small','credits_medium','credits_large');
 ```
 
