@@ -417,6 +417,8 @@ declare v_actor uuid:=auth.uid();v_id uuid;v_amount integer;v_minimum integer;v_
 begin
  if not exists(select 1 from public.profiles where id=v_actor and role='owner') then raise exception 'OWNER_REQUIRED';end if;
  if p_beneficiary_type not in ('author','affiliate') or p_period_end>now() or p_request_id is null or char_length(btrim(coalesce(p_reason,'')))<3 then raise exception 'VALIDATION';end if;
+ update public.marketplace_author_earnings set status='available' where status='pending' and available_at<=now();
+ update public.affiliate_commissions set status='approved',updated_at=now() where status in ('pending','partially_reversed') and available_at<=now() and commission_amount_cents>reversed_amount_cents;
  if p_beneficiary_type='author' then
   select payout_minimum_cents into v_minimum from public.marketplace_settings where id=true and author_payouts_enabled;
   if v_minimum is null or not exists(select 1 from public.seller_accounts where user_id=p_beneficiary_user_id and status='eligible' and transfers_capability_status='active') then raise exception 'PAYOUT_DISABLED';end if;
@@ -440,6 +442,27 @@ begin
  insert into public.admin_audit_log(actor_id,target_user_id,action,details) values(v_actor,p_beneficiary_user_id,'financial_payout_prepared',jsonb_build_object('payout_id',v_id,'type',p_beneficiary_type,'amount_cents',v_amount,'reason',btrim(p_reason)));return v_id;
 end;$$;
 
+create or replace function public.record_financial_transfer_status(p_payout_id uuid,p_transfer_id text,p_reversed boolean)
+returns void language plpgsql security definer set search_path='' as $$
+declare v_payout public.financial_payouts;
+begin
+ if auth.role()<>'service_role' then raise exception 'SERVICE_ROLE_REQUIRED';end if;
+ if p_payout_id is null or p_transfer_id is null or p_transfer_id!~'^tr_[A-Za-z0-9]+$' then raise exception 'VALIDATION';end if;
+ select * into v_payout from public.financial_payouts where id=p_payout_id for update;
+ if not found or v_payout.beneficiary_type<>'author' then raise exception 'PAYOUT_NOT_FOUND';end if;
+ if p_reversed then
+  update public.financial_payouts set status='reversed',stripe_transfer_id=p_transfer_id,failure_code='transfer_reversed',updated_at=now() where id=p_payout_id;
+  update public.marketplace_author_earnings e set paid_amount_cents=greatest(e.paid_amount_cents-i.amount_cents,0)
+   from public.financial_payout_items i where i.payout_id=p_payout_id and i.source_type='author_earning' and i.source_id=e.id;
+  insert into public.financial_admin_flags(user_id,subject_type,subject_id,severity,reason)
+   values(v_payout.beneficiary_user_id,'payout',p_payout_id::text,'high','Stripe transfer was reversed; review seller balance before retrying.');
+ else
+  update public.financial_payouts set status='transferred',stripe_transfer_id=p_transfer_id,updated_at=now() where id=p_payout_id and status in ('approved','processing','transferred');
+  update public.marketplace_author_earnings e set paid_amount_cents=greatest(e.paid_amount_cents,i.amount_cents)
+   from public.financial_payout_items i where i.payout_id=p_payout_id and i.source_type='author_earning' and i.source_id=e.id;
+ end if;
+end;$$;
+
 create or replace function public.admin_review_financial_payout(p_payout_id uuid,p_approve boolean,p_reason text)
 returns void language plpgsql security definer set search_path='' as $$
 declare v_actor uuid:=auth.uid();
@@ -460,10 +483,10 @@ end;$$;
 drop trigger if exists enforce_commercial_activation on public.community_stories;
 create trigger enforce_commercial_activation before insert or update of marketplace_sales_enabled on public.community_stories for each row execute function public.enforce_commercial_activation();
 
-revoke all on function public.get_seller_financial_dashboard(),public.get_customer_referral_dashboard(),public.apply_affiliate(text,text,boolean),public.claim_customer_referral(text),public.claim_affiliate_referral(text,uuid),public.record_affiliate_subscription_commission(uuid,text,text,integer,integer,text),public.qualify_customer_referral(uuid,text,text),public.grant_due_customer_referral_rewards(integer),public.reverse_customer_referral_rewards(text,text,text),public.get_affiliate_dashboard(),public.accept_policy(text,text,text),public.admin_get_financial_operations(),public.admin_update_commercial_settings(jsonb,text),public.admin_activate_policy(text,text,text),public.admin_prepare_financial_payout(text,uuid,timestamptz,uuid,text),public.admin_review_financial_payout(uuid,boolean,text) from public,anon,authenticated;
+revoke all on function public.get_seller_financial_dashboard(),public.get_customer_referral_dashboard(),public.apply_affiliate(text,text,boolean),public.claim_customer_referral(text),public.claim_affiliate_referral(text,uuid),public.record_affiliate_subscription_commission(uuid,text,text,integer,integer,text),public.qualify_customer_referral(uuid,text,text),public.grant_due_customer_referral_rewards(integer),public.reverse_customer_referral_rewards(text,text,text),public.record_financial_transfer_status(uuid,text,boolean),public.get_affiliate_dashboard(),public.accept_policy(text,text,text),public.admin_get_financial_operations(),public.admin_update_commercial_settings(jsonb,text),public.admin_activate_policy(text,text,text),public.admin_prepare_financial_payout(text,uuid,timestamptz,uuid,text),public.admin_review_financial_payout(uuid,boolean,text) from public,anon,authenticated;
 grant execute on function public.get_seller_financial_dashboard(),public.get_customer_referral_dashboard(),public.apply_affiliate(text,text,boolean),public.claim_customer_referral(text),public.claim_affiliate_referral(text,uuid),public.get_affiliate_dashboard(),public.accept_policy(text,text,text) to authenticated;
 grant execute on function public.admin_get_financial_operations(),public.admin_update_commercial_settings(jsonb,text),public.admin_activate_policy(text,text,text),public.admin_prepare_financial_payout(text,uuid,timestamptz,uuid,text),public.admin_review_financial_payout(uuid,boolean,text) to authenticated;
-grant execute on function public.record_affiliate_subscription_commission(uuid,text,text,integer,integer,text),public.qualify_customer_referral(uuid,text,text),public.grant_due_customer_referral_rewards(integer),public.reverse_customer_referral_rewards(text,text,text) to service_role;
+grant execute on function public.record_affiliate_subscription_commission(uuid,text,text,integer,integer,text),public.qualify_customer_referral(uuid,text,text),public.grant_due_customer_referral_rewards(integer),public.reverse_customer_referral_rewards(text,text,text),public.record_financial_transfer_status(uuid,text,boolean) to service_role;
 
 comment on table public.financial_payouts is 'Internal payout instruction ledger. Stripe transfers and bank payouts are distinct; automatic execution defaults disabled.';
 comment on table public.seller_accounts is 'Stripe Connect recipient onboarding state. No bank data is stored in MyStoryBookAI.';

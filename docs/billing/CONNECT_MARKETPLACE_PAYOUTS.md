@@ -22,13 +22,17 @@ Affiliate commissions are not assumed to use the seller Connect configuration. T
 
 ## Manual Stripe requirements before test activation
 
-1. Activate Connect for the FisherCreations/MyStoryBookAI Stripe account in test mode and complete the platform profile.
-2. Confirm Accounts v2 recipient accounts with Express Dashboard access are available.
-3. Enable and test the Stripe balance transfers capability.
-4. Add Connect webhook events: `v2.core.account.updated` (or `account.updated` for compatible account events), `transfer.created`, and `transfer.reversed`.
-5. Configure test-mode restricted keys with only the account, account-link, transfer, Checkout, customer, subscription, and webhook permissions actually used.
-6. Keep `STRIPE_CONNECT_TEST_MODE_ENABLED` unset until onboarding and transfer tests are approved.
-7. Review Radar, dispute handling, negative-balance recovery, tax registrations, 1099/reporting requirements, and the platform merchant-of-record position with qualified advisers.
-8. Review and activate the versioned seller, affiliate, and customer-referral policies before enabling their corresponding server-side switches.
+1. Rotate the sandbox API key exposed during CLI diagnostics, review Workbench request logs, and use a least-privilege restricted key for Edge Functions.
+2. In the FisherCreations sandbox (`acct_1S5NhuHEiMUagmiv`), activate Connect and complete the platform profile. Accounts v2 currently returns `non_connect_platform_accounts_v2_access_blocked` until this is done.
+3. Confirm Accounts v2 recipient accounts with Express Dashboard access are available and that `stripe_balance.stripe_transfers` can become active after hosted onboarding.
+4. On the existing **Your account** snapshot webhook endpoint, add `transfer.created` and `transfer.reversed`.
+5. Add a **Connected accounts** snapshot destination to the same function URL for `account.updated`; store its independent signing secret as `STRIPE_CONNECT_WEBHOOK_SECRET`.
+6. Add an Accounts v2 thin-event destination to the same function URL for `v2.core.account.created`, `v2.core.account.updated`, `v2.core.account.closed`, `v2.core.account[requirements].updated`, `v2.core.account[configuration.recipient].updated`, and `v2.core.account[configuration.recipient].capability_status_updated`; store its signing secret as `STRIPE_THIN_WEBHOOK_SECRET`.
+7. Configure a sandbox restricted key with only account, account-link, login-link, transfer, Checkout, customer, subscription, refund/read, balance-transaction/read, and webhook-related permissions actually used.
+8. Keep `STRIPE_CONNECT_TEST_MODE_ENABLED` unset until onboarding and transfer tests are approved.
+9. Review Radar, dispute handling, negative-balance recovery, tax registrations, 1099/reporting requirements, and the platform merchant-of-record position with qualified advisers.
+10. Review and activate the versioned seller, affiliate, and customer-referral policies before enabling their corresponding server-side switches.
+
+Payout batches are Owner-prepared and Owner-approved. The code enforces the $25 threshold and 30-day hold, but a monthly processing day is an operating procedure; no automatic monthly payout scheduler is enabled.
 
 Do not enable live transfers until test-mode onboarding, a $25 minimum, 30-day holding behavior, refunds, disputes, duplicate events, and transfer idempotency have been verified end to end.

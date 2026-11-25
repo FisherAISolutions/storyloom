@@ -23,7 +23,18 @@ test('seller onboarding uses hosted Connect with eligibility and policy gates',(
   assert.match(connect,/losses_collector: 'application'/);
   assert.match(connect,/stripe_transfers/);
   assert.match(connect,/policy_acceptances/);
+  assert.match(connect,/configurations: \['recipient'\]/);
+  assert.match(connect,/accounts\/\$\{encodeURIComponent\(accountId\)\}\/login_links/);
+  assert.doesNotMatch(connect,/account_dashboard/);
   assert.match(sql,/SELLER_ONBOARDING_REQUIRED/);
+});
+
+test('Accounts v2 thin events resolve the trusted related object before status sync',()=>{
+  assert.match(webhook,/STRIPE_CONNECT_WEBHOOK_SECRET/);
+  assert.match(webhook,/STRIPE_THIN_WEBHOOK_SECRET/);
+  assert.match(webhook,/event\.type\.startsWith\('v2\.core\.account'\)/);
+  assert.match(webhook,/event\.related_object/);
+  assert.match(webhook,/stripeV2\(`core\/accounts\/\$\{encodeURIComponent\(id\)\}`\)/);
 });
 
 test('author economics snapshot 80 percent of net after fees and tax',()=>{
@@ -60,6 +71,11 @@ test('payout ledger keeps approval, transfer, and bank payout concepts separate'
   assert.match(sql,/stripe_payout_id text/);
   assert.match(sql,/idempotency_key uuid not null unique/);
   assert.match(payout,/author-payout:/);
+  assert.match(payout,/record_financial_transfer_status/);
+  assert.match(sql,/update public\.marketplace_author_earnings set status='available'/);
+  assert.match(sql,/update public\.affiliate_commissions set status='approved'/);
+  assert.match(sql,/create or replace function public\.record_financial_transfer_status/);
+  assert.match(webhook,/record_financial_transfer_status/);
   assert.doesNotMatch(payout,/stripe\(['"]payouts['"]/);
 });
 

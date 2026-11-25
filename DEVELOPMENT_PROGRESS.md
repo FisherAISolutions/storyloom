@@ -155,6 +155,9 @@ Configure the six FisherCreations test-mode Stripe Prices and required webhook e
 - Added Owner commercial controls, policy activation gates, payout review/export, seller financial views, and draft program policies. All programs default off and require explicit activation after legal, tax, and Stripe readiness review.
 - Focused marketplace, affiliate, entitlement, personalization, and Stripe lifecycle contracts pass (54 tests). ESLint and the production build pass.
 - Work is local to `codex/marketplace-affiliate-completion`; no migration, deployment, live Stripe mutation, payment, transfer, payout, or paid AI call was made.
+- Targeted FisherCreations sandbox validation confirmed account `acct_1S5NhuHEiMUagmiv`, but Connect/Accounts v2 is not enabled and no connected accounts exist. External onboarding and transfer tests remain blocked until the Owner completes Stripe Connect platform setup.
+- Corrected Accounts v2 hosted onboarding configuration, Express Dashboard login links, thin-event object resolution, independent Connect/thin webhook signing secrets, held-balance release, and idempotent transfer-ledger reconciliation. Sixteen focused Connect/payment lifecycle contracts and focused lint pass.
+- Production remains unchanged. A production dry run selects only migration `20260826000000`; read-only OpenAPI checks confirmed all prerequisite tables, columns, and RPCs. A logical schema dump was unavailable because Docker/Podman is not installed.
 
 ## Milestone: final launch billing (local)
 

@@ -1,4 +1,4 @@
-import { BillingError, appUrl, authenticate, cors, response, safeFailure, service, stripeV2 } from '../_shared/billing.ts';
+import { BillingError, appUrl, authenticate, cors, response, safeFailure, service, stripe, stripeV2 } from '../_shared/billing.ts';
 
 function statusFrom(account: any) {
   const capability = account?.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status || 'inactive';
@@ -36,8 +36,13 @@ Deno.serve(async (request) => {
       const saved = await service.from('seller_accounts').upsert({ user_id: user.id, stripe_connected_account_id: accountId, dashboard_type: 'express', fees_collector: 'application', losses_collector: 'application', status: state.status, transfers_capability_status: state.capability, requirements_due: state.requirements, terms_version: accepted.data.policy_version, terms_accepted_at: new Date().toISOString(), last_stripe_sync_at: new Date().toISOString() });
       if (saved.error) throw new BillingError('DATABASE', 'Seller status could not be saved.', 500);
     }
+    if (!accountId) throw new BillingError('CONNECT_ACCOUNT_MISSING', 'Seller onboarding could not be completed.', 502);
+    if (body.action === 'dashboard') {
+      const link = await stripe(`accounts/${encodeURIComponent(accountId)}/login_links`, {});
+      return response({ data: { url: link.url } }, 200, headers);
+    }
     const origin = appUrl();
-    const link = await stripeV2('core/account_links', 'POST', { account: accountId, use_case: { type: body.action === 'dashboard' ? 'account_dashboard' : 'account_onboarding', [body.action === 'dashboard' ? 'account_dashboard' : 'account_onboarding']: { refresh_url: `${origin}/author?connect=refresh`, return_url: `${origin}/author?connect=return` } } });
+    const link = await stripeV2('core/account_links', 'POST', { account: accountId, use_case: { type: 'account_onboarding', account_onboarding: { configurations: ['recipient'], refresh_url: `${origin}/author?connect=refresh`, return_url: `${origin}/author?connect=return` } } });
     return response({ data: { url: link.url } }, 200, headers);
   } catch (caught) {
     const error = safeFailure(caught); return response({ error: { code: error.code, message: error.message } }, error.status, headers);

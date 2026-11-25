@@ -1,6 +1,10 @@
 import { BillingError, response, safeFailure, service, stripeGet, stripeV2, verifyStripeSignature } from '../_shared/billing.ts';
 
-const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET') || '';
+const webhookSecrets = [
+  Deno.env.get('STRIPE_WEBHOOK_SECRET'),
+  Deno.env.get('STRIPE_CONNECT_WEBHOOK_SECRET'),
+  Deno.env.get('STRIPE_THIN_WEBHOOK_SECRET'),
+].filter((secret): secret is string => Boolean(secret));
 const subscriptionEvents = new Set(['customer.subscription.created','customer.subscription.updated','customer.subscription.deleted','customer.subscription.paused','customer.subscription.resumed']);
 const allowedStatuses = new Set(['active','trialing','past_due','unpaid','canceled','incomplete','incomplete_expired','paused']);
 
@@ -154,14 +158,17 @@ async function syncSellerAccount(account: any) {
 
 async function syncTransfer(transfer: any, reversed = false) {
   const payoutId = transfer?.metadata?.payout_id; if (!payoutId || !transfer?.id) return;
-  const saved = await service.from('financial_payouts').update({ status: reversed ? 'reversed' : 'transferred', stripe_transfer_id: transfer.id, updated_at: new Date().toISOString(), ...(reversed ? { failure_code: 'transfer_reversed' } : {}) }).eq('id', payoutId).in('status', reversed ? ['approved','processing','transferred'] : ['approved','processing','transferred']);
+  const saved = await service.rpc('record_financial_transfer_status', { p_payout_id: payoutId, p_transfer_id: transfer.id, p_reversed: reversed });
   if (saved.error) throw new BillingError('DATABASE', 'Transfer status sync failed.', 500);
 }
 
 Deno.serve(async (request) => {
   if (request.method !== 'POST') return response({ error: { code: 'VALIDATION', message: 'Only POST requests are supported.' } }, 405);
   const raw = await request.text();
-  if (!await verifyStripeSignature(raw, request.headers.get('Stripe-Signature'), webhookSecret)) return response({ error: { code: 'SIGNATURE_INVALID', message: 'Webhook signature is invalid.' } }, 400);
+  const signature = request.headers.get('Stripe-Signature');
+  let signatureValid = false;
+  for (const secret of webhookSecrets) if (await verifyStripeSignature(raw, signature, secret)) { signatureValid = true; break; }
+  if (!signatureValid) return response({ error: { code: 'SIGNATURE_INVALID', message: 'Webhook signature is invalid.' } }, 400);
   let event: any; try { event = JSON.parse(raw); } catch { return response({ error: { code: 'VALIDATION', message: 'Webhook body is invalid.' } }, 400); }
   const claim = await service.rpc('claim_stripe_webhook_event', { p_event_id: event.id, p_event_type: event.type });
   if (claim.error) return response({ error: { code: 'DATABASE', message: 'Webhook event could not be claimed.' } }, 500);
@@ -178,7 +185,7 @@ Deno.serve(async (request) => {
     else if (event.type === 'invoice.paid') await recordPaidInvoice(event.data?.object);
     else if (event.type === 'invoice.payment_failed') await syncFailedInvoice(event.data?.object);
     else if (event.type === 'account.updated') await syncSellerAccount(event.data?.object);
-    else if (event.type === 'v2.core.account.updated') { const id=objectId(event.data?.object);if(id)await syncSellerAccount(await stripeV2(`core/accounts/${encodeURIComponent(id)}`)); }
+    else if (typeof event.type === 'string' && event.type.startsWith('v2.core.account')) { const id=objectId(event.related_object) || objectId(event.data?.object);if(id)await syncSellerAccount(await stripeV2(`core/accounts/${encodeURIComponent(id)}`)); }
     else if (event.type === 'transfer.created') await syncTransfer(event.data?.object,false);
     else if (event.type === 'transfer.reversed') await syncTransfer(event.data?.object,true);
     else if (event.type === 'charge.refunded') await recordPaymentRisk(event.id,event.data?.object,'refund',false);
