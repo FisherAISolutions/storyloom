@@ -37,3 +37,7 @@ The expected catalog is:
 ## Activation boundary
 
 Catalog copying alone does not activate billing. Test checkout remains blocked until the target Price mapping, target webhook destinations, target signing secrets, and sandbox Supabase secrets are approved and configured together.
+
+## Migration result
+
+Completed November 25, 2026. Six products and six Prices were created and verified in target sandbox `acct_1S5NiGH8FszCF9JP`. A second apply verified idempotency with no duplicates. See `STRIPE_SANDBOX_PRICE_MAPPING.json` and `STRIPE_SANDBOX_CUTOVER.md`.

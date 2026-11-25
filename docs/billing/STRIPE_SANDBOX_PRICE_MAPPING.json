@@ -1,0 +1,43 @@
+{
+  "migration_version": "mystorybook-catalog-v1",
+  "source_account_id": "acct_1S5NhuHEiMUagmiv",
+  "target_account_id": "acct_1S5NiGH8FszCF9JP",
+  "prices": {
+    "starter": {
+      "source_product_id": "prod_Vgn6ZC28cgeF6C",
+      "source_price_id": "price_1UfPW7HEiMUagmivdejEVlTs",
+      "target_product_id": "prod_Vh7ODNaQINaXzg",
+      "target_price_id": "price_1Ufj9IH8FszCF9JPG6vFXk5u"
+    },
+    "family": {
+      "source_product_id": "prod_V2QnxT3L5yHO2N",
+      "source_price_id": "price_1UfPD8HEiMUagmivmbdfyImM",
+      "target_product_id": "prod_Vh7O7x2O6BwKX5",
+      "target_price_id": "price_1Ufj9KH8FszCF9JP82pNs3s4"
+    },
+    "creator": {
+      "source_product_id": "prod_V2QnWWlW6R3W02",
+      "source_price_id": "price_1U2LvdHEiMUagmivD6tjJMkF",
+      "target_product_id": "prod_Vh7OolTHinGs99",
+      "target_price_id": "price_1Ufj9MH8FszCF9JPMkzYw0kd"
+    },
+    "credits_small": {
+      "source_product_id": "prod_VgnKcsZy554f0h",
+      "source_price_id": "price_1UfPjTHEiMUagmivwnsaJLuy",
+      "target_product_id": "prod_Vh7OPOzTvtDIsT",
+      "target_price_id": "price_1Ufj9PH8FszCF9JPVfrhDyqF"
+    },
+    "credits_medium": {
+      "source_product_id": "prod_VgnvKmi5u3GA1q",
+      "source_price_id": "price_1UfQJyHEiMUagmivWYL3h4dh",
+      "target_product_id": "prod_Vh7O9mF1OJo2Ma",
+      "target_price_id": "price_1Ufj9RH8FszCF9JPLokwoc22"
+    },
+    "credits_large": {
+      "source_product_id": "prod_VgnxXYnJPSBRiG",
+      "source_price_id": "price_1UfQLSHEiMUagmivm4X5clC1",
+      "target_product_id": "prod_Vh7OIKxI2Ryc53",
+      "target_price_id": "price_1Ufj9TH8FszCF9JPkqN9Frn2"
+    }
+  }
+}
