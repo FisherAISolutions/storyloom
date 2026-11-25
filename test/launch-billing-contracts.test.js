@@ -8,6 +8,7 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const read=(path)=>readFileSync(resolve(root,path),'utf8');
 const catalog=read('supabase/migrations/20260825000000_launch_pricing_credit_packs.sql');
 const credits=read('supabase/migrations/20260825010000_credit_reservations_and_reliability.sql');
+const periodFix=read('supabase/migrations/20260825020000_fix_entitlement_period_aliases.sql');
 const webhook=read('supabase/functions/stripe-webhook/index.ts');
 const ai=read('supabase/functions/story-ai/index.ts');
 const checkout=read('supabase/functions/credit-checkout/index.ts');
@@ -26,6 +27,15 @@ test('monthly allowances are consumed before permanent purchased credits and fai
   assert.match(credits,/purchased_credit_reservations/);
   assert.match(credits,/status='released'/);
   assert.match(credits,/remaining_story_units=remaining_story_units\+case/);
+});
+
+test('subscription periods are explicitly normalized while monthly credits remain ahead of purchased grants',()=>{
+  assert.match(periodFix,/s\.current_period_start as period_start,s\.current_period_end as period_end/);
+  assert.match(periodFix,/v_start:=v_selected\.period_start;v_end:=v_selected\.period_end/);
+  assert.ok(periodFix.indexOf('v_monthly:=least')<periodFix.indexOf('for v_grant in select'));
+  assert.match(periodFix,/purchased_credit_reservations/);
+  assert.match(periodFix,/security definer set search_path=''/);
+  assert.match(periodFix,/revoke all on function public\.reserve_ai_entitlement_customer/);
 });
 
 test('refunds, disputes, async payments, duplicate events, and out-of-order risk are handled server-side',()=>{
