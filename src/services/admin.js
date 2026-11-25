@@ -27,3 +27,6 @@ export const updateImageProvider = (setting, reason) => rpc('admin_update_image_
 });
 export const getMarketplaceSettings = () => rpc('get_marketplace_settings');
 export const updateMarketplaceSettings = (basisPoints) => rpc('update_marketplace_author_share', { p_author_share_bps: basisPoints });
+export const getFinancialOperations = () => rpc('admin_get_financial_operations');
+export const updateCommercialSettings = (settings, reason) => rpc('admin_update_commercial_settings', { p_settings: settings, p_reason: reason });
+export const activatePolicy = (key, version, reason) => rpc('admin_activate_policy', { p_policy_key: key, p_policy_version: version, p_reason: reason });

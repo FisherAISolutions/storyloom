@@ -17,12 +17,16 @@ Deno.serve(async (request) => {
 
     const authorization = request.headers.get('Authorization') || '';
     const userClient = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: authorization } }, auth: { persistSession: false } });
+    const activation = await service.from('marketplace_settings').select('paid_selling_enabled').eq('id', true).single();
+    if (activation.error || !activation.data?.paid_selling_enabled) throw new BillingError('MARKETPLACE_DISABLED', 'Paid marketplace checkout is not available yet.', 409);
     const claimed = await userClient.rpc('claim_marketplace_checkout', { p_slug: body.slug, p_request_id: body.request_id });
     if (claimed.error || !claimed.data) throw new BillingError('CHECKOUT_UNAVAILABLE', 'This book cannot be purchased right now.', 409);
     claimId = claimed.data;
 
     const listing = await service.from('community_stories').select('id,user_id,public_slug,price_cents,currency,stories!inner(title)').eq('public_slug', body.slug).eq('status', 'published').eq('marketplace_enabled', true).eq('marketplace_sales_enabled',true).maybeSingle();
     if (listing.error || !listing.data) throw new BillingError('LISTING_UNAVAILABLE', 'This book is no longer available.', 409);
+    const seller = await service.from('seller_accounts').select('status,transfers_capability_status,terms_accepted_at').eq('user_id', listing.data.user_id).maybeSingle();
+    if (seller.error || seller.data?.status !== 'eligible' || seller.data?.transfers_capability_status !== 'active' || !seller.data?.terms_accepted_at) throw new BillingError('SELLER_INELIGIBLE', 'This seller is not eligible to accept purchases.', 409);
     const customer = await customerFor(user);
     const origin = appUrl();
     const title = (listing.data as any).stories.title;

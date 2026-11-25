@@ -32,6 +32,9 @@ const AdminCommunity = lazy(() => import('@/pages/AdminCommunity'));
 const AdminControlCenter = lazy(() => import('@/pages/AdminControlCenter'));
 const AffiliateReferral = lazy(() => import('@/pages/AffiliateReferral'));
 const AffiliateDashboard = lazy(() => import('@/pages/AffiliateDashboard'));
+const ReferralLanding = lazy(() => import('@/pages/ReferralLanding'));
+const ReferralDashboard = lazy(() => import('@/pages/ReferralDashboard'));
+const ProgramPolicies = lazy(() => import('@/pages/ProgramPolicies'));
 const AuthorStorefront = lazy(() => import('@/pages/AuthorStorefront'));
 const AuthorDashboard = lazy(() => import('@/pages/AuthorDashboard'));
 const BuyerLibrary = lazy(() => import('@/pages/BuyerLibrary'));
@@ -71,12 +74,14 @@ function AppRoutes() {
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/r/:code" element={withPageLoader(<AffiliateReferral />)} />
+      <Route path="/invite/:code" element={withPageLoader(<ReferralLanding />)} />
       <Route element={<Layout />}>
         <Route path="/" element={withPageLoader(<Home />)} />
         <Route path="/pricing" element={withPageLoader(<Pricing />)} />
         <Route path="/privacy" element={withPageLoader(<Privacy />)} />
         <Route path="/terms" element={withPageLoader(<Terms />)} />
         <Route path="/support" element={withPageLoader(<Support />)} />
+        <Route path="/policies/:program" element={withPageLoader(<ProgramPolicies />)} />
         <Route path="/community" element={withPageLoader(<Community />)} />
         <Route path="/community/:slug" element={withPageLoader(<PublicStory />)} />
         <Route path="/authors/:slug" element={withPageLoader(<AuthorStorefront />)} />
@@ -91,6 +96,7 @@ function AppRoutes() {
           <Route path="/billing" element={withPageLoader(<Billing />)} />
           <Route path="/billing/success" element={withPageLoader(<BillingSuccess />)} />
           <Route path="/affiliate" element={withPageLoader(<AffiliateDashboard />)} />
+          <Route path="/referrals" element={withPageLoader(<ReferralDashboard />)} />
           <Route path="/author" element={withPageLoader(<AuthorDashboard />)} />
           <Route path="/purchases" element={withPageLoader(<BuyerLibrary />)} />
           <Route path="/community/:slug/personalize" element={withPageLoader(<PersonalizeStory />)} />

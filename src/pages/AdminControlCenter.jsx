@@ -15,13 +15,14 @@ export default function AdminControlCenter() {
   const [affiliates, setAffiliates] = useState([]);
   const [providers, setProviders] = useState(null);
   const [marketplaceSettings, setMarketplaceSettings] = useState(null);
+  const [financialOps, setFinancialOps] = useState(null);
 
   async function load(term = search) {
     setBusy(true); setError('');
     try {
       const controlCenter = await admin.getControlCenter(term);
-      const [affiliateRows, imageProviders, marketplace] = await Promise.all([admin.getAffiliates(), admin.getImageProviders(), controlCenter.actor_role === 'owner' ? admin.getMarketplaceSettings() : Promise.resolve(null)]);
-      setData(controlCenter); setAffiliates(affiliateRows || []); setProviders(imageProviders); setMarketplaceSettings(marketplace);
+      const [affiliateRows, imageProviders, marketplace, operations] = await Promise.all([admin.getAffiliates(), admin.getImageProviders(), controlCenter.actor_role === 'owner' ? admin.getMarketplaceSettings() : Promise.resolve(null), controlCenter.actor_role === 'owner' ? admin.getFinancialOperations() : Promise.resolve(null)]);
+      setData(controlCenter); setAffiliates(affiliateRows || []); setProviders(imageProviders); setMarketplaceSettings(marketplace); setFinancialOps(operations);
     }
     catch (caught) { setError(caught?.message || 'The Admin Control Center could not be loaded.'); }
     setBusy(false);
@@ -101,6 +102,19 @@ export default function AdminControlCenter() {
     catch (caught) { setError(caught?.message || 'Marketplace settings could not be saved.'); setBusy(false); }
   }
 
+  async function saveCommercialSettings(changes) {
+    const reason = window.prompt('Reason for this commercial-program setting change:');
+    if (!reason) return;
+    setBusy(true);setError('');
+    try { await admin.updateCommercialSettings(changes,reason);await load(); }
+    catch(caught){setError(caught?.message||'Commercial settings could not be saved.');setBusy(false);}
+  }
+
+  function exportFinancialReport() {
+    const rows=[['type','beneficiary_user_id','amount_cents','status','created_at'],...(financialOps?.payouts||[]).map((row)=>[row.beneficiary_type,row.beneficiary_user_id,row.amount_cents,row.status,row.created_at])];
+    const blob=new Blob([rows.map((row)=>row.map((cell)=>`"${String(cell??'').replaceAll('"','""')}"`).join(',')).join('\n')],{type:'text/csv'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`mystorybook-financial-report-${new Date().toISOString().slice(0,10)}.csv`;link.click();URL.revokeObjectURL(url);
+  }
+
   if (!data && busy) return <div className="flex justify-center py-24"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   const overview = data?.overview || {};
   return <div className="space-y-8">
@@ -129,6 +143,7 @@ export default function AdminControlCenter() {
       <div className="mt-5 grid gap-3 md:grid-cols-2"><div><h3 className="font-semibold">Usage · last 7 days</h3>{(providers?.daily_usage || []).map((row) => <p key={`${row.provider_key}-${row.usage_date}`} className="mt-1 text-sm text-stone-600">{row.usage_date} · {row.provider_key}: {row.success_count}/{row.request_count} succeeded · {money(row.estimated_cost_usd)}</p>)}</div><div><h3 className="font-semibold">Recent provider events</h3>{(providers?.recent_events || []).slice(0, 8).map((event) => <p key={event.id} className="mt-1 text-sm text-stone-600">{event.provider_key} · {event.model_key} · {event.outcome}{event.failure_reason ? ` (${event.failure_reason})` : ''}</p>)}</div></div>
     </section>
     {data?.actor_role==='owner'&&marketplaceSettings&&<section className="rounded-3xl border bg-white p-5"><h2 className="font-display text-2xl font-semibold">Marketplace economics</h2><p className="mt-1 text-sm text-stone-500">The share is snapshotted on each new purchase after payment processing fees and excluding tax. Historical earnings never change retroactively.</p><div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-stone-50 p-4"><div><p className="font-semibold">Author revenue share</p><p className="text-sm text-stone-500">{(marketplaceSettings.author_share_bps/100).toFixed(2)}% author · {(100-marketplaceSettings.author_share_bps/100).toFixed(2)}% platform</p></div><Button variant="outline" disabled={busy} onClick={()=>void saveMarketplaceSettings()}>Change split</Button></div></section>}
+    {data?.actor_role==='owner'&&financialOps&&<section className="rounded-3xl border bg-white p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-display text-2xl font-semibold">Commercial activation controls</h2><p className="mt-1 text-sm text-stone-500">All money-moving and reward programs remain independently disabled until legal, tax, Stripe, and Owner approval are complete.</p></div><Button variant="outline" onClick={exportFinancialReport}>Export payout report</Button></div><div className="mt-4 grid gap-3 md:grid-cols-2">{[['Paid marketplace selling','paid_selling_enabled',financialOps.marketplace_settings?.paid_selling_enabled],['Author payouts','author_payouts_enabled',financialOps.marketplace_settings?.author_payouts_enabled],['Affiliate commissions','affiliate_commissions_enabled',financialOps.settings?.affiliate_commissions_enabled],['Affiliate payouts','affiliate_payouts_enabled',financialOps.settings?.affiliate_payouts_enabled],['Customer referral rewards','customer_referrals_enabled',financialOps.settings?.customer_referrals_enabled]].map(([label,key,enabled])=><div key={key} className="flex items-center justify-between rounded-xl bg-stone-50 p-4"><div><p className="font-semibold">{label}</p><p className={`text-xs ${enabled?'text-emerald-700':'text-stone-500'}`}>{enabled?'Enabled':'Disabled'}</p></div><Button size="sm" variant="outline" disabled={busy} onClick={()=>void saveCommercialSettings({[key]:!enabled})}>{enabled?'Disable':'Enable'}</Button></div>)}</div><div className="mt-5 grid gap-3 md:grid-cols-3"><div className="rounded-xl border p-4"><p className="text-sm text-stone-500">Seller accounts</p><p className="text-2xl font-semibold">{financialOps.sellers?.length||0}</p></div><div className="rounded-xl border p-4"><p className="text-sm text-stone-500">Payout records</p><p className="text-2xl font-semibold">{financialOps.payouts?.length||0}</p></div><div className="rounded-xl border p-4"><p className="text-sm text-stone-500">Open risk flags</p><p className="text-2xl font-semibold">{financialOps.flags?.length||0}</p></div></div></section>}
     <section className="rounded-3xl border bg-white p-5"><h2 className="flex items-center gap-2 font-display text-2xl font-semibold"><ShieldCheck className="h-5 w-5" />Administrative activity</h2><div className="mt-4 space-y-2">{(data?.audit || []).map((entry) => <div key={entry.id} className="rounded-xl bg-stone-50 p-3 text-sm"><span className="font-medium">{entry.action}</span><span className="ml-2 text-stone-500">{new Date(entry.created_at).toLocaleString()}</span></div>)}</div></section>
   </div>;
 }

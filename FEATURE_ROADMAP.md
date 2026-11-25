@@ -62,8 +62,9 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 - [x] Refund and chargeback adjustments — Idempotent reversal handling released.
 - [ ] Anti-fraud protections — Self-referral, first-touch, approval, attribution-window, and click-deduplication controls implemented locally; broader operational fraud review remains.
 - [x] Admin affiliate management — Owner controls released in the Admin Control Center.
-- [ ] Manual payout tracking — Not implemented; commissions are recorded but no payout ledger exists.
-- [ ] Future automated payouts.
+- [ ] Manual payout tracking — Owner-reviewed, immutable payout ledger and CSV export are implemented locally; migration and operational verification remain.
+- [ ] Future automated payouts — Intentionally disabled; no automatic bank-payout path exists.
+- [ ] Customer referral rewards — Separate non-stackable referral links, delayed promotional-credit rewards, reversals, debt handling, and dashboards are implemented locally; activation and deployment remain.
 
 ## E. Digital Book Marketplace
 
@@ -101,14 +102,14 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 
 ## G. Seller Payments
 
-- [ ] Stripe Connect evaluation.
-- [ ] Seller onboarding.
-- [ ] Payout eligibility.
-- [ ] Seller balances.
-- [ ] Platform commissions.
-- [ ] Refund adjustments.
-- [ ] Payout history.
-- [ ] Admin financial reporting.
+- [ ] Stripe Connect evaluation — Separate charges and transfers with platform-collected fees/losses and hosted Express-style onboarding selected locally; FisherCreations test-mode verification and legal/tax review remain.
+- [ ] Seller onboarding — Hosted Accounts v2 onboarding and account-status synchronization implemented locally behind disabled gates.
+- [ ] Payout eligibility — Transfer capability, policy acceptance, seller status, hold, minimum, and Owner-review gates implemented locally.
+- [ ] Seller balances — Pending, available, reversed, and paid author balances implemented locally.
+- [ ] Platform commissions — Prospective 80% author share of net-after-fee/tax economics implemented locally with immutable sale snapshots.
+- [ ] Refund adjustments — Author and affiliate reversals remain idempotent; customer reward reversals/debt are implemented locally.
+- [ ] Payout history — Author transfer and general payout ledgers implemented locally; affiliate payout execution remains manual/disabled.
+- [ ] Admin financial reporting — Commercial controls, payout review, risk flags, and CSV export implemented locally; deployment pending.
 
 ## H. Print-on-Demand
 

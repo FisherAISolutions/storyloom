@@ -1,4 +1,4 @@
-import { BillingError, response, safeFailure, service, stripeGet, verifyStripeSignature } from '../_shared/billing.ts';
+import { BillingError, response, safeFailure, service, stripeGet, stripeV2, verifyStripeSignature } from '../_shared/billing.ts';
 
 const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET') || '';
 const subscriptionEvents = new Set(['customer.subscription.created','customer.subscription.updated','customer.subscription.deleted','customer.subscription.paused','customer.subscription.resumed']);
@@ -36,8 +36,16 @@ async function recordPaidInvoice(invoice: any) {
   if (!customerId) throw new BillingError('STRIPE_EVENT_INVALID', 'Invoice customer is missing.');
   const userId = await userForCustomer(customerId);
   const chargeId = typeof invoice.charge === 'string' ? invoice.charge : invoice.charge?.id || null;
-  const recorded = await service.rpc('record_affiliate_conversion', { p_user_id: userId, p_stripe_invoice_id: invoice.id, p_stripe_charge_id: chargeId, p_gross_amount_cents: invoice.amount_paid, p_currency: invoice.currency.toLowerCase() });
+  const priceId = objectId(invoice?.lines?.data?.[0]?.pricing?.price_details?.price || invoice?.lines?.data?.[0]?.price);
+  if (!priceId) return;
+  const plan = await service.from('billing_plans').select('plan_key').eq('stripe_price_id', priceId).in('plan_key', ['family','creator']).maybeSingle();
+  if (plan.error) throw new BillingError('DATABASE', 'Invoice plan lookup failed.', 500);
+  if (!plan.data) return;
+  const taxCents = Array.isArray(invoice.total_tax_amounts) ? invoice.total_tax_amounts.reduce((sum: number, row: any) => sum + (Number.isInteger(row?.amount) ? row.amount : 0), 0) : 0;
+  const recorded = await service.rpc('record_affiliate_subscription_commission', { p_user_id: userId, p_stripe_invoice_id: invoice.id, p_stripe_charge_id: chargeId, p_gross_amount_cents: invoice.amount_paid, p_tax_amount_cents: taxCents, p_currency: invoice.currency.toLowerCase() });
   if (recorded.error) throw new BillingError('DATABASE', 'Affiliate commission could not be recorded.', 500);
+  const referral = await service.rpc('qualify_customer_referral', { p_referred_user_id: userId, p_invoice_id: invoice.id, p_charge_id: chargeId });
+  if (referral.error) throw new BillingError('DATABASE', 'Customer referral could not be recorded.', 500);
 }
 
 function objectId(value: any) { return typeof value === 'string' ? value : typeof value?.id === 'string' ? value.id : null; }
@@ -124,6 +132,8 @@ async function recordPaymentRisk(eventId: string, chargeLike: any, reason: 'refu
   if (recorded.error) throw new BillingError('DATABASE', 'Payment risk event could not be recorded.', 500);
   const reversedCredits=await service.rpc('reverse_credit_purchase',{p_payment_intent_id:paymentIntentId,p_charge_id:chargeId,p_reason:reason});
   if(reversedCredits.error)throw new BillingError('DATABASE','Purchased credit reversal could not be recorded.',500);
+  const reversedReferral=await service.rpc('reverse_customer_referral_rewards',{p_invoice_id:null,p_charge_id:chargeId,p_reason:reason});
+  if(reversedReferral.error)throw new BillingError('DATABASE','Customer referral reversal could not be recorded.',500);
 }
 
 async function syncFailedInvoice(invoice: any) {
@@ -131,6 +141,21 @@ async function syncFailedInvoice(invoice: any) {
   if (!subscriptionId) return;
   const subscription = await stripeGet(`subscriptions/${encodeURIComponent(subscriptionId)}`);
   await syncSubscription(subscription);
+}
+
+async function syncSellerAccount(account: any) {
+  const accountId = objectId(account); if (!accountId) return;
+  const capability = account?.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status || (account?.capabilities?.transfers === 'active' ? 'active' : account?.capabilities?.transfers === 'pending' ? 'pending' : 'inactive');
+  const requirements = account?.requirements?.currently_due || account?.requirements?.past_due || [];
+  const status = capability === 'active' && requirements.length === 0 ? 'eligible' : account?.requirements?.disabled_reason ? 'restricted' : 'onboarding';
+  const saved = await service.from('seller_accounts').update({ status, transfers_capability_status: capability, requirements_due: requirements, disabled_reason: account?.requirements?.disabled_reason || null, details_submitted: Boolean(account?.details_submitted || status === 'eligible'), onboarding_completed_at: status === 'eligible' ? new Date().toISOString() : null, last_stripe_sync_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('stripe_connected_account_id', accountId);
+  if (saved.error) throw new BillingError('DATABASE', 'Seller account sync failed.', 500);
+}
+
+async function syncTransfer(transfer: any, reversed = false) {
+  const payoutId = transfer?.metadata?.payout_id; if (!payoutId || !transfer?.id) return;
+  const saved = await service.from('financial_payouts').update({ status: reversed ? 'reversed' : 'transferred', stripe_transfer_id: transfer.id, updated_at: new Date().toISOString(), ...(reversed ? { failure_code: 'transfer_reversed' } : {}) }).eq('id', payoutId).in('status', reversed ? ['approved','processing','transferred'] : ['approved','processing','transferred']);
+  if (saved.error) throw new BillingError('DATABASE', 'Transfer status sync failed.', 500);
 }
 
 Deno.serve(async (request) => {
@@ -152,6 +177,10 @@ Deno.serve(async (request) => {
     else if (subscriptionEvents.has(event.type)) await syncSubscription(event.data?.object);
     else if (event.type === 'invoice.paid') await recordPaidInvoice(event.data?.object);
     else if (event.type === 'invoice.payment_failed') await syncFailedInvoice(event.data?.object);
+    else if (event.type === 'account.updated') await syncSellerAccount(event.data?.object);
+    else if (event.type === 'v2.core.account.updated') { const id=objectId(event.data?.object);if(id)await syncSellerAccount(await stripeV2(`core/accounts/${encodeURIComponent(id)}`)); }
+    else if (event.type === 'transfer.created') await syncTransfer(event.data?.object,false);
+    else if (event.type === 'transfer.reversed') await syncTransfer(event.data?.object,true);
     else if (event.type === 'charge.refunded') await recordPaymentRisk(event.id,event.data?.object,'refund',false);
     else if (event.type === 'charge.dispute.created') await recordPaymentRisk(event.id,event.data?.object?.charge,'chargeback',true);
     else if (event.type === 'radar.early_fraud_warning.created') await recordPaymentRisk(event.id,event.data?.object?.charge,'fraud_warning',true);

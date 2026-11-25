@@ -59,6 +59,14 @@ export async function stripeGet(path: string) {
   return payload;
 }
 
+export async function stripeV2(path: string, method = 'GET', body?: Record<string, unknown>, idempotencyKey?: string) {
+  if (!STRIPE_KEY.startsWith('sk_test_') && Deno.env.get('STRIPE_LIVE_MODE') !== 'enabled') throw new BillingError('BILLING_CONFIG', 'Stripe test mode is not configured.', 503);
+  const result = await fetch(`https://api.stripe.com/v2/${path}`, { method, headers: { Authorization: `Bearer ${STRIPE_KEY}`, 'Content-Type': 'application/json', 'Stripe-Version': '2026-11-18.endive', ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
+  const payload = await result.json();
+  if (!result.ok) { console.error('Stripe v2 API request failed', path.split('/')[0], payload?.error?.type); throw new BillingError('STRIPE_API', 'Seller onboarding could not be completed.', 502); }
+  return payload;
+}
+
 export async function customerFor(user: { id: string; email?: string }) {
   const existing = await service.from('stripe_customers').select('stripe_customer_id').eq('user_id', user.id).maybeSingle();
   if (existing.error) throw new BillingError('DATABASE', 'Billing details could not be loaded.', 500);

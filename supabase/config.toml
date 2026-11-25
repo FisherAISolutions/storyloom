@@ -56,3 +56,9 @@ verify_jwt = false
 
 [functions.marketplace-checkout]
 verify_jwt = false
+
+[functions.seller-connect]
+verify_jwt = false
+
+[functions.payout-transfer]
+verify_jwt = false

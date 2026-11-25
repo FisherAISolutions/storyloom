@@ -4,6 +4,7 @@ import { queryClientInstance } from '@/lib/query-client';
 import { clearSignedUrlCache } from '@/services/storage';
 import { didAuthenticatedUserChange, INITIAL_AUTH_STATE, toAppUser } from '@/lib/authState';
 import { claimPendingReferral } from '@/services/affiliates';
+import { claimPendingReferral as claimPendingCustomerReferral } from '@/services/referrals';
 
 const AuthContext = createContext(null);
 
@@ -81,6 +82,7 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingAuth(false);
       setAuthChecked(true);
       void claimPendingReferral().catch(() => {});
+      void claimPendingCustomerReferral().catch(() => {});
     } catch {
       if (revision !== revisionRef.current) return;
       clearUserScopedState();

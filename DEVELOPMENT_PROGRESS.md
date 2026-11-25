@@ -146,6 +146,16 @@ Rollback plan: take a fresh logical production backup before migrations; keep th
 
 Configure the six FisherCreations test-mode Stripe Prices and required webhook events, then perform the approved ordered production database/function/frontend rollout. Keep real-money checkout, Connect payouts, and print fulfillment disabled.
 
+## Milestone: marketplace, affiliate, referral, and payout completion (local)
+
+- Added a forward-only, disabled-by-default commercial migration for seller eligibility, author and affiliate payout ledgers, customer referrals, policy acceptance, fraud-review flags, and prospective 80/20 marketplace economics.
+- Added hosted Stripe Connect onboarding for Express-style recipient accounts and an Owner-approved author transfer workflow. Direct bank-payout creation and automated affiliate payouts remain disabled.
+- Expanded affiliate accounting to recurring tax-exclusive subscription commissions with immutable rate/month snapshots, hold periods, reversals, and payout-ready balances.
+- Added a separate customer referral program with non-stackable attribution, delayed promotional-credit rewards, reversal/debt handling, and referral dashboards.
+- Added Owner commercial controls, policy activation gates, payout review/export, seller financial views, and draft program policies. All programs default off and require explicit activation after legal, tax, and Stripe readiness review.
+- Focused marketplace, affiliate, entitlement, personalization, and Stripe lifecycle contracts pass (54 tests). ESLint and the production build pass.
+- Work is local to `codex/marketplace-affiliate-completion`; no migration, deployment, live Stripe mutation, payment, transfer, payout, or paid AI call was made.
+
 ## Milestone: final launch billing (local)
 
 - Implemented the final Free, one-time Starter, Family, and Creator catalog plus permanent Small/Medium/Large packs in two forward-only migrations.

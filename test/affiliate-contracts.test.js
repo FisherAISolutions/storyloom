@@ -43,7 +43,7 @@ test('public click tracking stores only a salted visitor hash and deduplicates b
 test('Stripe creates and reverses commissions through idempotent webhook processing', () => {
   assert.match(webhook, /claim_stripe_webhook_event/);
   assert.match(webhook, /event\.type === 'invoice\.paid'/);
-  assert.match(webhook, /record_affiliate_conversion/);
+  assert.match(webhook, /record_affiliate_subscription_commission/);
   assert.match(webhook, /event\.type === 'charge\.refunded'/);
   assert.match(webhook, /event\.type === 'charge\.dispute\.created'/);
   assert.match(webhook, /record_stripe_payment_risk/);
@@ -60,8 +60,8 @@ test('Checkout derives referral attribution from the authenticated user, not req
   assert.match(checkout, /Object\.keys\(body\).*key !== 'plan_key'/);
 });
 
-test('no automated payout path exists', () => {
+test('legacy affiliate payouts remain disabled unless the new gated payout workflow is activated', () => {
   assert.doesNotMatch(migration, /stripe_connect|transfer_id|payout_id|automatic_payout/i);
-  assert.doesNotMatch(webhook, /transfers|payouts/);
+  assert.doesNotMatch(webhook, /stripe\(['"]payouts['"]/);
 });
 

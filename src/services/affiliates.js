@@ -25,7 +25,7 @@ export async function claimPendingReferral() {
   return Boolean(claimed);
 }
 
-export const enroll = (displayName) => rpc('enroll_affiliate', { p_display_name: displayName });
+export const enroll = (displayName, applicationNote, acceptTerms) => rpc('apply_affiliate', { p_display_name: displayName, p_application_note: applicationNote, p_accept_terms: acceptTerms });
 export const getDashboard = () => rpc('get_affiliate_dashboard');
 export const adminList = () => rpc('admin_get_affiliates');
 export const adminReview = (affiliateId, status, commissionBps, reason) => rpc('admin_review_affiliate', { p_affiliate_id: affiliateId, p_status: status, p_commission_bps: commissionBps, p_reason: reason });
