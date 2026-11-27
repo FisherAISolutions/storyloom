@@ -47,7 +47,10 @@ test('Portal uses only the authenticated user customer mapping', () => {
 
 test('webhook requires raw-body signature and idempotent event claim', () => {
   assert.match(webhook, /const raw = await request\.text\(\)/);
-  assert.match(webhook, /verifyStripeSignature\(raw, request\.headers\.get\('Stripe-Signature'\)/);
+  assert.match(webhook, /const signature = request\.headers\.get\('Stripe-Signature'\)/);
+  assert.match(webhook, /verifyStripeSignature\(raw, signature, secret\)/);
+  assert.match(webhook, /STRIPE_CONNECT_WEBHOOK_SECRET/);
+  assert.match(webhook, /STRIPE_THIN_WEBHOOK_SECRET/);
   assert.match(shared, /STRIPE_WEBHOOK_SECRET|verifyStripeSignature/);
   assert.match(webhook, /claim_stripe_webhook_event/);
   assert.match(migration, /on conflict\(stripe_event_id\)/);

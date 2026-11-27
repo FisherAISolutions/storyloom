@@ -40,14 +40,14 @@ Legend: `[x]` means implemented and verified at the appropriate recorded level. 
 
 ## C. Subscriptions and Payments
 
-- [ ] Stripe integration verification — Code paths reviewed; Stripe Dashboard mode and webhook delivery verification remain.
-- [ ] Stripe test-mode checkout — Final Family/Creator subscription and Starter/credit-pack flows are implemented locally; test Price mapping and end-to-end production-project test-mode verification remain.
-- [x] Subscription plans — Final Free, Family, and Creator allowances are server-authoritative; deployment remains pending.
+- [ ] Stripe integration verification — New Connect-enabled sandbox secrets, webhook destinations, database mappings, and functions are configured; controlled end-to-end webhook delivery verification remains.
+- [ ] Stripe test-mode checkout — Family/Creator and Starter/credit-pack Price mappings are deployed against the new sandbox; authenticated purchase acceptance remains.
+- [x] Subscription plans — Final Free, Family, and Creator allowances and sandbox Price mappings are deployed server-authoritatively.
 - [x] Customer billing portal.
-- [ ] Credit purchases — One-time Starter and three permanent pack flows, monthly-first allocation, idempotent fulfillment, and reversals are implemented locally; Stripe Price configuration and deployment remain.
+- [ ] Credit purchases — One-time Starter and three permanent pack flows, mappings, and fulfillment functions are deployed; controlled sandbox purchase/refund acceptance remains.
 - [x] Webhook verification and idempotency.
 - [x] Subscription entitlement synchronization.
-- [ ] Payment and refund handling — Trusted Charge/PaymentIntent matching, async Checkout, out-of-order/duplicate events, purchased-credit debt handling, and marketplace/affiliate reversals are implemented locally; deployment and test-mode webhook verification remain.
+- [ ] Payment and refund handling — Trusted Charge/PaymentIntent matching, async Checkout, duplicate protection, debt handling, and reversal functions are deployed; Stripe sandbox event acceptance remains.
 - [ ] Production billing readiness — Needs Stripe Dashboard and live-mode readiness review.
 
 ## D. Affiliate Program

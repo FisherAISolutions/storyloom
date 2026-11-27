@@ -65,6 +65,8 @@ The non-payment staging release rehearsal is complete on `codex/personalization-
 
 ## Work in progress
 
+- Production database and Edge Function cutover to Connect-enabled Stripe sandbox `acct_1S5NiGH8FszCF9JP` is complete: migration `20260826000000` is applied; the six Family/Creator/Starter/credit-pack Price mappings are updated; the obsolete customer mapping was removed while its canceled subscription audit row was preserved; and `marketplace-checkout`, `seller-connect`, `payout-transfer`, and `stripe-webhook` are deployed. All commercial, referral, and payout flags remain disabled pending controlled test-mode acceptance.
+
 - Added a separate owner-only print-preparation workflow without changing the existing A4 PDF export. It supports configurable trim/binding planning profiles, bleed-aware interior proofs, effective-DPI inspection, page-count checks, missing-image handling, and explicit wrap-cover/provider-template blockers. Exports are visibly labeled `PRINT-PROOF-NOT-PROVIDER-READY`.
 - Added a provider-neutral print adapter contract, bounded retry rules, itemized quote math, legal order-state transitions, and a forward-only service-authoritative fulfillment ledger with buyer read-only RLS, quote/payment gates, provider/webhook idempotency fields, status history, tracking, cancellation, refund, failure, and reprint states.
 - Added an owner-only print-order status page. No shipping address is stored before a secure checkout/provider workflow exists, and no product, quote, payment, provider call, or order was created.
@@ -105,9 +107,11 @@ The non-payment staging release rehearsal is complete on `codex/personalization-
 
 ## Known bugs and blockers
 
+- Frontend merge/Vercel deployment and authenticated Stripe test-mode acceptance remain to complete the current cutover. Real payments, live mode, commercial selling, and payouts remain disabled.
+
 - Staging has no Stripe API key or webhook signing secret, so `marketplace-checkout` and `stripe-webhook` were intentionally not deployed there. Payment-function rehearsal requires isolated Stripe test/sandbox credentials and required test webhook events.
 - Staging now has dedicated Author and Buyer test identities, but no authorized Owner. Owner/Admin UI testing remains blocked until the user identifies a specific staging account for `assign_initial_owner()` or another approved role-assignment path. Browser-authenticated UI testing was not claimed because no user-shareable test password was created; equivalent authenticated API/RLS checks and focused UI contracts pass.
-- Migration `20260824000000_stripe_marketplace_payment_lifecycle.sql` and the updated payment functions remain pending in production. The production webhook endpoint must subscribe to the new async payment, failed-invoice, dispute/refund, and early-fraud-warning events.
+- Migration `20260824000000_stripe_marketplace_payment_lifecycle.sql` and the updated payment functions are deployed. Controlled delivery verification remains for async payment, failed-invoice, dispute/refund, and early-fraud-warning events.
 
 - Generated page art is currently 1024px; at an 8.5-inch square trim plus bleed it is only about 117 effective DPI, below the 300 PPI professional target. A separately approved high-resolution generation/upscaling strategy is required before these books can be certified print-ready.
 - Personalization and print migrations passed staging validation; production rollout remains blocked on explicit approval and the existing backup/recovery decision.
@@ -144,7 +148,7 @@ Rollback plan: take a fresh logical production backup before migrations; keep th
 
 ## Next recommended task
 
-Configure the six FisherCreations test-mode Stripe Prices and required webhook events, then perform the approved ordered production database/function/frontend rollout. Keep real-money checkout, Connect payouts, and print fulfillment disabled.
+Merge the verified release to `main`, confirm Vercel is Ready, then run controlled authenticated Stripe sandbox acceptance tests. Keep live mode, Connect payouts, automated affiliate payouts, commercial selling, and print fulfillment disabled.
 
 ## Milestone: marketplace, affiliate, referral, and payout completion (local)
 
